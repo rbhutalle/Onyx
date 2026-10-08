@@ -103,7 +103,7 @@ export function Sidebar() {
           </button>
 
           {isMaintenanceOpen && (
-            <div className="pl-9 pr-2 space-y-1 py-1 border-l border-slate-800 ml-4">
+            <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-slate-800">
               <button
                 onClick={() => navigate('/daily-inspection')}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
@@ -162,7 +162,7 @@ export function Sidebar() {
           </button>
 
           {isSettingsOpen && (
-            <div className="pl-9 pr-2 space-y-1 py-1 border-l border-slate-800 ml-4">
+            <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-slate-800">
               <button
                 onClick={() => navigate('/settings/service-standards')}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${

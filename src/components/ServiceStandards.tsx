@@ -11,7 +11,8 @@ import {
   Edit2,
   Trash2,
   Save,
-  Loader2
+  Loader2,
+  Filter
 } from 'lucide-react';
 
 interface StandardRecord {
@@ -32,8 +33,12 @@ interface IntervalRecord {
 }
 
 interface ThresholdRecord {
+  thresholds_id: string;
   pm_threshold: number | null;
+  pm_hrs_converter: number | null;
+  pm_calendar_converter: number | null;
   created_at: string;
+  updated_at: string;
   [key: string]: unknown;
 }
 
@@ -45,6 +50,9 @@ export function ServiceStandards() {
   const [standards, setStandards] = useState<StandardRecord[]>([]);
   const [intervals, setIntervals] = useState<IntervalRecord[]>([]);
   const [thresholds, setThresholds] = useState<ThresholdRecord[]>([]);
+
+  // Filter state for Service Intervals
+  const [selectedStandardFilter, setSelectedStandardFilter] = useState<string>('all');
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -61,7 +69,11 @@ export function ServiceStandards() {
     description: '', 
     is_active: true 
   });
-  const [thresholdForm, setThresholdForm] = useState({ pm_threshold: '' });
+  const [thresholdForm, setThresholdForm] = useState({ 
+    pm_threshold: '', 
+    pm_hrs_converter: '', 
+    pm_calendar_converter: '' 
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -69,10 +81,12 @@ export function ServiceStandards() {
     async function loadTabData() {
       try {
         setErrorMsg(null);
+        const stdRes = await supabase.from('service_standards').select('*');
+        if (stdRes.error) throw stdRes.error;
+        if (isMounted) setStandards(stdRes.data || []);
+
         if (activeTab === 'standards') {
-          const { data, error } = await supabase.from('service_standards').select('*');
-          if (error) throw error;
-          if (isMounted) setStandards(data || []);
+          // already loaded
         } else if (activeTab === 'intervals') {
           const { data, error } = await supabase.from('service_intervals').select('*');
           if (error) throw error;
@@ -83,7 +97,7 @@ export function ServiceStandards() {
           if (isMounted) setThresholds(data || []);
         }
       } catch (err: unknown) {
-        console.error(`Error fetching ${activeTab}:`, err);
+        console.error(`Error fetching data for ${activeTab}:`, err);
         if (isMounted) setErrorMsg(`Failed to load ${activeTab} data. Please check table permissions.`);
       }
     }
@@ -105,7 +119,7 @@ export function ServiceStandards() {
       description: '', 
       is_active: true 
     });
-    setThresholdForm({ pm_threshold: '' });
+    setThresholdForm({ pm_threshold: '', pm_hrs_converter: '', pm_calendar_converter: '' });
     setIsModalOpen(true);
   };
 
@@ -129,21 +143,22 @@ export function ServiceStandards() {
       });
     } else if (activeTab === 'thresholds') {
       const rec = item as ThresholdRecord;
-      setEditingId(rec.created_at);
+      setEditingId(rec.thresholds_id);
       setThresholdForm({
         pm_threshold: rec.pm_threshold !== null ? String(rec.pm_threshold) : '',
+        pm_hrs_converter: rec.pm_hrs_converter !== null ? String(rec.pm_hrs_converter) : '',
+        pm_calendar_converter: rec.pm_calendar_converter !== null ? String(rec.pm_calendar_converter) : '',
       });
     }
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string, tableName: 'service_standards' | 'service_intervals' | 'service_thresholds') => {
+  const handleDelete = async (id: string, tableName: 'service_standards' | 'service_intervals') => {
     if (!confirm('Are you sure you want to delete this record?')) return;
     try {
       setErrorMsg(null);
       let pkField = 'service_standard_id';
       if (tableName === 'service_intervals') pkField = 'service_interval_id';
-      if (tableName === 'service_thresholds') pkField = 'created_at';
 
       const { error } = await supabase.from(tableName).delete().eq(pkField, id);
       if (error) throw error;
@@ -194,16 +209,15 @@ export function ServiceStandards() {
         setSuccessMsg('Service Interval saved successfully!');
       } else if (activeTab === 'thresholds') {
         const payload = { 
-          pm_threshold: thresholdForm.pm_threshold !== '' ? Number(thresholdForm.pm_threshold) : 0 
+          pm_threshold: thresholdForm.pm_threshold !== '' ? Number(thresholdForm.pm_threshold) : 0,
+          pm_hrs_converter: thresholdForm.pm_hrs_converter !== '' ? Number(thresholdForm.pm_hrs_converter) : null,
+          pm_calendar_converter: thresholdForm.pm_calendar_converter !== '' ? Number(thresholdForm.pm_calendar_converter) : null,
         };
         if (editingId) {
-          const { error } = await supabase.from('service_thresholds').update(payload).eq('created_at', editingId);
-          if (error) throw error;
-        } else {
-          const { error } = await supabase.from('service_thresholds').insert([payload]);
+          const { error } = await supabase.from('service_thresholds').update(payload).eq('thresholds_id', editingId);
           if (error) throw error;
         }
-        setSuccessMsg('Service Threshold saved successfully!');
+        setSuccessMsg('Service Threshold updated successfully!');
       }
 
       setIsModalOpen(false);
@@ -216,6 +230,11 @@ export function ServiceStandards() {
       setSubmitting(false);
     }
   };
+
+  // Filter intervals based on selected service standard
+  const filteredIntervals = selectedStandardFilter === 'all'
+    ? intervals
+    : intervals.filter((item) => item.service_standard_id === selectedStandardFilter);
 
   return (
     <div className="p-6 w-full max-w-6xl mx-auto space-y-6">
@@ -285,14 +304,38 @@ export function ServiceStandards() {
 
       {/* Tab Content Container */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-        <div className="flex justify-end items-center">
-          <button
-            onClick={handleOpenAdd}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Record</span>
-          </button>
+        {/* Toolbar / Actions */}
+        <div className="flex flex-wrap justify-between items-center gap-4">
+          <div>
+            {activeTab === 'intervals' && (
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-slate-400" />
+                <select
+                  value={selectedStandardFilter}
+                  onChange={(e) => setSelectedStandardFilter(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="all">All Standards (Filter by Code)</option>
+                  {standards.map((std) => (
+                    <option key={std.service_standard_id} value={std.service_standard_id}>
+                      {std.code} {std.description ? `- ${std.description}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Add Record Button hidden for Thresholds tab */}
+          {activeTab !== 'thresholds' && (
+            <button
+              onClick={handleOpenAdd}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow ml-auto"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Record</span>
+            </button>
+          )}
         </div>
 
         <div className="overflow-x-auto">
@@ -342,82 +385,87 @@ export function ServiceStandards() {
             <table className="w-full text-left border-collapse text-sm">
               <thead>
                 <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950/50">
-                  <th className="p-3">Code</th>
-                  <th className="p-3">Interval (km)</th>
+                  <th className="p-3">Standard Code</th>
+                  <th className="p-3">PM Code</th>
+                  <th className="p-3">Interval</th>
                   <th className="p-3">Description</th>
                   <th className="p-3">Status</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 text-slate-300">
-                {intervals.length === 0 ? (
+                {filteredIntervals.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-slate-500">No service intervals found.</td>
+                    <td colSpan={6} className="p-8 text-center text-slate-500">No service intervals found for this filter.</td>
                   </tr>
                 ) : (
-                  intervals.map((item) => (
-                    <tr key={item.service_interval_id} className="hover:bg-slate-950/40 transition-colors">
-                      <td className="p-3 font-semibold text-emerald-400">{item.code}</td>
-                      <td className="p-3 font-semibold">{item.interval ?? 'N/A'} km</td>
-                      <td className="p-3 text-slate-400">{item.description || '—'}</td>
-                      <td className="p-3">
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${item.is_active ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-slate-800 text-slate-400'}`}>
-                          {item.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="p-3 text-right space-x-3">
-                        <button
-                          onClick={() => handleOpenEdit(item)}
-                          className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" /> Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.service_interval_id, 'service_intervals')}
-                          className="text-xs text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" /> Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                  filteredIntervals.map((item) => {
+                    const matchedStandard = standards.find(s => s.service_standard_id === item.service_standard_id);
+                    return (
+                      <tr key={item.service_interval_id} className="hover:bg-slate-950/40 transition-colors">
+                        <td className="p-3 font-semibold text-blue-400">{matchedStandard ? matchedStandard.code : '—'}</td>
+                        <td className="p-3 font-semibold text-emerald-400">{item.code}</td>
+                        <td className="p-3 font-semibold">{item.interval ?? 'N/A'}</td>
+                        <td className="p-3 text-slate-400">{item.description || '—'}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${item.is_active ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-slate-800 text-slate-400'}`}>
+                            {item.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right space-x-3">
+                          <button
+                            onClick={() => handleOpenEdit(item)}
+                            className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" /> Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item.service_interval_id, 'service_intervals')}
+                            className="text-xs text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
           )}
 
-          {/* TAB 3: THRESHOLDS */}
+          {/* TAB 3: THRESHOLDS (Edit only) */}
           {activeTab === 'thresholds' && (
             <table className="w-full text-left border-collapse text-sm">
               <thead>
                 <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950/50">
                   <th className="p-3">PM Threshold</th>
-                  <th className="p-3">Created At</th>
+                  <th className="p-3">PM Hrs Converter</th>
+                  <th className="p-3">PM Calendar Converter</th>
+                  <th className="p-3">Updated At</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 text-slate-300">
                 {thresholds.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="p-8 text-center text-slate-500">No service thresholds found.</td>
+                    <td colSpan={5} className="p-8 text-center text-slate-500">No service thresholds found.</td>
                   </tr>
                 ) : (
                   thresholds.map((item) => (
-                    <tr key={item.created_at} className="hover:bg-slate-950/40 transition-colors">
+                    <tr key={item.thresholds_id} className="hover:bg-slate-950/40 transition-colors">
                       <td className="p-3 font-semibold text-amber-400">{item.pm_threshold ?? '0'}</td>
-                      <td className="p-3 font-mono text-xs text-slate-400">{new Date(item.created_at).toLocaleString()}</td>
-                      <td className="p-3 text-right space-x-3">
+                      <td className="p-3 text-slate-300">{item.pm_hrs_converter ?? '—'}</td>
+                      <td className="p-3 text-slate-300">{item.pm_calendar_converter ?? '—'}</td>
+                      <td className="p-3 font-mono text-xs text-slate-400">
+                        {item.updated_at ? new Date(item.updated_at).toLocaleString() : '—'}
+                      </td>
+                      <td className="p-3 text-right">
                         <button
                           onClick={() => handleOpenEdit(item)}
                           className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                         >
                           <Edit2 className="w-3.5 h-3.5" /> Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.created_at, 'service_thresholds')}
-                          className="text-xs text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" /> Delete
                         </button>
                       </td>
                     </tr>
@@ -486,7 +534,7 @@ export function ServiceStandards() {
                       <option value="">Select Service Standard</option>
                       {standards.map((std) => (
                         <option key={std.service_standard_id} value={std.service_standard_id}>
-                          {std.code} - {std.description.substring(0, 40)}...
+                          {std.code} - {std.description ? std.description.substring(0, 40) : ''}
                         </option>
                       ))}
                     </select>
@@ -505,7 +553,7 @@ export function ServiceStandards() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Interval (km)</label>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Interval</label>
                     <input
                       type="number"
                       min="0"
@@ -549,6 +597,28 @@ export function ServiceStandards() {
                       value={thresholdForm.pm_threshold}
                       onChange={(e) => setThresholdForm({ ...thresholdForm, pm_threshold: e.target.value })}
                       placeholder="e.g. 1000"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">PM Hrs Converter</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={thresholdForm.pm_hrs_converter}
+                      onChange={(e) => setThresholdForm({ ...thresholdForm, pm_hrs_converter: e.target.value })}
+                      placeholder="e.g. 1.0"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">PM Calendar Converter</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={thresholdForm.pm_calendar_converter}
+                      onChange={(e) => setThresholdForm({ ...thresholdForm, pm_calendar_converter: e.target.value })}
+                      placeholder="e.g. 30"
                       className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
                     />
                   </div>

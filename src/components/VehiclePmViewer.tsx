@@ -8,6 +8,7 @@ interface VehiclePm {
   make_name: string | null;
   model_name: string | null;
   type_description: string | null;
+  timezone?: string | null;
   id?: string;
   vehicle_id?: string;
   [key: string]: unknown;
@@ -104,7 +105,6 @@ export function VehiclePmViewer() {
     try {
       setActionLoading(pmNum);
 
-      // Calls the server-side PL/pgSQL function securely (bypassing client RLS)
       const { error: rpcError } = await supabase.rpc('completed_vehicle_pm', {
         p_pm_level: pmNum,
         p_vehicle_id: vehicleId,
@@ -114,7 +114,6 @@ export function VehiclePmViewer() {
 
       alert(`PM ${pmNum} successfully marked as completed for plate ${selectedVehicle.plate_no}!`);
       
-      // Refresh list and close modal
       await fetchVehicles();
       setSelectedVehicle(null);
     } catch (err: unknown) {
@@ -129,6 +128,27 @@ export function VehiclePmViewer() {
       alert(`Failed to complete PM: ${errorMessage}`);
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  // UI-side formatting & timezone adjustment based on service_thresholds.timezone
+  const formatDateTime = (val: unknown, tz?: string | null) => {
+    if (!val) return '—';
+    try {
+      const date = new Date(String(val));
+      if (isNaN(date.getTime())) return String(val);
+
+      return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZone: tz || undefined, // Adjusts display to the threshold timezone without touching raw data
+      }).format(date);
+    } catch {
+      return String(val);
     }
   };
 
@@ -194,7 +214,6 @@ export function VehiclePmViewer() {
                 </tr>
               ) : (
                 vehicles.map((vehicle, index) => {
-                  // Check if ANY PM flag (PM2 to PM7) is triggered
                   const hasAnyFlag = [2, 3, 4, 5, 6, 7].some((pmNum) => {
                     const rawFlag = vehicle[`pm${pmNum}_flag`];
                     return rawFlag === true || rawFlag === 'true' || rawFlag === 'TRUE' || rawFlag === 1;
@@ -245,7 +264,7 @@ export function VehiclePmViewer() {
 
       {selectedVehicle && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col">
             
             {/* Modal Header */}
             <div className="flex justify-between items-center px-6 py-4 border-b border-slate-800 bg-slate-950">
@@ -267,7 +286,7 @@ export function VehiclePmViewer() {
             {/* Modal Body */}
             <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
               
-              {/* Vehicle Summary Info Grid */}
+              {/* Summary Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
                 <div>
                   <span className="block text-xs font-medium text-slate-400 uppercase">Plate Number</span>
@@ -289,7 +308,7 @@ export function VehiclePmViewer() {
                 </div>
               </div>
 
-              {/* PM Schedule Breakdown Table (PM 2 to PM 7) */}
+              {/* PM Schedule Breakdown Table */}
               <div>
                 <h4 className="text-sm font-semibold text-slate-200 mb-3 uppercase tracking-wider">PM Schedule Breakdown</h4>
                 <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950/40">
@@ -298,6 +317,7 @@ export function VehiclePmViewer() {
                       <tr className="border-b border-slate-800 bg-slate-950 text-slate-400 text-xs uppercase tracking-wider">
                         <th className="py-3 px-4 font-semibold">PM Level</th>
                         <th className="py-3 px-4 font-semibold">Previous PM</th>
+                        <th className="py-3 px-4 font-semibold">PM Completed</th>
                         <th className="py-3 px-4 font-semibold">Current PM</th>
                         <th className="py-3 px-4 font-semibold">Next PM</th>
                         <th className="py-3 px-4 font-semibold text-right">Action</th>
@@ -306,6 +326,7 @@ export function VehiclePmViewer() {
                     <tbody className="divide-y divide-slate-800/60">
                       {[2, 3, 4, 5, 6, 7].map((pmNum) => {
                         const prevVal = selectedVehicle[`pm${pmNum}_previous`] ?? selectedVehicle[`pm${pmNum}_prev`] ?? 'N/A';
+                        const completedVal = selectedVehicle[`pm${pmNum}_datecompleted`];
                         const currVal = selectedVehicle[`pm${pmNum}_current`] ?? selectedVehicle[`pm${pmNum}_curr`] ?? 'N/A';
                         const nextVal = selectedVehicle[`pm${pmNum}_next`] ?? 'N/A';
                         
@@ -324,6 +345,9 @@ export function VehiclePmViewer() {
                           >
                             <td className="py-3 px-4 font-medium text-slate-100">PM {pmNum}</td>
                             <td className="py-3 px-4">{String(prevVal)}</td>
+                            <td className="py-3 px-4 text-slate-300 font-mono text-xs">
+                              {formatDateTime(completedVal, selectedVehicle.timezone)}
+                            </td>
                             <td className="py-3 px-4">{String(currVal)}</td>
                             <td className="py-3 px-4">{String(nextVal)}</td>
                             <td className="py-3 px-4 text-right">
