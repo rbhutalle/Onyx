@@ -1,80 +1,248 @@
-import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Wrench, Car, Settings } from 'lucide-react';
-import { SupabaseHeartbeat } from '@/components/SupabaseHeartbeat';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { supabase } from '@/lib/supabaseClient';
+import { 
+  LayoutDashboard, 
+  Wrench, 
+  ClipboardList, 
+  FileText, 
+  Activity, 
+  ChevronDown, 
+  ChevronRight, 
+  Car,
+  Settings,
+  ShieldAlert,
+  Layers,
+  Tag
+} from 'lucide-react';
 
 export function Sidebar() {
+  const navigate = useNavigate();
   const location = useLocation();
+  const currentPath = location.pathname;
 
-  const isActive = (path: string) => location.pathname === path;
+  const [isMaintenanceOpen, setIsMaintenanceOpen] = useState<boolean>(
+    currentPath === '/daily-inspection' || currentPath === '/vehicles'
+  );
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(
+    currentPath.startsWith('/settings')
+  );
+
+  const [dbStatus, setDbStatus] = useState<'checking' | 'connected' | 'error'>('checking');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function checkDbConnection() {
+      try {
+        const { error } = await supabase
+          .from('vehicles')
+          .select('vehicle_id', { count: 'exact', head: true })
+          .limit(1);
+
+        if (error) throw error;
+        if (isMounted) setDbStatus('connected');
+      } catch (err) {
+        console.error('Database connection heartbeat failed:', err);
+        if (isMounted) setDbStatus('error');
+      }
+    }
+
+    checkDbConnection();
+    const interval = setInterval(checkDbConnection, 30000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   return (
-    <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col h-screen p-4 justify-between">
-      {/* Top Brand / Logo Section */}
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center gap-2 px-2">
-          <div className="p-2 bg-indigo-600 rounded-lg text-white">
-            <Car className="w-5 h-5" />
-          </div>
-          <span className="font-bold text-slate-100 text-base tracking-tight">RBMMS Dashboard</span>
+    <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col h-screen select-none">
+      {/* Brand / Logo Header */}
+      <div className="p-6 border-b border-slate-800 flex items-center gap-3">
+        <div className="p-2 bg-blue-600/20 text-blue-400 rounded-xl">
+          <Car className="w-6 h-6" />
         </div>
-
-        {/* Navigation Links */}
-        <nav className="flex flex-col gap-1">
-          <Link
-            to="/"
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-              isActive('/') 
-                ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
-          >
-            <LayoutDashboard className="w-4 h-4" />
-            Dashboard
-          </Link>
-
-          <Link
-            to="/vehicles"
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-              isActive('/vehicles') 
-                ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
-          >
-            <Car className="w-4 h-4" />
-            Vehicle PM Details
-          </Link>
-
-          {/* NEW MAINTENANCE PLAN MENU */}
-          <Link
-            to="/maintenance-plan"
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-              isActive('/maintenance-plan') 
-                ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
-          >
-            <Wrench className="w-4 h-4" />
-            Maintenance Plan
-          </Link>
-
-          <Link
-            to="/settings"
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-              isActive('/settings') 
-                ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
-          >
-            <Settings className="w-4 h-4" />
-            Settings
-          </Link>
-        </nav>
+        <div>
+          <h1 className="font-bold text-slate-100 tracking-tight text-base">Fleet Management</h1>
+          <p className="text-xs text-slate-400">Operations Portal</p>
+        </div>
       </div>
 
-      {/* Bottom Section: Supabase Heartbeat Widget */}
-      <div className="pt-4 border-t border-slate-800/80">
-        <SupabaseHeartbeat />
+      {/* Navigation Links */}
+      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+        <button
+          onClick={() => navigate('/')}
+          className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
+            currentPath === '/'
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+              : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900'
+          }`}
+        >
+          <LayoutDashboard className="w-4 h-4" />
+          <span>Dashboard</span>
+        </button>
+
+        {/* Maintenance Plan Accordion */}
+        <div className="space-y-1">
+          <button
+            onClick={() => setIsMaintenanceOpen(!isMaintenanceOpen)}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-900 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <Wrench className="w-4 h-4 text-blue-400" />
+              <span>Maintenance Plan</span>
+            </div>
+            {isMaintenanceOpen ? (
+              <ChevronDown className="w-4 h-4 text-slate-400" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            )}
+          </button>
+
+          {isMaintenanceOpen && (
+            <div className="pl-9 pr-2 space-y-1 py-1 border-l border-slate-800 ml-4">
+              <button
+                onClick={() => navigate('/daily-inspection')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/daily-inspection'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <ClipboardList className="w-3.5 h-3.5" />
+                <span>Daily Inspection</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/vehicles')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/vehicles'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Vehicle PM Details</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* System Heartbeat */}
+        <button
+          onClick={() => navigate('/heartbeat')}
+          className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
+            currentPath === '/heartbeat'
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+              : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900'
+          }`}
+        >
+          <Activity className="w-4 h-4 text-emerald-400" />
+          <span>System Heartbeat</span>
+        </button>
+
+        {/* Settings Accordion */}
+        <div className="space-y-1">
+          <button
+            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-900 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <Settings className="w-4 h-4 text-blue-400" />
+              <span>Settings</span>
+            </div>
+            {isSettingsOpen ? (
+              <ChevronDown className="w-4 h-4 text-slate-400" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            )}
+          </button>
+
+          {isSettingsOpen && (
+            <div className="pl-9 pr-2 space-y-1 py-1 border-l border-slate-800 ml-4">
+              <button
+                onClick={() => navigate('/settings/service-standards')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/settings/service-standards'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <ShieldAlert className="w-3.5 h-3.5" />
+                <span>Service Standards</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/settings/vehicle-types')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/settings/vehicle-types'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Vehicle Types</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/settings/vehicle-makes')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/settings/vehicle-makes'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <Tag className="w-3.5 h-3.5" />
+                <span>Vehicle Makes</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/settings/vehicle-models')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/settings/vehicle-models'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <Car className="w-3.5 h-3.5" />
+                <span>Vehicle Models</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </nav>
+
+      {/* Database Status Footer */}
+      <div className="p-4 border-t border-slate-800">
+        <div className="bg-slate-900 border border-slate-800 rounded-lg p-2.5 flex items-center justify-between text-xs">
+          <span className="text-slate-400 font-medium">Database Status</span>
+          <div className="flex items-center gap-2">
+            {dbStatus === 'checking' && (
+              <>
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span className="text-amber-400">Connecting...</span>
+              </>
+            )}
+            {dbStatus === 'connected' && (
+              <>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
+                <span className="text-emerald-400 font-semibold">Connected</span>
+              </>
+            )}
+            {dbStatus === 'error' && (
+              <>
+                <span className="w-2 h-2 rounded-full bg-red-500" />
+                <span className="text-red-400 font-semibold">Offline</span>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </aside>
   );
 }
+
+export default Sidebar;

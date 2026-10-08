@@ -1,28 +1,24 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Sidebar } from '@/components/Sidebar';
 import { VehiclePmViewer } from '@/components/VehiclePmViewer';
+import { DailyInspection } from '@/components/DailyInspection';
+import { ServiceStandards } from '@/components/ServiceStandards'; 
 
 export function App() {
   return (
     <BrowserRouter>
-      <div className="flex h-screen w-screen overflow-hidden bg-slate-950">
-        {/* Persistent Sidebar with Heartbeat & Navigation */}
+      <div className="flex bg-slate-950 min-h-screen text-slate-100 w-full">
+        {/* Sidebar is now INSIDE BrowserRouter so <Link> and useLocation work */}
         <Sidebar />
-
-        {/* Main Content Area */}
-        <main className="flex-1 flex flex-col h-full overflow-y-auto p-6 bg-slate-900">
+        
+        <main className="flex-1 overflow-y-auto">
           <Routes>
-            {/* Default redirect or dashboard route */}
-            <Route path="/" element={<div className="text-slate-100 text-lg font-semibold">Welcome to RBMMS Dashboard</div>} />
-            
-            {/* Vehicle PM Details Page */}
+            <Route path="/" element={<div className="p-6 text-xl font-bold">Dashboard Home</div>} />
             <Route path="/vehicles" element={<VehiclePmViewer />} />
-
-            {/* Maintenance Plan Page (using the same view or a custom one) */}
-            <Route path="/maintenance-plan" element={<VehiclePmViewer />} />
-
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="/daily-inspection" element={<DailyInspection />} />
+            <Route path="/maintenance-plan" element={<div className="p-6 text-xl font-bold">Maintenance Plan</div>} />
+            <Route path="/settings" element={<div className="p-6 text-xl font-bold">Settings</div>} />
+            <Route path="/settings/service-standards" element={<ServiceStandards />} />
           </Routes>
         </main>
       </div>
