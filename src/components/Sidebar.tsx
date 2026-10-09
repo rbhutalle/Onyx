@@ -6,7 +6,6 @@ import {
   Wrench, 
   ClipboardList, 
   FileText, 
-  Activity, 
   ChevronDown, 
   ChevronRight, 
   Car,
@@ -15,7 +14,9 @@ import {
   Calendar,
   Cpu,
   CheckSquare,
-  Wrench as WrenchIcon
+  Wrench as WrenchIcon,
+  ClipboardCheck,
+  LayoutGrid
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -27,6 +28,10 @@ export function Sidebar() {
     currentPath === '/daily-inspection' || 
     currentPath === '/vehicles' || 
     currentPath === '/maintenance-forecast'
+  );
+
+  const [isJobOrderOpen, setIsJobOrderOpen] = useState<boolean>(
+    currentPath.startsWith('/job-orders')
   );
 
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(
@@ -147,18 +152,51 @@ export function Sidebar() {
           )}
         </div>
 
-        {/* System Heartbeat */}
-        <button
-          onClick={() => navigate('/heartbeat')}
-          className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
-            currentPath === '/heartbeat'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-              : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900'
-          }`}
-        >
-          <Activity className="w-4 h-4 text-emerald-400" />
-          <span>System Heartbeat</span>
-        </button>
+        {/* Job Order System Accordion */}
+        <div className="space-y-1">
+          <button
+            onClick={() => setIsJobOrderOpen(!isJobOrderOpen)}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-900 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <ClipboardCheck className="w-4 h-4 text-blue-400" />
+              <span>Job Order System</span>
+            </div>
+            {isJobOrderOpen ? (
+              <ChevronDown className="w-4 h-4 text-slate-400" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            )}
+          </button>
+
+          {isJobOrderOpen && (
+            <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-slate-800">
+              <button
+                onClick={() => navigate('/job-orders/dashboard')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/job-orders/dashboard'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Dashboard</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/job-orders')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/job-orders'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <WrenchIcon className="w-3.5 h-3.5" />
+                <span>Job Order</span>
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Settings Accordion */}
         <div className="space-y-1">

@@ -8,6 +8,8 @@ import { SystemComponents } from '@/components/SystemComponents';
 import { TaskStandards } from '@/components/TaskStandards';
 import { VehicleModels } from '@/components/VehicleModels';
 import { JobOrderSettings } from '@/components/JobOrderSettings';
+import { JobOrder } from '@/components/JobOrder';
+import { JobOrderDashboard } from '@/components/JobOrderDashboard';
 
 export function App() {
   return (
@@ -23,6 +25,8 @@ export function App() {
             <Route path="/daily-inspection" element={<DailyInspection />} />
             <Route path="/maintenance-plan" element={<div className="p-6 text-xl font-bold">Maintenance Plan</div>} />
             <Route path="/maintenance-forecast" element={<MaintenanceForecast />} />
+            <Route path="/job-orders" element={<JobOrder />} />
+            <Route path="/job-orders/dashboard" element={<JobOrderDashboard />} />
             <Route path="/settings" element={<div className="p-6 text-xl font-bold">Settings</div>} />
             <Route path="/settings/service-standards" element={<ServiceStandards />} />
             <Route path="/settings/system-components" element={<SystemComponents />} />

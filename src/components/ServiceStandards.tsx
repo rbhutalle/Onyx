@@ -347,12 +347,13 @@ export function ServiceStandards() {
           )}
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Scrollable Container with Sticky Table Headers */}
+        <div className="overflow-y-auto overflow-x-auto max-h-[calc(100vh-360px)] border border-slate-800/60 rounded-lg">
           {/* TAB 1: STANDARDS */}
           {activeTab === 'standards' && (
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950/50">
+                <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
                   <th className="p-3">Code</th>
                   <th className="p-3">Description</th>
                   <th className="p-3 text-right">Actions</th>
@@ -393,7 +394,7 @@ export function ServiceStandards() {
           {activeTab === 'intervals' && (
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950/50">
+                <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
                   <th className="p-3">Standard Code</th>
                   <th className="p-3">PM Code</th>
                   <th className="p-3">Interval</th>
@@ -447,7 +448,7 @@ export function ServiceStandards() {
           {activeTab === 'thresholds' && (
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950/50">
+                <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
                   <th className="p-3">PM Threshold</th>
                   <th className="p-3">PM Hrs Converter</th>
                   <th className="p-3">PM Calendar Converter</th>
@@ -545,7 +546,7 @@ export function ServiceStandards() {
                       <option value="">Select Service Standard</option>
                       {standards.map((std) => (
                         <option key={std.service_standard_id} value={std.service_standard_id}>
-                          {std.code} - {std.description ? std.description.substring(0, 40) : ''}
+                          {std.code} {std.description ? `- ${std.description.substring(0, 40)}` : ''}
                         </option>
                       ))}
                     </select>
@@ -590,7 +591,7 @@ export function ServiceStandards() {
                       id="is_active_chk"
                       checked={intervalForm.is_active}
                       onChange={(e) => setIntervalForm({ ...intervalForm, is_active: e.target.checked })}
-                      className="rounded bg-slate-950 border-slate-800 text-blue-600 focus:ring-0 w-4 h-4"
+                      className="rounded bg-slate-950 border-slate-800 text-blue-600 focus:ring-0 w-4 h-4 cursor-pointer"
                     />
                     <label htmlFor="is_active_chk" className="text-xs font-semibold uppercase text-slate-400 cursor-pointer">Is Active</label>
                   </div>

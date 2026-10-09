@@ -248,7 +248,7 @@ export function VehicleModels() {
         </div>
       )}
 
-      {/* Clean Tab Navigation (Tab 1: Makes, Tab 2: Models, Tab 3: Types) */}
+      {/* Clean Tab Navigation */}
       <div className="flex border-b border-slate-800 gap-2">
         <button
           onClick={() => setActiveTab('makes')}
