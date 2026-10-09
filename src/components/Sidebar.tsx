@@ -12,9 +12,9 @@ import {
   Car,
   Settings,
   ShieldAlert,
-  Layers,
-  Tag,
-  Calendar
+  Calendar,
+  Cpu,
+  CheckSquare
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -191,30 +191,6 @@ export function Sidebar() {
               </button>
 
               <button
-                onClick={() => navigate('/settings/vehicle-types')}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  currentPath === '/settings/vehicle-types'
-                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Vehicle Types</span>
-              </button>
-
-              <button
-                onClick={() => navigate('/settings/vehicle-makes')}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  currentPath === '/settings/vehicle-makes'
-                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
-                }`}
-              >
-                <Tag className="w-3.5 h-3.5" />
-                <span>Vehicle Makes</span>
-              </button>
-
-              <button
                 onClick={() => navigate('/settings/vehicle-models')}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   currentPath === '/settings/vehicle-models'
@@ -224,6 +200,30 @@ export function Sidebar() {
               >
                 <Car className="w-3.5 h-3.5" />
                 <span>Vehicle Models</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/settings/system-components')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/settings/system-components'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <Cpu className="w-3.5 h-3.5" />
+                <span>System & Components</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/settings/task-standards')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/settings/task-standards'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <CheckSquare className="w-3.5 h-3.5" />
+                <span>Task Standards</span>
               </button>
             </div>
           )}
