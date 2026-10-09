@@ -7,6 +7,7 @@ import { MaintenanceForecast } from '@/components/MaintenanceForecast';
 import { SystemComponents } from '@/components/SystemComponents';
 import { TaskStandards } from '@/components/TaskStandards';
 import { VehicleModels } from '@/components/VehicleModels';
+import { JobOrderSettings } from '@/components/JobOrderSettings';
 
 export function App() {
   return (
@@ -27,6 +28,7 @@ export function App() {
             <Route path="/settings/system-components" element={<SystemComponents />} />
             <Route path="/settings/task-standards" element={<TaskStandards />} />
             <Route path="/settings/vehicle-models" element={<VehicleModels />} />
+            <Route path="/settings/job-order-config" element={<JobOrderSettings />} />
           </Routes>
         </main>
       </div>
