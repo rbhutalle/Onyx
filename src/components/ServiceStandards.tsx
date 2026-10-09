@@ -37,6 +37,7 @@ interface ThresholdRecord {
   pm_threshold: number | null;
   pm_hrs_converter: number | null;
   pm_calendar_converter: number | null;
+  average_lookback: number | null;
   created_at: string;
   updated_at: string;
   [key: string]: unknown;
@@ -72,7 +73,8 @@ export function ServiceStandards() {
   const [thresholdForm, setThresholdForm] = useState({ 
     pm_threshold: '', 
     pm_hrs_converter: '', 
-    pm_calendar_converter: '' 
+    pm_calendar_converter: '', 
+    average_lookback: '' 
   });
 
   useEffect(() => {
@@ -119,7 +121,12 @@ export function ServiceStandards() {
       description: '', 
       is_active: true 
     });
-    setThresholdForm({ pm_threshold: '', pm_hrs_converter: '', pm_calendar_converter: '' });
+    setThresholdForm({ 
+      pm_threshold: '', 
+      pm_hrs_converter: '', 
+      pm_calendar_converter: '', 
+      average_lookback: '' 
+    });
     setIsModalOpen(true);
   };
 
@@ -148,6 +155,7 @@ export function ServiceStandards() {
         pm_threshold: rec.pm_threshold !== null ? String(rec.pm_threshold) : '',
         pm_hrs_converter: rec.pm_hrs_converter !== null ? String(rec.pm_hrs_converter) : '',
         pm_calendar_converter: rec.pm_calendar_converter !== null ? String(rec.pm_calendar_converter) : '',
+        average_lookback: rec.average_lookback !== null && rec.average_lookback !== undefined ? String(rec.average_lookback) : '',
       });
     }
     setIsModalOpen(true);
@@ -212,6 +220,7 @@ export function ServiceStandards() {
           pm_threshold: thresholdForm.pm_threshold !== '' ? Number(thresholdForm.pm_threshold) : 0,
           pm_hrs_converter: thresholdForm.pm_hrs_converter !== '' ? Number(thresholdForm.pm_hrs_converter) : null,
           pm_calendar_converter: thresholdForm.pm_calendar_converter !== '' ? Number(thresholdForm.pm_calendar_converter) : null,
+          average_lookback: thresholdForm.average_lookback !== '' ? Number(thresholdForm.average_lookback) : null,
         };
         if (editingId) {
           const { error } = await supabase.from('service_thresholds').update(payload).eq('thresholds_id', editingId);
@@ -442,6 +451,7 @@ export function ServiceStandards() {
                   <th className="p-3">PM Threshold</th>
                   <th className="p-3">PM Hrs Converter</th>
                   <th className="p-3">PM Calendar Converter</th>
+                  <th className="p-3">Average Lookback</th>
                   <th className="p-3">Updated At</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
@@ -449,7 +459,7 @@ export function ServiceStandards() {
               <tbody className="divide-y divide-slate-800 text-slate-300">
                 {thresholds.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-slate-500">No service thresholds found.</td>
+                    <td colSpan={6} className="p-8 text-center text-slate-500">No service thresholds found.</td>
                   </tr>
                 ) : (
                   thresholds.map((item) => (
@@ -457,6 +467,7 @@ export function ServiceStandards() {
                       <td className="p-3 font-semibold text-amber-400">{item.pm_threshold ?? '0'}</td>
                       <td className="p-3 text-slate-300">{item.pm_hrs_converter ?? '—'}</td>
                       <td className="p-3 text-slate-300">{item.pm_calendar_converter ?? '—'}</td>
+                      <td className="p-3 text-slate-300">{item.average_lookback ?? '—'}</td>
                       <td className="p-3 font-mono text-xs text-slate-400">
                         {item.updated_at ? new Date(item.updated_at).toLocaleString() : '—'}
                       </td>
@@ -618,6 +629,17 @@ export function ServiceStandards() {
                       step="any"
                       value={thresholdForm.pm_calendar_converter}
                       onChange={(e) => setThresholdForm({ ...thresholdForm, pm_calendar_converter: e.target.value })}
+                      placeholder="e.g. 30"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Average Lookback</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={thresholdForm.average_lookback}
+                      onChange={(e) => setThresholdForm({ ...thresholdForm, average_lookback: e.target.value })}
                       placeholder="e.g. 30"
                       className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
                     />

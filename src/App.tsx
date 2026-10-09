@@ -3,6 +3,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { VehiclePmViewer } from '@/components/VehiclePmViewer';
 import { DailyInspection } from '@/components/DailyInspection';
 import { ServiceStandards } from '@/components/ServiceStandards'; 
+import { MaintenanceForecast } from '@/components/MaintenanceForecast';
 
 export function App() {
   return (
@@ -17,6 +18,7 @@ export function App() {
             <Route path="/vehicles" element={<VehiclePmViewer />} />
             <Route path="/daily-inspection" element={<DailyInspection />} />
             <Route path="/maintenance-plan" element={<div className="p-6 text-xl font-bold">Maintenance Plan</div>} />
+            <Route path="/maintenance-forecast" element={<MaintenanceForecast />} />
             <Route path="/settings" element={<div className="p-6 text-xl font-bold">Settings</div>} />
             <Route path="/settings/service-standards" element={<ServiceStandards />} />
           </Routes>
