@@ -3,6 +3,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { VehiclePmViewer } from '@/components/VehiclePmViewer';
 import { DailyInspection } from '@/components/DailyInspection';
 import { ServiceStandards } from '@/components/ServiceStandards'; 
+import { OperationsStandards } from '@/components/OperationsStandards';
 import { MaintenanceForecast } from '@/components/MaintenanceForecast';
 import { SystemComponents } from '@/components/SystemComponents';
 import { TaskStandards } from '@/components/TaskStandards';
@@ -10,6 +11,9 @@ import { VehicleModels } from '@/components/VehicleModels';
 import { JobOrderSettings } from '@/components/JobOrderSettings';
 import { JobOrder } from '@/components/JobOrder';
 import { JobOrderDashboard } from '@/components/JobOrderDashboard';
+import { VehicleRegistry } from '@/components/VehicleRegistry';
+import { EmployeeRegistry } from '@/components/EmployeeRegistry';
+import { ComponentRegistry } from '@/components/ComponentRegistry';
 
 export function App() {
   return (
@@ -27,8 +31,16 @@ export function App() {
             <Route path="/maintenance-forecast" element={<MaintenanceForecast />} />
             <Route path="/job-orders" element={<JobOrder />} />
             <Route path="/job-orders/dashboard" element={<JobOrderDashboard />} />
+            
+            {/* Global Settings / Registry Routes */}
+            <Route path="/global-settings/vehicle-registry" element={<VehicleRegistry />} />
+            <Route path="/global-settings/employee-registry" element={<EmployeeRegistry />} />
+            <Route path="/global-settings/component-registry" element={<ComponentRegistry />} />
+
+            {/* Settings Routes */}
             <Route path="/settings" element={<div className="p-6 text-xl font-bold">Settings</div>} />
             <Route path="/settings/service-standards" element={<ServiceStandards />} />
+            <Route path="/settings/operations-standards" element={<OperationsStandards />} />
             <Route path="/settings/system-components" element={<SystemComponents />} />
             <Route path="/settings/task-standards" element={<TaskStandards />} />
             <Route path="/settings/vehicle-models" element={<VehicleModels />} />

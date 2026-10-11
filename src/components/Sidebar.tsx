@@ -16,7 +16,11 @@ import {
   CheckSquare,
   Wrench as WrenchIcon,
   ClipboardCheck,
-  LayoutGrid
+  LayoutGrid,
+  Activity,
+  Globe,
+  Users,
+  Layers
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -34,7 +38,11 @@ export function Sidebar() {
     currentPath.startsWith('/job-orders')
   );
 
-  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(
+  const [isAppRegistryOpen, setIsAppRegistryOpen] = useState<boolean>(
+    currentPath.startsWith('/global-settings')
+  );
+
+  const [isAppSettingsOpen, setIsAppSettingsOpen] = useState<boolean>(
     currentPath.startsWith('/settings')
   );
 
@@ -198,24 +206,82 @@ export function Sidebar() {
           )}
         </div>
 
-        {/* Settings Accordion */}
+        {/* App Registry Accordion */}
         <div className="space-y-1">
           <button
-            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+            onClick={() => setIsAppRegistryOpen(!isAppRegistryOpen)}
             className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-900 transition-colors cursor-pointer"
           >
             <div className="flex items-center gap-3">
-              <Settings className="w-4 h-4 text-blue-400" />
-              <span>Settings</span>
+              <Globe className="w-4 h-4 text-blue-400" />
+              <span>App Registry</span>
             </div>
-            {isSettingsOpen ? (
+            {isAppRegistryOpen ? (
               <ChevronDown className="w-4 h-4 text-slate-400" />
             ) : (
               <ChevronRight className="w-4 h-4 text-slate-400" />
             )}
           </button>
 
-          {isSettingsOpen && (
+          {isAppRegistryOpen && (
+            <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-slate-800">
+              <button
+                onClick={() => navigate('/global-settings/vehicle-registry')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/global-settings/vehicle-registry'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <Car className="w-3.5 h-3.5" />
+                <span>Vehicle Registry</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/global-settings/employee-registry')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/global-settings/employee-registry'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Employee Registry</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/global-settings/component-registry')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/global-settings/component-registry'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Component Registry</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* App Settings Accordion */}
+        <div className="space-y-1">
+          <button
+            onClick={() => setIsAppSettingsOpen(!isAppSettingsOpen)}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-900 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <Settings className="w-4 h-4 text-blue-400" />
+              <span>App Settings</span>
+            </div>
+            {isAppSettingsOpen ? (
+              <ChevronDown className="w-4 h-4 text-slate-400" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            )}
+          </button>
+
+          {isAppSettingsOpen && (
             <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-slate-800">
               <button
                 onClick={() => navigate('/settings/service-standards')}
@@ -227,6 +293,18 @@ export function Sidebar() {
               >
                 <ShieldAlert className="w-3.5 h-3.5" />
                 <span>Service Standards</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/settings/operations-standards')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/settings/operations-standards'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <Activity className="w-3.5 h-3.5" />
+                <span>Operations Standards</span>
               </button>
 
               <button
