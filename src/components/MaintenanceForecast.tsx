@@ -275,7 +275,30 @@ export function MaintenanceForecast() {
                             );
                           }
 
+                          // Split items and sort by Plate No and then by Date
                           const items = cellValue.split(', ').map((item) => item.trim()).filter(Boolean);
+                          
+                          items.sort((a, b) => {
+                            // Extract plate and date string using regex matching format "PLATE (Mon DD)"
+                            const matchA = a.match(/^(.+?)\s*\((.+?)\)$/);
+                            const matchB = b.match(/^(.+?)\s*\((.+?)\)$/);
+
+                            const plateA = matchA ? matchA[1].trim() : a;
+                            const dateStrA = matchA ? matchA[2].trim() : '';
+
+                            const plateB = matchB ? matchB[1].trim() : b;
+                            const dateStrB = matchB ? matchB[2].trim() : '';
+
+                            // 1. Primary sort by Plate No
+                            const plateCompare = plateA.localeCompare(plateB);
+                            if (plateCompare !== 0) return plateCompare;
+
+                            // 2. Secondary sort by Date (parsing 'Mon DD' assuming current year context)
+                            const timeA = dateStrA ? new Date(`${dateStrA} 2026`).getTime() : 0;
+                            const timeB = dateStrB ? new Date(`${dateStrB} 2026`).getTime() : 0;
+                            return timeA - timeB;
+                          });
+
                           const filteredItems = searchTrim === ''
                             ? items
                             : items.filter((item) => item.toLowerCase().includes(searchTrim));
