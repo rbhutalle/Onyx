@@ -142,7 +142,7 @@ export function Sidebar() {
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" />
-                <span>Vehicle PM Details</span>
+                <span>Equipment PM Details</span>
               </button>
 
               <button
@@ -234,7 +234,7 @@ export function Sidebar() {
                 }`}
               >
                 <Car className="w-3.5 h-3.5" />
-                <span>Vehicle Registry</span>
+                <span>Equipment Registry</span>
               </button>
 
               <button
@@ -316,7 +316,7 @@ export function Sidebar() {
                 }`}
               >
                 <Car className="w-3.5 h-3.5" />
-                <span>Vehicle Models</span>
+                <span>Equipment Models</span>
               </button>
 
               <button

@@ -130,7 +130,7 @@ export function MaintenanceForecast() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div>
               <h2 className="text-xs font-semibold text-slate-200 uppercase tracking-wider">Schedule Matrix</h2>
-              <p className="text-[11px] text-slate-400">Vehicle plate numbers and projected service dates grouped by PM level.</p>
+              <p className="text-[11px] text-slate-400">Equipment ID and projected service dates grouped by PM level.</p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
@@ -139,7 +139,7 @@ export function MaintenanceForecast() {
                 <Car className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Search vehicle plate..."
+                  placeholder="Search Equipment ID ..."
                   value={vehicleSearchQuery}
                   onChange={(e) => setVehicleSearchQuery(e.target.value)}
                   className="bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-7 py-1 text-xs text-slate-200 focus:outline-none focus:border-blue-500 placeholder:text-slate-500 w-40 sm:w-48"

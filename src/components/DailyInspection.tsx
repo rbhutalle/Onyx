@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { ClipboardList, Search, Calendar, Gauge, FileText, Loader2, CheckCircle, X, AlertCircle, Car, Activity } from 'lucide-react';
 
-interface VehiclePm {
+interface EquipmentPm {
   plate_no: string;
   service_rdg: number | null;
   make_name: string | null;
   model_name: string | null;
   type_description: string | null;
   id?: string;
+  equipment_id?: string;
   vehicle_id?: string;
   [key: string]: unknown;
 }
@@ -22,13 +23,13 @@ interface OperationsStatus {
 }
 
 export function DailyInspection() {
-  const [vehicles, setVehicles] = useState<VehiclePm[]>([]);
+  const [equipmentList, setEquipmentList] = useState<EquipmentPm[]>([]);
   const [operationsStatuses, setOperationsStatuses] = useState<OperationsStatus[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [showPicker, setShowPicker] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  const [selectedVehicle, setSelectedVehicle] = useState<VehiclePm | null>(null);
+  const [selectedEquipment, setSelectedEquipment] = useState<EquipmentPm | null>(null);
   const [logDate, setLogDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [currentReading, setCurrentReading] = useState<string>('');
   const [operationsId, setOperationsId] = useState<string>('');
@@ -38,9 +39,9 @@ export function DailyInspection() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Previous reading pulled directly from vehicle service reading
-  const previousRdg = selectedVehicle && selectedVehicle.service_rdg !== null && selectedVehicle.service_rdg !== undefined 
-    ? Number(selectedVehicle.service_rdg) 
+  // Previous reading pulled directly from equipment service reading
+  const previousRdg = selectedEquipment && selectedEquipment.service_rdg !== null && selectedEquipment.service_rdg !== undefined 
+    ? Number(selectedEquipment.service_rdg) 
     : 0;
 
   const numericCurrentRdg = Number(currentReading) || 0;
@@ -54,29 +55,29 @@ export function DailyInspection() {
       setErrorMsg(null);
       const activeQuery = queryToRun !== undefined ? queryToRun : searchQuery;
 
-      let vehicleQuery = supabase
+      let equipmentQuery = supabase
         .from('vw_vehicle_pm_details')
         .select('*')
         .order('plate_no', { ascending: true })
         .limit(50);
 
       if (activeQuery.trim()) {
-        vehicleQuery = vehicleQuery.ilike('plate_no', `%${activeQuery.trim()}%`);
+        equipmentQuery = equipmentQuery.ilike('plate_no', `%${activeQuery.trim()}%`);
       }
 
-      const [vehicleRes, statusRes] = await Promise.all([
-        vehicleQuery,
+      const [equipmentRes, statusRes] = await Promise.all([
+        equipmentQuery,
         supabase.from('operations_status').select('*')
       ]);
 
-      if (vehicleRes.error) throw vehicleRes.error;
+      if (equipmentRes.error) throw equipmentRes.error;
       if (statusRes.error) throw statusRes.error;
 
-      setVehicles(vehicleRes.data || []);
+      setEquipmentList(equipmentRes.data || []);
       setOperationsStatuses(statusRes.data || []);
     } catch (err: unknown) {
       console.error('Error fetching data:', err);
-      setErrorMsg('Failed to load vehicle or operations status records. Please try again later.');
+      setErrorMsg('Failed to load equipment or operations status records. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -86,16 +87,16 @@ export function DailyInspection() {
     let isMounted = true;
     async function loadInitialData() {
       try {
-        const [vehicleRes, statusRes] = await Promise.all([
+        const [equipmentRes, statusRes] = await Promise.all([
           supabase.from('vw_vehicle_pm_details').select('*').order('plate_no', { ascending: true }).limit(50),
           supabase.from('operations_status').select('*')
         ]);
 
-        if (vehicleRes.error) throw vehicleRes.error;
+        if (equipmentRes.error) throw equipmentRes.error;
         if (statusRes.error) throw statusRes.error;
 
         if (isMounted) {
-          setVehicles(vehicleRes.data || []);
+          setEquipmentList(equipmentRes.data || []);
           setOperationsStatuses(statusRes.data || []);
         }
       } catch (err: unknown) {
@@ -120,8 +121,8 @@ export function DailyInspection() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedVehicle) {
-      setErrorMsg('Please select a vehicle first.');
+    if (!selectedEquipment) {
+      setErrorMsg('Please select an equipment first.');
       return;
     }
     if (!currentReading || isNaN(Number(currentReading))) {
@@ -129,7 +130,7 @@ export function DailyInspection() {
       return;
     }
     if (numericCurrentRdg < previousRdg) {
-      setErrorMsg('Current reading cannot be less than the previous vehicle service reading.');
+      setErrorMsg('Current reading cannot be less than the previous equipment service reading.');
       return;
     }
 
@@ -138,14 +139,14 @@ export function DailyInspection() {
       setErrorMsg(null);
       setSuccessMsg(null);
 
-      const vehicleId = selectedVehicle.vehicle_id || selectedVehicle.id;
-      if (!vehicleId) {
-        throw new Error('Vehicle ID is missing from the selected record.');
+      const equipmentId = selectedEquipment.equipment_id || selectedEquipment.vehicle_id || selectedEquipment.id;
+      if (!equipmentId) {
+        throw new Error('Equipment ID is missing from the selected record.');
       }
 
       // Explicitly passing previous_rdg and current_rdg to the RPC function
       const { error: rpcError } = await supabase.rpc('record_vehicle_daily_log', {
-        p_vehicle_id: vehicleId,
+        p_vehicle_id: equipmentId,
         p_log_date: logDate,
         p_previous_rdg: previousRdg,
         p_current_rdg: numericCurrentRdg,
@@ -156,11 +157,11 @@ export function DailyInspection() {
 
       if (rpcError) throw rpcError;
 
-      setSuccessMsg(`Daily inspection successfully recorded for plate ${selectedVehicle.plate_no}!`);
+      setSuccessMsg(`Daily inspection successfully recorded for equipment plate/ID ${selectedEquipment.plate_no}!`);
       setCurrentReading('');
       setOperationsId('');
       setRemarks('');
-      setSelectedVehicle(null);
+      setSelectedEquipment(null);
       await fetchData();
 
       setTimeout(() => {
@@ -177,13 +178,13 @@ export function DailyInspection() {
 
         switch (supabaseErr.code) {
           case '23505':
-            userFriendlyMessage = 'A daily inspection log for this vehicle on this date already exists.';
+            userFriendlyMessage = 'A daily inspection log for this equipment on this date already exists.';
             break;
           case '42501':
             userFriendlyMessage = 'You do not have permission to perform this action.';
             break;
           case '23503':
-            userFriendlyMessage = 'The selected vehicle record or operations status is invalid.';
+            userFriendlyMessage = 'The selected equipment record or operations status is invalid.';
             break;
           case '23514':
             userFriendlyMessage = 'The provided values violate system validation rules.';
@@ -206,7 +207,7 @@ export function DailyInspection() {
         <ClipboardList className="w-8 h-8 text-blue-500" />
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-100">Daily Inspection Log</h1>
-          <p className="text-sm text-slate-400">Record daily telemetry increments and mileage/hour readings for active vehicles.</p>
+          <p className="text-sm text-slate-400">Record daily telemetry increments and mileage/hour readings for active equipment.</p>
         </div>
       </div>
 
@@ -228,37 +229,37 @@ export function DailyInspection() {
       <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-xl overflow-hidden">
         <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[calc(100vh-180px)] overflow-y-auto">
           
-          {/* Vehicle Selector Section */}
+          {/* Equipment Selector Section */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
-              Selected Vehicle <span className="text-red-500">*</span>
+              Selected Equipment <span className="text-red-500">*</span>
             </label>
             
-            {selectedVehicle ? (
+            {selectedEquipment ? (
               <div className="flex items-center justify-between bg-slate-950 border border-blue-900/60 p-4 rounded-xl">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full text-sm">
                   <div>
-                    <span className="text-xs text-slate-400 uppercase">Plate Number</span>
-                    <div className="font-bold text-blue-400 text-base">{selectedVehicle.plate_no}</div>
+                    <span className="text-xs text-slate-400 uppercase">Plate Number / ID</span>
+                    <div className="font-bold text-blue-400 text-base">{selectedEquipment.plate_no}</div>
                   </div>
                   <div>
                     <span className="text-xs text-slate-400 uppercase">Current Reading</span>
-                    <div className="font-semibold text-slate-100">{selectedVehicle.service_rdg ?? '0'}</div>
+                    <div className="font-semibold text-slate-100">{selectedEquipment.service_rdg ?? '0'}</div>
                   </div>
                   <div>
                     <span className="text-xs text-slate-400 uppercase">Make / Model</span>
-                    <div className="font-semibold text-slate-100">{selectedVehicle.make_name || 'N/A'} {selectedVehicle.model_name ? `/ ${selectedVehicle.model_name}` : ''}</div>
+                    <div className="font-semibold text-slate-100">{selectedEquipment.make_name || 'N/A'} {selectedEquipment.model_name ? `/ ${selectedEquipment.model_name}` : ''}</div>
                   </div>
                   <div>
                     <span className="text-xs text-slate-400 uppercase">Type</span>
-                    <div className="font-semibold text-slate-100">{selectedVehicle.type_description || 'N/A'}</div>
+                    <div className="font-semibold text-slate-100">{selectedEquipment.type_description || 'N/A'}</div>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setSelectedVehicle(null)}
+                  onClick={() => setSelectedEquipment(null)}
                   className="text-slate-400 hover:text-red-400 p-2 transition-colors cursor-pointer"
-                  title="Change vehicle"
+                  title="Change equipment"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -271,14 +272,14 @@ export function DailyInspection() {
               >
                 <span className="flex items-center gap-2">
                   <Search className="w-4 h-4 text-blue-400" />
-                  {vehicles.length > 0 ? `Click here to select a vehicle (${vehicles.length} loaded)...` : 'Click here to select a vehicle...'}
+                  {equipmentList.length > 0 ? `Click here to select an equipment (${equipmentList.length} loaded)...` : 'Click here to select an equipment...'}
                 </span>
                 <span className="text-xs bg-blue-600/20 text-blue-400 px-2 py-1 rounded font-medium">Browse</span>
               </button>
             )}
           </div>
 
-          {/* Date, Current Reading, and Operations Status Grid (3 columns on desktop) */}
+          {/* Date, Current Reading, and Operations Status Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
               <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
@@ -333,14 +334,14 @@ export function DailyInspection() {
             </div>
           </div>
 
-          {/* Telemetry Display Grid (Previous Reading & Computed Daily Increment Preview) */}
+          {/* Telemetry Display Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-950/60 border border-slate-800 p-4 rounded-xl">
             <div>
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Previous Reading</span>
               <div className="text-lg font-mono font-bold text-blue-400">
                 {previousRdg.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
               </div>
-              <span className="text-[11px] text-slate-500">Pulled from vehicle service reading</span>
+              <span className="text-[11px] text-slate-500">Pulled from equipment service reading</span>
             </div>
 
             <div>
@@ -360,18 +361,18 @@ export function DailyInspection() {
             </label>
             <textarea
               rows={3}
-              placeholder="e.g. Standard delivery route, minor maintenance check performed..."
+              placeholder="e.g. Standard operation route, minor maintenance check performed..."
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
               className="w-full bg-slate-950 border border-slate-700 text-slate-100 px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-          {/* Explicitly Visible Save/Submit Button */}
+          {/* Submit Button */}
           <div className="flex items-center justify-end pt-4 border-t border-slate-800">
             <button
               type="submit"
-              disabled={submitting || !selectedVehicle}
+              disabled={submitting || !selectedEquipment}
               className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-6 py-3 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 cursor-pointer shadow-xl"
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -381,12 +382,12 @@ export function DailyInspection() {
         </form>
       </div>
 
-      {/* Vehicle Picker Modal */}
+      {/* Equipment Picker Modal */}
       {showPicker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col">
             <div className="flex justify-between items-center px-6 py-4 border-b border-slate-800 bg-slate-950">
-              <h3 className="text-lg font-semibold text-slate-100">Select Vehicle</h3>
+              <h3 className="text-lg font-semibold text-slate-100">Select Equipment</h3>
               <button
                 type="button"
                 onClick={() => setShowPicker(false)}
@@ -401,7 +402,7 @@ export function DailyInspection() {
                 <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Filter by Plate Number..."
+                  placeholder="Filter by Equipment ID  / ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 text-slate-100 pl-9 pr-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -419,18 +420,18 @@ export function DailyInspection() {
               {loading ? (
                 <div className="py-12 text-center text-slate-400 flex items-center justify-center gap-2">
                   <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
-                  <span>Loading vehicle records...</span>
+                  <span>Loading equipment records...</span>
                 </div>
-              ) : vehicles.length === 0 ? (
+              ) : equipmentList.length === 0 ? (
                 <div className="py-12 text-center text-slate-400">
-                  No vehicle records found.
+                  No equipment records found.
                 </div>
               ) : (
-                vehicles.map((v, index) => (
+                equipmentList.map((eq, index) => (
                   <div
-                    key={v.vehicle_id || v.id || index}
+                    key={eq.equipment_id || eq.vehicle_id || eq.id || index}
                     onClick={() => {
-                      setSelectedVehicle(v);
+                      setSelectedEquipment(eq);
                       setShowPicker(false);
                     }}
                     className="flex items-center justify-between bg-slate-950 hover:bg-blue-950/40 border border-slate-800 hover:border-blue-600/50 p-3 rounded-lg transition-colors cursor-pointer group"
@@ -440,15 +441,15 @@ export function DailyInspection() {
                         <Car className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="font-bold text-blue-400">{v.plate_no}</div>
+                        <div className="font-bold text-blue-400">{eq.plate_no}</div>
                         <div className="text-xs text-slate-400">
-                          {v.make_name || 'N/A'} {v.model_name ? `/ ${v.model_name}` : ''} ({v.type_description || 'N/A'})
+                          {eq.make_name || 'N/A'} {eq.model_name ? `/ ${eq.model_name}` : ''} ({eq.type_description || 'N/A'})
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
                       <span className="text-xs text-slate-400 uppercase">Service Rdg</span>
-                      <div className="text-sm font-semibold text-slate-200">{v.service_rdg ?? '0'}</div>
+                      <div className="text-sm font-semibold text-slate-200">{eq.service_rdg ?? '0'}</div>
                     </div>
                   </div>
                 ))

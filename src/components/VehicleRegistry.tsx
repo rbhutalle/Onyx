@@ -248,7 +248,7 @@ export function VehicleRegistry() {
       setVehicleLogs(logRes.data || []);
     } catch (err: unknown) {
       console.error('Error loading vehicle details:', err);
-      setErrorMsg('Failed to load records for the selected vehicle.');
+      setErrorMsg('Failed to load records for the selected Equipment.');
     }
   };
 
@@ -284,7 +284,7 @@ export function VehicleRegistry() {
       if (error) throw error;
       setSearchVehiclesList(data || []);
     } catch (err) {
-      console.error('Error searching vehicles:', err);
+      console.error('Error searching Equipments:', err);
     } finally {
       setPickerLoading(false);
     }
@@ -359,7 +359,7 @@ export function VehicleRegistry() {
     } catch (err: unknown) {
       const errObj = err as Record<string, unknown>;
       const errorDetail = (errObj?.message as string) || (errObj?.details as string) || JSON.stringify(err);
-      setErrorMsg(`Failed to initialize vehicle: ${errorDetail}`);
+      setErrorMsg(`Failed to initialize Equipment: ${errorDetail}`);
     }
   };
 
@@ -477,7 +477,7 @@ export function VehicleRegistry() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this vehicle?')) return;
+    if (!confirm('Are you sure you want to delete this Equipment?')) return;
     try {
       setErrorMsg(null);
       const { error } = await supabase
@@ -487,12 +487,12 @@ export function VehicleRegistry() {
 
       if (error) throw error;
 
-      setSuccessMsg('Vehicle deleted successfully!');
+      setSuccessMsg('Equipment deleted successfully!');
       setIsModalOpen(false);
       handleClearSelection();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: unknown) {
-      console.error('Error deleting vehicle:', err);
+      console.error('Error deleting Equipment:', err);
       const errObj = err as Record<string, unknown>;
       const errorDetail = (errObj?.message as string) || (errObj?.details as string) || JSON.stringify(err);
       setErrorMsg(`Failed to delete record: ${errorDetail}`);
@@ -553,7 +553,7 @@ export function VehicleRegistry() {
 
       if (error) throw error;
 
-      setSuccessMsg(editingId ? 'Vehicle updated successfully!' : 'Vehicle registered successfully!');
+      setSuccessMsg(editingId ? 'Equipment updated successfully!' : 'Equipment registered successfully!');
       setIsModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 4000);
 
@@ -591,8 +591,8 @@ export function VehicleRegistry() {
           <Car className="w-7 h-7" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-100">Vehicle Registry & Operations</h1>
-          <p className="text-sm text-slate-400">Search a vehicle to inspect its registry, PM schedule, and daily logs.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-100">Equipment Registry & Operations</h1>
+          <p className="text-sm text-slate-400">Search an Equipment to inspect its registry, PM schedule, and daily logs.</p>
         </div>
       </div>
 
@@ -676,7 +676,7 @@ export function VehicleRegistry() {
               >
                 <span className="flex items-center gap-2">
                   <Search className="w-4 h-4 text-blue-400" />
-                  Click here to search and select a vehicle...
+                  Click here to search and select an Equipment...
                 </span>
                 <span className="text-xs bg-blue-600/20 text-blue-400 px-2 py-1 rounded font-medium">Browse</span>
               </button>
@@ -696,7 +696,7 @@ export function VehicleRegistry() {
           }`}
         >
           <Car className="w-4 h-4" />
-          <span>Vehicle Details ({vehicles.length})</span>
+          <span>Equipment Details ({vehicles.length})</span>
         </button>
 
         <button
@@ -708,7 +708,7 @@ export function VehicleRegistry() {
           }`}
         >
           <ShieldAlert className="w-4 h-4" />
-          <span>Vehicle PM Status ({vehiclePms.length})</span>
+          <span>Equipment PM Status ({vehiclePms.length})</span>
         </button>
 
         <button
@@ -733,7 +733,7 @@ export function VehicleRegistry() {
                 className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow"
               >
                 <Plus className="w-4 h-4" />
-                <span>Add Vehicle</span>
+                <span>Add Equipment</span>
               </button>
             </div>
 
@@ -752,7 +752,7 @@ export function VehicleRegistry() {
                 <tbody className="divide-y divide-slate-800 text-slate-300">
                   {vehicles.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-slate-500">No vehicle selected or found. Please search a vehicle above.</td>
+                      <td colSpan={6} className="p-8 text-center text-slate-500">No Equipment selected or found. Please search an Equipment above.</td>
                     </tr>
                   ) : (
                     vehicles.map((item) => {
@@ -814,7 +814,7 @@ export function VehicleRegistry() {
           <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-280px)] pr-2">
             {vehiclePms.length === 0 ? (
               <div className="p-12 text-center text-slate-500 bg-slate-950/50 rounded-xl border border-slate-800">
-                No PM schedule records found for the selected vehicle.
+                No PM schedule records found for the selected Equipment.
               </div>
             ) : (
               vehiclePms.map((pm) => {
@@ -850,7 +850,7 @@ export function VehicleRegistry() {
                           type="button"
                           disabled={!isInitialized}
                           onClick={() => handleOpenPmEdit(pm)}
-                          title={!isInitialized ? "Vehicle must be initialized before PM schedule can be updated." : "Update PM Schedule"}
+                          title={!isInitialized ? "Equipment must be initialized before PM schedule can be updated." : "Update PM Schedule"}
                           className={`px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow shrink-0 ${
                             isInitialized 
                               ? 'bg-blue-600 hover:bg-blue-500 text-white cursor-pointer' 
@@ -910,7 +910,7 @@ export function VehicleRegistry() {
               <thead>
                 <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
                   <th className="p-3">Log Date</th>
-                  <th className="p-3">Vehicle (Plate)</th>
+                  <th className="p-3">Equipment (Plate)</th>
                   <th className="p-3">Previous Reading</th>
                   <th className="p-3">Daily Increment</th>
                   <th className="p-3">Current Reading</th>
@@ -920,7 +920,7 @@ export function VehicleRegistry() {
               <tbody className="divide-y divide-slate-800 text-slate-300">
                 {vehicleLogs.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-8 text-center text-slate-500">No daily logs found for the selected vehicle.</td>
+                    <td colSpan={6} className="p-8 text-center text-slate-500">No daily logs found for the selected Equipment.</td>
                   </tr>
                 ) : (
                   vehicleLogs.map((log) => (
@@ -1067,7 +1067,7 @@ export function VehicleRegistry() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col">
             <div className="flex justify-between items-center px-6 py-4 border-b border-slate-800 bg-slate-950">
-              <h3 className="text-lg font-semibold text-slate-100">Select Vehicle</h3>
+              <h3 className="text-lg font-semibold text-slate-100">Select Equipment</h3>
               <button
                 type="button"
                 onClick={() => setShowPicker(false)}
@@ -1100,11 +1100,11 @@ export function VehicleRegistry() {
               {pickerLoading ? (
                 <div className="py-12 text-center text-slate-400 flex items-center justify-center gap-2">
                   <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
-                  <span>Loading vehicle records...</span>
+                  <span>Loading Equipment records...</span>
                 </div>
               ) : searchVehiclesList.length === 0 ? (
                 <div className="py-12 text-center text-slate-400">
-                  No vehicle records found.
+                  No Equipment records found.
                 </div>
               ) : (
                 searchVehiclesList.map((v, index) => (
@@ -1142,7 +1142,7 @@ export function VehicleRegistry() {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <h3 className="text-lg font-bold text-slate-100">
-                {editingId ? 'Edit Vehicle' : 'Add Vehicle'}
+                {editingId ? 'Edit Equipment' : 'Add Equipment'}
               </h3>
               <button 
                 onClick={() => setIsModalOpen(false)}
@@ -1209,7 +1209,7 @@ export function VehicleRegistry() {
 
                 {/* Vehicle Model Dropdown with Search & Make Display */}
                 <div className="relative" ref={modelDropdownRef}>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Vehicle Model <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Equipment Model <span className="text-red-500">*</span></label>
                   <div 
                     onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 flex items-center justify-between cursor-pointer focus:border-blue-500"
@@ -1218,7 +1218,7 @@ export function VehicleRegistry() {
                       {(() => {
                         const matched = models.find(m => m.model_id === vehicleForm.model_id);
                         if (matched) return `${matched.make_name || ''} ${matched.name || ''}`.trim();
-                        return 'Select Vehicle Model...';
+                        return 'Select Equipment Model...';
                       })()}
                     </span>
                     <ChevronDownIcon className="w-4 h-4 text-slate-400" />
@@ -1404,7 +1404,7 @@ export function VehicleRegistry() {
                     className="px-4 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
                     {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    <span>{editingId ? 'Update Vehicle' : 'Save Vehicle'}</span>
+                    <span>{editingId ? 'Update Equipment' : 'Save Equipment'}</span>
                   </button>
                 </div>
               </div>

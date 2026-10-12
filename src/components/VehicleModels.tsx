@@ -176,7 +176,7 @@ export function VehicleModels() {
           const { error } = await supabase.from('vehicle_makes').insert([payload]);
           if (error) throw error;
         }
-        setSuccessMsg('Vehicle Make saved successfully!');
+        setSuccessMsg('Equipment Make saved successfully!');
       } else if (activeTab === 'models') {
         const payload = {
           make_id: modelForm.make_id,
@@ -191,7 +191,7 @@ export function VehicleModels() {
           const { error } = await supabase.from('vehicle_models').insert([payload]);
           if (error) throw error;
         }
-        setSuccessMsg('Vehicle Model saved successfully!');
+        setSuccessMsg('Equipment Model saved successfully!');
       } else if (activeTab === 'types') {
         const payload = {
           code: typeForm.code,
@@ -205,7 +205,7 @@ export function VehicleModels() {
           const { error } = await supabase.from('vehicle_types').insert([payload]);
           if (error) throw error;
         }
-        setSuccessMsg('Vehicle Type saved successfully!');
+        setSuccessMsg('Equipment Type saved successfully!');
       }
 
       setIsModalOpen(false);
@@ -229,8 +229,8 @@ export function VehicleModels() {
           <Car className="w-7 h-7" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-100">Vehicle Models & Configurations</h1>
-          <p className="text-sm text-slate-400">Manage manufacturers (makes), vehicle models, and vehicle classifications (types).</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-100">Equipment Models & Configurations</h1>
+          <p className="text-sm text-slate-400">Manage manufacturers (makes), equipment models, and equipment classifications (types).</p>
         </div>
       </div>
 
@@ -259,7 +259,7 @@ export function VehicleModels() {
           }`}
         >
           <Tag className="w-4 h-4" />
-          <span>Vehicle Makes</span>
+          <span>Equipment Makes</span>
         </button>
 
         <button
@@ -271,7 +271,7 @@ export function VehicleModels() {
           }`}
         >
           <Car className="w-4 h-4" />
-          <span>Vehicle Models</span>
+          <span>Equipment Models</span>
         </button>
 
         <button
@@ -283,7 +283,7 @@ export function VehicleModels() {
           }`}
         >
           <Layers className="w-4 h-4" />
-          <span>Vehicle Types</span>
+          <span>Equipment Types</span>
         </button>
       </div>
 
@@ -334,7 +334,7 @@ export function VehicleModels() {
               <tbody className="divide-y divide-slate-800 text-slate-300">
                 {makes.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="p-8 text-center text-slate-500">No vehicle makes found.</td>
+                    <td colSpan={3} className="p-8 text-center text-slate-500">No Equipment makes found.</td>
                   </tr>
                 ) : (
                   makes.map((item) => (
@@ -381,7 +381,7 @@ export function VehicleModels() {
               <tbody className="divide-y divide-slate-800 text-slate-300">
                 {filteredModels.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-slate-500">No vehicle models found.</td>
+                    <td colSpan={5} className="p-8 text-center text-slate-500">No equipment models found.</td>
                   </tr>
                 ) : (
                   filteredModels.map((item) => {
@@ -433,7 +433,7 @@ export function VehicleModels() {
               <tbody className="divide-y divide-slate-800 text-slate-300">
                 {types.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="p-8 text-center text-slate-500">No vehicle types found.</td>
+                    <td colSpan={4} className="p-8 text-center text-slate-500">No Equipment types found.</td>
                   </tr>
                 ) : (
                   types.map((item) => (
@@ -514,14 +514,14 @@ export function VehicleModels() {
               {activeTab === 'models' && (
                 <>
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Vehicle Make</label>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Equipment Make</label>
                     <select
                       required
                       value={modelForm.make_id}
                       onChange={(e) => setModelForm({ ...modelForm, make_id: e.target.value })}
                       className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
                     >
-                      <option value="">Select Vehicle Make</option>
+                      <option value="">Select Equipment Make</option>
                       {makes.map((make) => (
                         <option key={make.make_id} value={make.make_id}>
                           {make.name}
@@ -530,13 +530,13 @@ export function VehicleModels() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Vehicle Type (Optional)</label>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Equipment Type (Optional)</label>
                     <select
                       value={modelForm.type_id}
                       onChange={(e) => setModelForm({ ...modelForm, type_id: e.target.value })}
                       className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
                     >
-                      <option value="">Select Vehicle Type</option>
+                      <option value="">Select Equipment Type</option>
                       {types.map((type) => (
                         <option key={type.type_id} value={type.type_id}>
                           {type.code} - {type.description}
@@ -588,7 +588,7 @@ export function VehicleModels() {
                       required
                       value={typeForm.description}
                       onChange={(e) => setTypeForm({ ...typeForm, description: e.target.value })}
-                      placeholder="Describe vehicle classification..."
+                      placeholder="Describe Equipment classification..."
                       className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
                     />
                   </div>
