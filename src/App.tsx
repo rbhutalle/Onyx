@@ -14,6 +14,7 @@ import { JobOrderDashboard } from '@/components/JobOrderDashboard';
 import { VehicleRegistry } from '@/components/VehicleRegistry';
 import { EmployeeRegistry } from '@/components/EmployeeRegistry';
 import { ComponentRegistry } from '@/components/ComponentRegistry';
+import { ComponentHistory } from '@/components/ComponentHistory';
 
 export function App() {
   return (
@@ -28,6 +29,7 @@ export function App() {
             <Route path="/vehicles" element={<VehiclePmViewer />} />
             <Route path="/daily-inspection" element={<DailyInspection />} />
             <Route path="/maintenance-plan" element={<div className="p-6 text-xl font-bold">Maintenance Plan</div>} />
+            <Route path="/component-history" element={<ComponentHistory />} />
             <Route path="/maintenance-forecast" element={<MaintenanceForecast />} />
             <Route path="/job-orders" element={<JobOrder />} />
             <Route path="/job-orders/dashboard" element={<JobOrderDashboard />} />

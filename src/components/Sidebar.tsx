@@ -20,7 +20,8 @@ import {
   Activity,
   Globe,
   Users,
-  Layers
+  Layers,
+  History
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -31,6 +32,7 @@ export function Sidebar() {
   const [isMaintenanceOpen, setIsMaintenanceOpen] = useState<boolean>(
     currentPath === '/daily-inspection' || 
     currentPath === '/vehicles' || 
+    currentPath === '/component-history' ||
     currentPath === '/maintenance-forecast'
   );
 
@@ -143,6 +145,18 @@ export function Sidebar() {
               >
                 <FileText className="w-3.5 h-3.5" />
                 <span>Equipment PM Details</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/component-history')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/component-history'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <History className="w-3.5 h-3.5" />
+                <span>Component History</span>
               </button>
 
               <button

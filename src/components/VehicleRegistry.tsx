@@ -741,7 +741,7 @@ export function VehicleRegistry() {
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
-                    <th className="p-3">Plate No / Conduction</th>
+                    <th className="p-3">Equipment ID </th>
                     <th className="p-3">Model</th>
                     <th className="p-3">Service Reading</th>
                     <th className="p-3">Status</th>
@@ -791,14 +791,12 @@ export function VehicleRegistry() {
                             >
                               <Trash2 className="w-3.5 h-3.5" /> Delete
                             </button>
-                            {!item.has_initialized_rdg && (
-                              <button
-                                onClick={() => handleInitializeVehicle(item)}
-                                className="text-xs text-emerald-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-semibold"
-                              >
-                                <CheckCheck className="w-3.5 h-3.5" /> Initialize
-                              </button>
-                            )}
+                            <button
+                              onClick={() => handleInitializeVehicle(item)}
+                              className="text-xs text-emerald-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-semibold"
+                            >
+                              <CheckCheck className="w-3.5 h-3.5" /> Initialize
+                            </button>
                           </td>
                         </tr>
                       );
@@ -818,9 +816,6 @@ export function VehicleRegistry() {
               </div>
             ) : (
               vehiclePms.map((pm) => {
-                const currentVehicle = vehicles.find(v => v.vehicle_id === pm.vehicle_id);
-                const isInitialized = currentVehicle ? currentVehicle.has_initialized_rdg : false;
-
                 const pmLevels = [
                   { level: 'PM 2', prev: pm.pm2_previous, curr: pm.pm2_current, next: pm.pm2_next, flag: pm.pm2_flag, date: pm.pm2_datecompleted },
                   { level: 'PM 3', prev: pm.pm3_previous, curr: pm.pm3_current, next: pm.pm3_next, flag: pm.pm3_flag, date: pm.pm3_datecompleted },
@@ -848,21 +843,13 @@ export function VehicleRegistry() {
                       <div className="flex flex-col items-end gap-1">
                         <button
                           type="button"
-                          disabled={!isInitialized}
                           onClick={() => handleOpenPmEdit(pm)}
-                          title={!isInitialized ? "Equipment must be initialized before PM schedule can be updated." : "Update PM Schedule"}
-                          className={`px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow shrink-0 ${
-                            isInitialized 
-                              ? 'bg-blue-600 hover:bg-blue-500 text-white cursor-pointer' 
-                              : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-60'
-                          }`}
+                          title="Update PM Schedule"
+                          className="px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow shrink-0 bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
                         >
                           <RefreshCw className="w-3.5 h-3.5" />
                           <span>Update PM Schedule</span>
                         </button>
-                        {!isInitialized && (
-                          <span className="text-[10px] text-amber-400/80">Requires initialization</span>
-                        )}
                       </div>
                     </div>
 
@@ -1280,7 +1267,7 @@ export function VehicleRegistry() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Plate No <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Equipment ID <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     required
