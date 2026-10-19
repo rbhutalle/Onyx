@@ -17,7 +17,8 @@ import {
   ChevronDown,
   ChevronUp,
   Calendar,
-  Upload
+  Upload,
+  Briefcase
 } from 'lucide-react';
 
 interface JobOrderMasterRecord {
@@ -80,6 +81,20 @@ interface JobOrderResourceRecord {
   ee_reference_total: number | null;
   task_standard_id: string;
   assigned_date: string;
+  [key: string]: unknown;
+}
+
+interface JobOrderContractRecord {
+  job_order_matls_id: string;
+  job_order_id: string;
+  qty: number | null;
+  contract_decription: string | null;
+  unit_price: number | null;
+  list_price: number | null;
+  line_total: number | null;
+  reference_total: number | null;
+  created_at?: string;
+  updated_at?: string;
   [key: string]: unknown;
 }
 
@@ -154,7 +169,7 @@ export function JobOrder() {
   const jobOrderId = currentJobOrder?.job_order_id;
   const vehicleId = currentJobOrder?.vehicle_id;
 
-  const [activeChildTab, setActiveChildTab] = useState<'tasks' | 'materials' | 'resources'>('tasks');
+  const [activeChildTab, setActiveChildTab] = useState<'tasks' | 'materials' | 'resources' | 'contracts'>('tasks');
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState<boolean>(false);
 
   const [statuses, setStatuses] = useState<{ status_id: string; status_name: string }[]>([]);
@@ -189,6 +204,7 @@ export function JobOrder() {
   const [taskDetails, setTaskDetails] = useState<JobOrderTaskDetailRecord[]>([]);
   const [materials, setMaterials] = useState<JobOrderMaterialRecord[]>([]);
   const [resources, setResources] = useState<JobOrderResourceRecord[]>([]);
+  const [contracts, setContracts] = useState<JobOrderContractRecord[]>([]);
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -215,32 +231,36 @@ export function JobOrder() {
   const [childEditingId, setChildEditingId] = useState<string | null>(null);
   const [taskDetailForm, setTaskDetailForm] = useState({ task_standard_id: '', standard_time: '' });
   const [resourceForm, setResourceForm] = useState({ job_order_task_id: '', employee_id: '', charged_time: '0', assigned_date: '' });
+  const [contractForm, setContractForm] = useState({ contract_decription: '', qty: '1', unit_price: '0', list_price: '0' });
 
-  // Recalculate and persist labor_cost, materials_cost, and total_cost
+  // Recalculate and persist labor_cost, materials_cost, contract_cost, and total_cost
   const recalculateAndSaveJobOrderCosts = async (targetJobOrderId: string) => {
     try {
-      const [mRes, rRes, joRes] = await Promise.all([
+      const [mRes, rRes, cRes, joRes] = await Promise.all([
         supabase.from('joborder_materials').select('*').eq('job_order_id', targetJobOrderId),
         supabase.from('joborder_resources').select('*').eq('job_order_id', targetJobOrderId),
+        supabase.from('joborder_contract').select('*').eq('job_order_id', targetJobOrderId),
         supabase.from('joborder_master').select('*').eq('job_order_id', targetJobOrderId).maybeSingle()
       ]);
 
       const matList = mRes.data || [];
       const resList = rRes.data || [];
+      const contractList = cRes.data || [];
       const joRecord = joRes.data;
 
       if (!joRecord) return;
 
       const newMaterialsCost = matList.reduce((sum, item) => sum + (Number(item.reference_total) || 0), 0);
       const newLaborCost = resList.reduce((sum, item) => sum + (Number(item.ee_reference_total) || 0), 0);
-      const contractCost = Number(joRecord.contract_cost) || 0;
-      const newTotalCost = newMaterialsCost + newLaborCost + contractCost;
+      const newContractCost = contractList.reduce((sum, item) => sum + (Number(item.reference_total) || 0), 0);
+      const newTotalCost = newMaterialsCost + newLaborCost + newContractCost;
 
       const { data: updatedJoData, error: updateError } = await supabase
         .from('joborder_master')
         .update({
           materials_cost: Number(newMaterialsCost.toFixed(2)),
           labor_cost: Number(newLaborCost.toFixed(2)),
+          contract_cost: Number(newContractCost.toFixed(2)),
           total_cost: Number(newTotalCost.toFixed(2))
         })
         .eq('job_order_id', targetJobOrderId)
@@ -455,16 +475,18 @@ export function JobOrder() {
           setTaskDetails([]);
           setMaterials([]);
           setResources([]);
+          setContracts([]);
           setSelectedPickerVehicle(null);
         }
         return;
       }
 
       try {
-        const [tdRes, mRes, rRes, vData] = await Promise.all([
+        const [tdRes, mRes, rRes, cRes, vData] = await Promise.all([
           supabase.from('joborder_task_details').select('*').eq('job_order_id', jobOrderId),
           supabase.from('joborder_materials').select('*').eq('job_order_id', jobOrderId),
           supabase.from('joborder_resources').select('*').eq('job_order_id', jobOrderId),
+          supabase.from('joborder_contract').select('*').eq('job_order_id', jobOrderId),
           fetchVehicleDetails(vehicleId || null)
         ]);
 
@@ -472,6 +494,7 @@ export function JobOrder() {
           setTaskDetails(tdRes.data || []);
           setMaterials(mRes.data || []);
           setResources(rRes.data || []);
+          setContracts(cRes.data || []);
           setSelectedPickerVehicle(vData);
         }
       } catch (err) {
@@ -487,13 +510,18 @@ export function JobOrder() {
     setIsHeaderEditing(false);
     setSelectedPickerVehicle(null);
     setSupervisorSearchQuery('');
+    const defaultStatusId = statuses[0]?.status_id || '';
+    const defaultStatus = statuses.find(s => s.status_id === defaultStatusId);
+    const isCompleted = defaultStatus?.status_name?.toLowerCase() === 'completed';
+    const todayStr = new Date().toISOString().split('T')[0];
+
     setHeaderForm({
       vehicle_id: '',
-      status_id: statuses[0]?.status_id || '',
+      status_id: defaultStatusId,
       priority_id: priorities[0]?.priority_id || '',
-      expected_completion: new Date().toISOString().split('T')[0],
+      expected_completion: todayStr,
       date_started: '',
-      date_completed: '',
+      date_completed: isCompleted ? todayStr : '',
       assigned_supervisor: '',
       labor_cost: '0',
       materials_cost: '0',
@@ -519,13 +547,17 @@ export function JobOrder() {
         : ''
     );
 
+    const currentStatus = statuses.find(s => s.status_id === currentJobOrder.status_id);
+    const isCompleted = currentStatus?.status_name?.toLowerCase() === 'completed';
+    const todayStr = new Date().toISOString().split('T')[0];
+
     setHeaderForm({
       vehicle_id: currentJobOrder.vehicle_id || '',
       status_id: currentJobOrder.status_id || '',
       priority_id: currentJobOrder.priority_id || '',
       expected_completion: currentJobOrder.expected_completion || '',
       date_started: currentJobOrder.date_started || '',
-      date_completed: currentJobOrder.date_completed || '',
+      date_completed: isCompleted ? (currentJobOrder.date_completed || todayStr) : '',
       assigned_supervisor: currentJobOrder.assigned_supervisor || '',
       labor_cost: String(currentJobOrder.labor_cost ?? 0),
       materials_cost: String(currentJobOrder.materials_cost ?? 0),
@@ -562,13 +594,16 @@ export function JobOrder() {
     setErrorMsg(null);
 
     try {
+      const selectedStatus = statuses.find(s => s.status_id === headerForm.status_id);
+      const isCompleted = selectedStatus?.status_name?.toLowerCase() === 'completed';
+
       const payload = {
         vehicle_id: headerForm.vehicle_id,
         status_id: headerForm.status_id,
         priority_id: headerForm.priority_id,
         expected_completion: headerForm.expected_completion,
         date_started: headerForm.date_started || null,
-        date_completed: headerForm.date_completed || null,
+        date_completed: isCompleted ? (headerForm.date_completed || new Date().toISOString().split('T')[0]) : null,
         assigned_supervisor: headerForm.assigned_supervisor || null,
         labor_cost: Number(headerForm.labor_cost) || 0,
         materials_cost: Number(headerForm.materials_cost) || 0,
@@ -618,14 +653,23 @@ export function JobOrder() {
       charged_time: '0', 
       assigned_date: new Date().toISOString().split('T')[0] 
     });
+
+    setContractForm({
+      contract_decription: '',
+      qty: '1',
+      unit_price: '0',
+      list_price: '0'
+    });
+
     setIsChildModalOpen(true);
   };
 
-  const handleOpenEditChild = (item: JobOrderTaskDetailRecord | JobOrderMaterialRecord | JobOrderResourceRecord) => {
+  const handleOpenEditChild = (item: JobOrderTaskDetailRecord | JobOrderMaterialRecord | JobOrderResourceRecord | JobOrderContractRecord) => {
     setChildEditingId(
       activeChildTab === 'tasks' ? (item as JobOrderTaskDetailRecord).job_order_task_id :
       activeChildTab === 'materials' ? (item as JobOrderMaterialRecord).job_order_matls_id :
-      (item as JobOrderResourceRecord).job_order_resource_id
+      activeChildTab === 'resources' ? (item as JobOrderResourceRecord).job_order_resource_id :
+      (item as JobOrderContractRecord).job_order_matls_id
     );
 
     if (activeChildTab === 'tasks') {
@@ -641,11 +685,19 @@ export function JobOrder() {
         charged_time: String(rec.charged_time ?? 0),
         assigned_date: rec.assigned_date || ''
       });
+    } else if (activeChildTab === 'contracts') {
+      const rec = item as JobOrderContractRecord;
+      setContractForm({
+        contract_decription: rec.contract_decription || '',
+        qty: String(rec.qty ?? 1),
+        unit_price: String(rec.unit_price ?? 0),
+        list_price: String(rec.list_price ?? 0)
+      });
     }
     setIsChildModalOpen(true);
   };
 
-  const handleDeleteChild = async (id: string, tableName: 'joborder_task_details' | 'joborder_materials' | 'joborder_resources', pkField: string) => {
+  const handleDeleteChild = async (id: string, tableName: 'joborder_task_details' | 'joborder_materials' | 'joborder_resources' | 'joborder_contract', pkField: string) => {
     if (!confirm('Are you sure you want to delete this record?')) return;
     try {
       setErrorMsg(null);
@@ -654,14 +706,16 @@ export function JobOrder() {
       setSuccessMsg('Record deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 3000);
       if (currentJobOrder) {
-        const [tdRes, mRes, rRes] = await Promise.all([
+        const [tdRes, mRes, rRes, cRes] = await Promise.all([
           supabase.from('joborder_task_details').select('*').eq('job_order_id', currentJobOrder.job_order_id),
           supabase.from('joborder_materials').select('*').eq('job_order_id', currentJobOrder.job_order_id),
-          supabase.from('joborder_resources').select('*').eq('job_order_id', currentJobOrder.job_order_id)
+          supabase.from('joborder_resources').select('*').eq('job_order_id', currentJobOrder.job_order_id),
+          supabase.from('joborder_contract').select('*').eq('job_order_id', currentJobOrder.job_order_id)
         ]);
         setTaskDetails(tdRes.data || []);
         setMaterials(mRes.data || []);
         setResources(rRes.data || []);
+        setContracts(cRes.data || []);
 
         await recalculateAndSaveJobOrderCosts(currentJobOrder.job_order_id);
       }
@@ -727,18 +781,43 @@ export function JobOrder() {
           if (error) throw error;
         }
         setSuccessMsg('Resource assignment saved successfully!');
+      } else if (activeChildTab === 'contracts') {
+        const qtyVal = Number(contractForm.qty) || 0;
+        const unitPriceVal = Number(contractForm.unit_price) || 0;
+        const listPriceVal = Number(contractForm.list_price) || 0;
+
+        const payload = {
+          job_order_id: currentJobOrder.job_order_id,
+          contract_decription: contractForm.contract_decription,
+          qty: qtyVal,
+          unit_price: unitPriceVal,
+          list_price: listPriceVal,
+          line_total: Number((qtyVal * unitPriceVal).toFixed(2)),
+          reference_total: Number((qtyVal * listPriceVal).toFixed(2))
+        };
+
+        if (childEditingId) {
+          const { error } = await supabase.from('joborder_contract').update(payload).eq('job_order_matls_id', childEditingId);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from('joborder_contract').insert([payload]);
+          if (error) throw error;
+        }
+        setSuccessMsg('Contracted Job saved successfully!');
       }
 
       setIsChildModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 4000);
-      const [tdRes, mRes, rRes] = await Promise.all([
+      const [tdRes, mRes, rRes, cRes] = await Promise.all([
         supabase.from('joborder_task_details').select('*').eq('job_order_id', currentJobOrder.job_order_id),
         supabase.from('joborder_materials').select('*').eq('job_order_id', currentJobOrder.job_order_id),
-        supabase.from('joborder_resources').select('*').eq('job_order_id', currentJobOrder.job_order_id)
+        supabase.from('joborder_resources').select('*').eq('job_order_id', currentJobOrder.job_order_id),
+        supabase.from('joborder_contract').select('*').eq('job_order_id', currentJobOrder.job_order_id)
       ]);
       setTaskDetails(tdRes.data || []);
       setMaterials(mRes.data || []);
       setResources(rRes.data || []);
+      setContracts(cRes.data || []);
 
       await recalculateAndSaveJobOrderCosts(currentJobOrder.job_order_id);
     } catch (err) {
@@ -865,7 +944,7 @@ export function JobOrder() {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-100">Job Order Management</h1>
-            <p className="text-sm text-slate-400">Manage job order headers and associated tasks, materials, and labor resources.</p>
+            <p className="text-sm text-slate-400">Manage Job Order and associated Tasks, Materials, Resources, and Contracted Jobs.</p>
           </div>
         </div>
 
@@ -941,74 +1020,80 @@ export function JobOrder() {
           <div className="p-12 text-center text-slate-500">No job order loaded. Click "Search Job Order" above or create a new one to begin.</div>
         ) : !isHeaderCollapsed ? (
           <div className="space-y-4 pt-2">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-sm">
-              <div>
-                <span className="block text-xs font-semibold uppercase text-slate-500 mb-1">Equipment</span>
+            {/* ALIGNED 4-COLUMN DETAILS GRID */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-sm items-start">
+              <div className="space-y-1">
+                <span className="block text-xs font-semibold uppercase text-slate-500">Equipment</span>
                 <span className="text-blue-400 font-bold block">
                   {selectedPickerVehicle?.plate_no || '—'}
                 </span>
-                <span className="text-xs text-slate-400 block mt-0.5">
+                <span className="text-xs text-slate-400 block">
                   {selectedPickerVehicle 
                     ? `${selectedPickerVehicle.make_name || ''} ${selectedPickerVehicle.model_name ? `/ ${selectedPickerVehicle.model_name}` : ''} (${selectedPickerVehicle.type_description || 'N/A'})` 
                     : '—'}
                 </span>
               </div>
 
-              <div>
-                <span className="block text-xs font-semibold uppercase text-slate-500 mb-1">Status</span>
-                <span className="text-emerald-400 font-medium">{matchedStatus ? matchedStatus.status_name : '—'}</span>
+              <div className="space-y-1">
+                <span className="block text-xs font-semibold uppercase text-slate-500">Status</span>
+                <span className="text-emerald-400 font-medium block">{matchedStatus ? matchedStatus.status_name : '—'}</span>
               </div>
 
-              <div>
-                <span className="block text-xs font-semibold uppercase text-slate-500 mb-1">Priority</span>
-                <span className="text-amber-400 font-medium">{matchedPriority ? matchedPriority.priority_desc : '—'}</span>
+              <div className="space-y-1">
+                <span className="block text-xs font-semibold uppercase text-slate-500">Priority</span>
+                <span className="text-amber-400 font-medium block">{matchedPriority ? matchedPriority.priority_desc : '—'}</span>
               </div>
 
-              <div>
-                <span className="block text-xs font-semibold uppercase text-slate-500 mb-1">Expected Completion</span>
-                <span className="text-slate-200 font-mono">{currentJobOrder.expected_completion}</span>
+              <div className="space-y-1">
+                <span className="block text-xs font-semibold uppercase text-slate-500">Expected Completion</span>
+                <span className="text-slate-200 font-mono block">{currentJobOrder.expected_completion || '—'}</span>
               </div>
 
-              <div>
-                <span className="block text-xs font-semibold uppercase text-slate-500 mb-1">Supervisor</span>
-                <span className="text-slate-200">
+              <div className="space-y-1">
+                <span className="block text-xs font-semibold uppercase text-slate-500">Supervisor</span>
+                <span className="text-slate-200 block">
                   {matchedSupervisor ? (matchedSupervisor.employee_name || matchedSupervisor.name || `${matchedSupervisor.first_name || ''} ${matchedSupervisor.last_name || ''}`) : '—'}
                 </span>
               </div>
 
-              <div>
-                <span className="block text-xs font-semibold uppercase text-slate-500 mb-1">Odometer Reading</span>
-                <span className="text-slate-200 font-mono">{currentJobOrder.odo_rdg}</span>
+              <div className="space-y-1">
+                <span className="block text-xs font-semibold uppercase text-slate-500">Odometer Reading</span>
+                <span className="text-slate-200 font-mono block">{currentJobOrder.odo_rdg ?? 0}</span>
               </div>
 
-              <div className="md:col-span-2">
-                <span className="block text-xs font-semibold uppercase text-slate-500 mb-1">Dates (Started / Completed)</span>
-                <span className="text-slate-200 font-mono">{currentJobOrder.date_started || '—'} / {currentJobOrder.date_completed || '—'}</span>
+              <div className="space-y-1">
+                <span className="block text-xs font-semibold uppercase text-slate-500">Dates (Started / Completed)</span>
+                <span className="text-slate-200 font-mono block">{currentJobOrder.date_started || '—'} / {currentJobOrder.date_completed || '—'}</span>
+              </div>
+
+              <div className="space-y-1">
+                <span className="block text-xs font-bold uppercase text-emerald-400">Total Cost</span>
+                <span className="text-emerald-400 font-mono text-base font-bold block">₱{(currentJobOrder.total_cost ?? 0).toFixed(2)}</span>
               </div>
             </div>
 
-            {/* GROUPED COST AREA */}
+            {/* ALIGNED GROUPED COST AREA */}
             <div className="pt-3 border-t border-slate-800/80">
               <span className="block text-xs font-semibold uppercase text-slate-400 mb-2.5 tracking-wider">Cost Summary</span>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
-                <div>
-                  <span className="block text-xs font-semibold uppercase text-slate-500 mb-1">Labor Cost</span>
-                  <span className="text-slate-200 font-mono">₱{(currentJobOrder.labor_cost ?? 0).toFixed(2)}</span>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80 items-center">
+                <div className="space-y-1">
+                  <span className="block text-xs font-semibold uppercase text-slate-500">Labor Cost</span>
+                  <span className="text-slate-200 font-mono block">₱{(currentJobOrder.labor_cost ?? 0).toFixed(2)}</span>
                 </div>
 
-                <div>
-                  <span className="block text-xs font-semibold uppercase text-slate-500 mb-1">Materials Cost</span>
-                  <span className="text-slate-200 font-mono">₱{(currentJobOrder.materials_cost ?? 0).toFixed(2)}</span>
+                <div className="space-y-1">
+                  <span className="block text-xs font-semibold uppercase text-slate-500">Materials Cost</span>
+                  <span className="text-slate-200 font-mono block">₱{(currentJobOrder.materials_cost ?? 0).toFixed(2)}</span>
                 </div>
 
-                <div>
-                  <span className="block text-xs font-semibold uppercase text-slate-500 mb-1">Contract Cost</span>
-                  <span className="text-slate-200 font-mono">₱{(currentJobOrder.contract_cost ?? 0).toFixed(2)}</span>
+                <div className="space-y-1">
+                  <span className="block text-xs font-semibold uppercase text-slate-500">Contract Cost</span>
+                  <span className="text-slate-200 font-mono block">₱{(currentJobOrder.contract_cost ?? 0).toFixed(2)}</span>
                 </div>
 
-                <div>
-                  <span className="block text-xs font-bold uppercase text-emerald-400 mb-1">Total Cost</span>
-                  <span className="text-emerald-400 font-mono text-base font-bold">₱{(currentJobOrder.total_cost ?? 0).toFixed(2)}</span>
+                <div className="space-y-1">
+                  <span className="block text-xs font-bold uppercase text-emerald-400">Total Cost</span>
+                  <span className="text-emerald-400 font-mono text-base font-bold block">₱{(currentJobOrder.total_cost ?? 0).toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -1020,7 +1105,7 @@ export function JobOrder() {
       {currentJobOrder && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
           <div className="flex flex-wrap justify-between items-center gap-4 border-b border-slate-800 pb-4">
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => setActiveChildTab('tasks')}
                 className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
@@ -1049,6 +1134,16 @@ export function JobOrder() {
               >
                 <Users className="w-3.5 h-3.5" />
                 <span>Resources ({resources.length})</span>
+              </button>
+
+              <button
+                onClick={() => setActiveChildTab('contracts')}
+                className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                  activeChildTab === 'contracts' ? 'bg-blue-600 text-white' : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                }`}
+              >
+                <Briefcase className="w-3.5 h-3.5" />
+                <span>Contracted Jobs ({contracts.length})</span>
               </button>
             </div>
 
@@ -1207,6 +1302,57 @@ export function JobOrder() {
                         </tr>
                       );
                     })
+                  )}
+                </tbody>
+              </table>
+            )}
+
+            {/* CHILD TAB 4: CONTRACTED JOBS */}
+            {activeChildTab === 'contracts' && (
+              <table className="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
+                    <th className="p-3">Contract Description</th>
+                    <th className="p-3">Qty</th>
+                    <th className="p-3">Unit Price</th>
+                    <th className="p-3">List Price</th>
+                    <th className="p-3">Line Total</th>
+                    <th className="p-3">Reference Total</th>
+                    <th className="p-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 text-slate-300">
+                  {contracts.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-slate-500">No contracted jobs added yet. Click "Add Details" above to add one.</td>
+                    </tr>
+                  ) : (
+                    contracts.map((item) => (
+                      <tr key={item.job_order_matls_id} className="hover:bg-slate-950/40 transition-colors">
+                        <td className="p-3 font-semibold text-slate-100">{item.contract_decription || '—'}</td>
+                        <td className="p-3 font-mono">{item.qty ?? 0}</td>
+                        <td className="p-3 font-mono">₱{(item.unit_price ?? 0).toFixed(2)}</td>
+                        <td className="p-3 font-mono">₱{(item.list_price ?? 0).toFixed(2)}</td>
+                        <td className="p-3 font-mono text-emerald-400">₱{(item.line_total ?? 0).toFixed(2)}</td>
+                        <td className="p-3 font-mono text-blue-400">₱{(item.reference_total ?? 0).toFixed(2)}</td>
+                        <td className="p-3 text-right space-x-3">
+                          <button
+                            onClick={() => handleOpenEditChild(item)}
+                            disabled={isStatusCompleted || isStatusCancelled}
+                            className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" /> Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteChild(item.job_order_matls_id, 'joborder_contract', 'job_order_matls_id')}
+                            disabled={isStatusCompleted || isStatusCancelled}
+                            className="text-xs text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))
                   )}
                 </tbody>
               </table>
@@ -1389,7 +1535,18 @@ export function JobOrder() {
                     <select
                       required
                       value={headerForm.status_id}
-                      onChange={(e) => setHeaderForm({ ...headerForm, status_id: e.target.value })}
+                      onChange={(e) => {
+                        const selectedStatusId = e.target.value;
+                        const selectedStatus = statuses.find(s => s.status_id === selectedStatusId);
+                        const isCompleted = selectedStatus?.status_name?.toLowerCase() === 'completed';
+                        const todayStr = new Date().toISOString().split('T')[0];
+
+                        setHeaderForm(prev => ({
+                          ...prev,
+                          status_id: selectedStatusId,
+                          date_completed: isCompleted ? (prev.date_completed || todayStr) : ''
+                        }));
+                      }}
                       className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
                     >
                       <option value="">Select Status</option>
@@ -1662,18 +1819,18 @@ export function JobOrder() {
       {/* CHILD FORM MODAL */}
       {isChildModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 shrink-0 bg-slate-950">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col overflow-visible">
+            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 shrink-0 bg-slate-950 rounded-t-2xl">
               <h3 className="text-lg font-bold text-slate-100">
-                {childEditingId ? 'Edit Details' : 'Add Details'} ({activeChildTab})
+                {childEditingId ? 'Edit Details' : 'Add Details'} ({activeChildTab === 'contracts' ? 'Contracted Job' : activeChildTab})
               </h3>
               <button onClick={() => setIsChildModalOpen(false)} className="text-slate-400 hover:text-slate-100 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitChildForm} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-6 overflow-y-auto space-y-4 flex-1">
+            <form onSubmit={handleSubmitChildForm} className="flex flex-col flex-1 overflow-visible">
+              <div className="p-6 overflow-visible space-y-4 flex-1">
                 {activeChildTab === 'tasks' && (
                   <>
                     <div className="relative" ref={taskStandardDropdownRef}>
@@ -1836,10 +1993,61 @@ export function JobOrder() {
                     </div>
                   </>
                 )}
+
+                {activeChildTab === 'contracts' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Contract Description</label>
+                      <textarea
+                        required
+                        rows={3}
+                        placeholder="Enter contracted job description..."
+                        value={contractForm.contract_decription}
+                        onChange={(e) => setContractForm({ ...contractForm, contract_decription: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Qty</label>
+                        <input
+                          type="number"
+                          step="any"
+                          required
+                          value={contractForm.qty}
+                          onChange={(e) => setContractForm({ ...contractForm, qty: e.target.value })}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Unit Price (₱)</label>
+                        <input
+                          type="number"
+                          step="any"
+                          required
+                          value={contractForm.unit_price}
+                          onChange={(e) => setContractForm({ ...contractForm, unit_price: e.target.value })}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">List Price (₱)</label>
+                        <input
+                          type="number"
+                          step="any"
+                          required
+                          value={contractForm.list_price}
+                          onChange={(e) => setContractForm({ ...contractForm, list_price: e.target.value })}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {activeChildTab !== 'materials' && (
-                <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-800 shrink-0 bg-slate-950">
+                <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-800 shrink-0 bg-slate-950 rounded-b-2xl">
                   <button
                     type="button"
                     onClick={() => setIsChildModalOpen(false)}

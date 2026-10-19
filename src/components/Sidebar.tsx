@@ -21,7 +21,12 @@ import {
   Globe,
   Users,
   Layers,
-  History
+  History,
+  AlertTriangle,
+  FileWarning,
+  SearchCheck,
+  GitFork,
+  AlertCircle
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -38,6 +43,10 @@ export function Sidebar() {
 
   const [isJobOrderOpen, setIsJobOrderOpen] = useState<boolean>(
     currentPath.startsWith('/job-orders')
+  );
+
+  const [isIncidentManagementOpen, setIsIncidentManagementOpen] = useState<boolean>(
+    currentPath.startsWith('/incident-management')
   );
 
   const [isAppRegistryOpen, setIsAppRegistryOpen] = useState<boolean>(
@@ -220,6 +229,52 @@ export function Sidebar() {
           )}
         </div>
 
+        {/* Incident Management Accordion */}
+        <div className="space-y-1">
+          <button
+            onClick={() => setIsIncidentManagementOpen(!isIncidentManagementOpen)}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-900 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-4 h-4 text-blue-400" />
+              <span>Incident Mgmt</span>
+            </div>
+            {isIncidentManagementOpen ? (
+              <ChevronDown className="w-4 h-4 text-slate-400" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            )}
+          </button>
+
+          {isIncidentManagementOpen && (
+            <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-slate-800">
+              <button
+                onClick={() => navigate('/incident-management/incident-report')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/incident-management/incident-report'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <FileWarning className="w-3.5 h-3.5" />
+                <span>Incident Report</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/incident-management/fmea-rca')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/incident-management/fmea-rca'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <SearchCheck className="w-3.5 h-3.5" />
+                <span>FMEA RCA</span>
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* App Registry Accordion */}
         <div className="space-y-1">
           <button
@@ -367,6 +422,30 @@ export function Sidebar() {
               >
                 <WrenchIcon className="w-3.5 h-3.5" />
                 <span>Job Order Config</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/settings/rca')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/settings/rca'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <GitFork className="w-3.5 h-3.5" />
+                <span>RCA</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/settings/fmea')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/settings/fmea'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-800/50'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <AlertCircle className="w-3.5 h-3.5" />
+                <span>FMEA</span>
               </button>
             </div>
           )}

@@ -15,12 +15,15 @@ import { VehicleRegistry } from '@/components/VehicleRegistry';
 import { EmployeeRegistry } from '@/components/EmployeeRegistry';
 import { ComponentRegistry } from '@/components/ComponentRegistry';
 import { ComponentHistory } from '@/components/ComponentHistory';
+import { IncidentReport } from '@/components/IncidentReport';
+import { FmeaRca } from '@/components/FmeaRca';
+import { FmeaSettings } from '@/components/FmeaSettings';
+import { RcaSettings } from '@/components/RcaSettings';
 
 export function App() {
   return (
     <BrowserRouter>
       <div className="flex bg-slate-950 min-h-screen text-slate-100 w-full">
-        {/* Sidebar is inside BrowserRouter so <Link> and useLocation work */}
         <Sidebar />
         
         <main className="flex-1 overflow-y-auto">
@@ -34,6 +37,10 @@ export function App() {
             <Route path="/job-orders" element={<JobOrder />} />
             <Route path="/job-orders/dashboard" element={<JobOrderDashboard />} />
             
+            {/* Incident Management Routes */}
+            <Route path="/incident-management/incident-report" element={<IncidentReport />} />
+            <Route path="/incident-management/fmea-rca" element={<FmeaRca />} />
+
             {/* Global Settings / Registry Routes */}
             <Route path="/global-settings/vehicle-registry" element={<VehicleRegistry />} />
             <Route path="/global-settings/employee-registry" element={<EmployeeRegistry />} />
@@ -47,6 +54,8 @@ export function App() {
             <Route path="/settings/task-standards" element={<TaskStandards />} />
             <Route path="/settings/vehicle-models" element={<VehicleModels />} />
             <Route path="/settings/job-order-config" element={<JobOrderSettings />} />
+            <Route path="/settings/rca" element={<RcaSettings />} />
+            <Route path="/settings/fmea" element={<FmeaSettings />} />
           </Routes>
         </main>
       </div>
