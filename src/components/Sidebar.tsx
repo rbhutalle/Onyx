@@ -26,13 +26,17 @@ import {
   FileWarning,
   SearchCheck,
   GitFork,
-  AlertCircle
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight as ChevronRightIcon
 } from 'lucide-react';
 
 export function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
+
+  const [isMinimized, setIsMinimized] = useState<boolean>(false);
 
   const [isMaintenanceOpen, setIsMaintenanceOpen] = useState<boolean>(
     currentPath === '/daily-inspection' || 
@@ -87,50 +91,77 @@ export function Sidebar() {
   }, []);
 
   return (
-    <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col h-screen select-none">
+    <aside className={`relative bg-slate-950 border-r border-slate-800 flex flex-col h-screen select-none transition-all duration-300 ${isMinimized ? 'w-20' : 'w-64'}`}>
+      {/* Edge Floating Minimize / Expand Button */}
+      <button
+        onClick={() => setIsMinimized(!isMinimized)}
+        title={isMinimized ? "Expand Sidebar" : "Minimize Sidebar"}
+        className="absolute -right-3.5 top-8 z-20 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 p-1.5 rounded-full shadow-lg flex items-center justify-center transition-colors cursor-pointer"
+      >
+        {isMinimized ? (
+          <ChevronRightIcon className="w-3.5 h-3.5 text-blue-400" />
+        ) : (
+          <ChevronLeft className="w-3.5 h-3.5 text-blue-400" />
+        )}
+      </button>
+
       {/* Brand / Logo Header */}
-      <div className="p-6 border-b border-slate-800 flex items-center gap-3">
-        <div className="p-2 bg-blue-600/20 text-blue-400 rounded-xl">
+      <div className={`p-6 border-b border-slate-800 flex items-center ${isMinimized ? 'justify-center p-4' : 'gap-3'}`}>
+        <div className="p-2 bg-blue-600/20 text-blue-400 rounded-xl shrink-0">
           <Car className="w-6 h-6" />
         </div>
-        <div>
-          <h1 className="font-bold text-slate-100 tracking-tight text-base">Fleet Management</h1>
-          <p className="text-xs text-slate-400">Operations Portal</p>
-        </div>
+        {!isMinimized && (
+          <div className="overflow-hidden whitespace-nowrap">
+            <h1 className="font-bold text-slate-100 tracking-tight text-base truncate">Product Name Here</h1>
+            <p className="text-xs text-slate-400 truncate">Reliability-Centered MRO</p>
+          </div>
+        )}
       </div>
 
       {/* Navigation Links */}
-      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+      <nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto overflow-x-hidden">
+        {/* Dashboard */}
         <button
           onClick={() => navigate('/')}
-          className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
+          title={isMinimized ? "Dashboard" : undefined}
+          className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2.5' : 'gap-3 px-3.5 py-2.5'} rounded-xl text-sm font-medium transition-colors cursor-pointer ${
             currentPath === '/'
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
               : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900'
           }`}
         >
-          <LayoutDashboard className="w-4 h-4" />
-          <span>Dashboard</span>
+          <LayoutDashboard className="w-4 h-4 shrink-0" />
+          {!isMinimized && <span className="truncate">Dashboard</span>}
         </button>
 
         {/* Maintenance Plan Accordion */}
         <div className="space-y-1">
           <button
-            onClick={() => setIsMaintenanceOpen(!isMaintenanceOpen)}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-900 transition-colors cursor-pointer"
+            onClick={() => {
+              if (isMinimized) {
+                setIsMinimized(false);
+                setIsMaintenanceOpen(true);
+              } else {
+                setIsMaintenanceOpen(!isMaintenanceOpen);
+              }
+            }}
+            title={isMinimized ? "Maintenance Plan" : undefined}
+            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2.5' : 'justify-between px-3.5 py-2.5'} rounded-xl text-sm font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-900 transition-colors cursor-pointer`}
           >
-            <div className="flex items-center gap-3">
-              <Wrench className="w-4 h-4 text-blue-400" />
-              <span>Maintenance Plan</span>
+            <div className={`flex items-center ${isMinimized ? '' : 'gap-3'}`}>
+              <Wrench className="w-4 h-4 text-blue-400 shrink-0" />
+              {!isMinimized && <span className="truncate">Maintenance Plan</span>}
             </div>
-            {isMaintenanceOpen ? (
-              <ChevronDown className="w-4 h-4 text-slate-400" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-slate-400" />
+            {!isMinimized && (
+              isMaintenanceOpen ? (
+                <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+              )
             )}
           </button>
 
-          {isMaintenanceOpen && (
+          {isMaintenanceOpen && !isMinimized && (
             <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-slate-800">
               <button
                 onClick={() => navigate('/daily-inspection')}
@@ -140,8 +171,8 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
-                <ClipboardList className="w-3.5 h-3.5" />
-                <span>Daily Inspection</span>
+                <ClipboardList className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Daily Inspection</span>
               </button>
 
               <button
@@ -152,8 +183,8 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
-                <FileText className="w-3.5 h-3.5" />
-                <span>Equipment PM Details</span>
+                <FileText className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Equipment PM Details</span>
               </button>
 
               <button
@@ -164,8 +195,8 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
-                <History className="w-3.5 h-3.5" />
-                <span>Component History</span>
+                <History className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Component History</span>
               </button>
 
               <button
@@ -176,8 +207,8 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
-                <Calendar className="w-3.5 h-3.5" />
-                <span>Maintenance Forecast</span>
+                <Calendar className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Maintenance Forecast</span>
               </button>
             </div>
           )}
@@ -186,21 +217,31 @@ export function Sidebar() {
         {/* Job Order System Accordion */}
         <div className="space-y-1">
           <button
-            onClick={() => setIsJobOrderOpen(!isJobOrderOpen)}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-900 transition-colors cursor-pointer"
+            onClick={() => {
+              if (isMinimized) {
+                setIsMinimized(false);
+                setIsJobOrderOpen(true);
+              } else {
+                setIsJobOrderOpen(!isJobOrderOpen);
+              }
+            }}
+            title={isMinimized ? "Job Order System" : undefined}
+            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2.5' : 'justify-between px-3.5 py-2.5'} rounded-xl text-sm font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-900 transition-colors cursor-pointer`}
           >
-            <div className="flex items-center gap-3">
-              <ClipboardCheck className="w-4 h-4 text-blue-400" />
-              <span>Job Order System</span>
+            <div className={`flex items-center ${isMinimized ? '' : 'gap-3'}`}>
+              <ClipboardCheck className="w-4 h-4 text-blue-400 shrink-0" />
+              {!isMinimized && <span className="truncate">Job Order System</span>}
             </div>
-            {isJobOrderOpen ? (
-              <ChevronDown className="w-4 h-4 text-slate-400" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-slate-400" />
+            {!isMinimized && (
+              isJobOrderOpen ? (
+                <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+              )
             )}
           </button>
 
-          {isJobOrderOpen && (
+          {isJobOrderOpen && !isMinimized && (
             <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-slate-800">
               <button
                 onClick={() => navigate('/job-orders/dashboard')}
@@ -210,8 +251,8 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
-                <LayoutGrid className="w-3.5 h-3.5" />
-                <span>Dashboard</span>
+                <LayoutGrid className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Dashboard</span>
               </button>
 
               <button
@@ -222,8 +263,8 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
-                <WrenchIcon className="w-3.5 h-3.5" />
-                <span>Job Order</span>
+                <WrenchIcon className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Job Order</span>
               </button>
             </div>
           )}
@@ -232,21 +273,31 @@ export function Sidebar() {
         {/* Incident Management Accordion */}
         <div className="space-y-1">
           <button
-            onClick={() => setIsIncidentManagementOpen(!isIncidentManagementOpen)}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-900 transition-colors cursor-pointer"
+            onClick={() => {
+              if (isMinimized) {
+                setIsMinimized(false);
+                setIsIncidentManagementOpen(true);
+              } else {
+                setIsIncidentManagementOpen(!isIncidentManagementOpen);
+              }
+            }}
+            title={isMinimized ? "Incident Mgmt" : undefined}
+            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2.5' : 'justify-between px-3.5 py-2.5'} rounded-xl text-sm font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-900 transition-colors cursor-pointer`}
           >
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-4 h-4 text-blue-400" />
-              <span>Incident Mgmt</span>
+            <div className={`flex items-center ${isMinimized ? '' : 'gap-3'}`}>
+              <AlertTriangle className="w-4 h-4 text-blue-400 shrink-0" />
+              {!isMinimized && <span className="truncate">Incident Mgmt</span>}
             </div>
-            {isIncidentManagementOpen ? (
-              <ChevronDown className="w-4 h-4 text-slate-400" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-slate-400" />
+            {!isMinimized && (
+              isIncidentManagementOpen ? (
+                <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+              )
             )}
           </button>
 
-          {isIncidentManagementOpen && (
+          {isIncidentManagementOpen && !isMinimized && (
             <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-slate-800">
               <button
                 onClick={() => navigate('/incident-management/incident-report')}
@@ -256,8 +307,8 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
-                <FileWarning className="w-3.5 h-3.5" />
-                <span>Incident Report</span>
+                <FileWarning className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Incident Report</span>
               </button>
 
               <button
@@ -268,8 +319,8 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
-                <SearchCheck className="w-3.5 h-3.5" />
-                <span>FMEA RCA</span>
+                <SearchCheck className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">FMEA RCA</span>
               </button>
             </div>
           )}
@@ -278,21 +329,31 @@ export function Sidebar() {
         {/* App Registry Accordion */}
         <div className="space-y-1">
           <button
-            onClick={() => setIsAppRegistryOpen(!isAppRegistryOpen)}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-900 transition-colors cursor-pointer"
+            onClick={() => {
+              if (isMinimized) {
+                setIsMinimized(false);
+                setIsAppRegistryOpen(true);
+              } else {
+                setIsAppRegistryOpen(!isAppRegistryOpen);
+              }
+            }}
+            title={isMinimized ? "App Registry" : undefined}
+            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2.5' : 'justify-between px-3.5 py-2.5'} rounded-xl text-sm font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-900 transition-colors cursor-pointer`}
           >
-            <div className="flex items-center gap-3">
-              <Globe className="w-4 h-4 text-blue-400" />
-              <span>App Registry</span>
+            <div className={`flex items-center ${isMinimized ? '' : 'gap-3'}`}>
+              <Globe className="w-4 h-4 text-blue-400 shrink-0" />
+              {!isMinimized && <span className="truncate">App Registry</span>}
             </div>
-            {isAppRegistryOpen ? (
-              <ChevronDown className="w-4 h-4 text-slate-400" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-slate-400" />
+            {!isMinimized && (
+              isAppRegistryOpen ? (
+                <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+              )
             )}
           </button>
 
-          {isAppRegistryOpen && (
+          {isAppRegistryOpen && !isMinimized && (
             <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-slate-800">
               <button
                 onClick={() => navigate('/global-settings/vehicle-registry')}
@@ -302,8 +363,8 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
-                <Car className="w-3.5 h-3.5" />
-                <span>Equipment Registry</span>
+                <Car className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Equipment Registry</span>
               </button>
 
               <button
@@ -314,8 +375,8 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
-                <Users className="w-3.5 h-3.5" />
-                <span>Employee Registry</span>
+                <Users className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Employee Registry</span>
               </button>
 
               <button
@@ -326,8 +387,8 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Component Registry</span>
+                <Layers className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Component Registry</span>
               </button>
             </div>
           )}
@@ -336,21 +397,31 @@ export function Sidebar() {
         {/* App Settings Accordion */}
         <div className="space-y-1">
           <button
-            onClick={() => setIsAppSettingsOpen(!isAppSettingsOpen)}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-900 transition-colors cursor-pointer"
+            onClick={() => {
+              if (isMinimized) {
+                setIsMinimized(false);
+                setIsAppSettingsOpen(true);
+              } else {
+                setIsAppSettingsOpen(!isAppSettingsOpen);
+              }
+            }}
+            title={isMinimized ? "App Settings" : undefined}
+            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2.5' : 'justify-between px-3.5 py-2.5'} rounded-xl text-sm font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-900 transition-colors cursor-pointer`}
           >
-            <div className="flex items-center gap-3">
-              <Settings className="w-4 h-4 text-blue-400" />
-              <span>App Settings</span>
+            <div className={`flex items-center ${isMinimized ? '' : 'gap-3'}`}>
+              <Settings className="w-4 h-4 text-blue-400 shrink-0" />
+              {!isMinimized && <span className="truncate">App Settings</span>}
             </div>
-            {isAppSettingsOpen ? (
-              <ChevronDown className="w-4 h-4 text-slate-400" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-slate-400" />
+            {!isMinimized && (
+              isAppSettingsOpen ? (
+                <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+              )
             )}
           </button>
 
-          {isAppSettingsOpen && (
+          {isAppSettingsOpen && !isMinimized && (
             <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-slate-800">
               <button
                 onClick={() => navigate('/settings/service-standards')}
@@ -360,8 +431,8 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
-                <ShieldAlert className="w-3.5 h-3.5" />
-                <span>Service Standards</span>
+                <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Service Standards</span>
               </button>
 
               <button
@@ -372,8 +443,8 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
-                <Activity className="w-3.5 h-3.5" />
-                <span>Operations Standards</span>
+                <Activity className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Operations Standards</span>
               </button>
 
               <button
@@ -384,8 +455,8 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
-                <Car className="w-3.5 h-3.5" />
-                <span>Equipment Models</span>
+                <Car className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Equipment Models</span>
               </button>
 
               <button
@@ -396,8 +467,8 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
-                <Cpu className="w-3.5 h-3.5" />
-                <span>System & Components</span>
+                <Cpu className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">System & Components</span>
               </button>
 
               <button
@@ -408,8 +479,8 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
-                <CheckSquare className="w-3.5 h-3.5" />
-                <span>Task Standards</span>
+                <CheckSquare className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Task Standards</span>
               </button>
 
               <button
@@ -420,8 +491,8 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
-                <WrenchIcon className="w-3.5 h-3.5" />
-                <span>Job Order Config</span>
+                <WrenchIcon className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Job Order Config</span>
               </button>
 
               <button
@@ -432,8 +503,8 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
-                <GitFork className="w-3.5 h-3.5" />
-                <span>RCA</span>
+                <GitFork className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">RCA</span>
               </button>
 
               <button
@@ -444,8 +515,8 @@ export function Sidebar() {
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
-                <AlertCircle className="w-3.5 h-3.5" />
-                <span>FMEA</span>
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">FMEA</span>
               </button>
             </div>
           )}
@@ -453,29 +524,39 @@ export function Sidebar() {
       </nav>
 
       {/* Database Status Footer */}
-      <div className="p-4 border-t border-slate-800">
-        <div className="bg-slate-900 border border-slate-800 rounded-lg p-2.5 flex items-center justify-between text-xs">
-          <span className="text-slate-400 font-medium">Database Status</span>
-          <div className="flex items-center gap-2">
-            {dbStatus === 'checking' && (
-              <>
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                <span className="text-amber-400">Connecting...</span>
-              </>
-            )}
-            {dbStatus === 'connected' && (
-              <>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
-                <span className="text-emerald-400 font-semibold">Connected</span>
-              </>
-            )}
-            {dbStatus === 'error' && (
-              <>
-                <span className="w-2 h-2 rounded-full bg-red-500" />
-                <span className="text-red-400 font-semibold">Offline</span>
-              </>
-            )}
-          </div>
+      <div className="p-3 border-t border-slate-800">
+        <div className="bg-slate-900 border border-slate-800 rounded-lg p-2.5 flex items-center justify-center text-xs">
+          {isMinimized ? (
+            <div title={`Database Status: ${dbStatus}`}>
+              {dbStatus === 'checking' && <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse block" />}
+              {dbStatus === 'connected' && <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)] block" />}
+              {dbStatus === 'error' && <span className="w-2.5 h-2.5 rounded-full bg-red-500 block" />}
+            </div>
+          ) : (
+            <div className="w-full flex items-center justify-between">
+              <span className="text-slate-400 font-medium">Database Status</span>
+              <div className="flex items-center gap-2">
+                {dbStatus === 'checking' && (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                    <span className="text-amber-400">Connecting...</span>
+                  </>
+                )}
+                {dbStatus === 'connected' && (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
+                    <span className="text-emerald-400 font-semibold">Connected</span>
+                  </>
+                )}
+                {dbStatus === 'error' && (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-red-500" />
+                    <span className="text-red-400 font-semibold">Offline</span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </aside>
