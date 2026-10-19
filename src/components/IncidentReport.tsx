@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { 
   AlertTriangle, 
@@ -15,18 +15,41 @@ import {
   Briefcase, 
   Layers, 
   Car, 
-  DollarSign, 
   Calendar, 
   User, 
-  FileText 
+  FileText,
+  UserCheck2,
+  ChevronDown,
+  ChevronUp,
+  FolderSearch,
+  Lock
 } from 'lucide-react';
 
-// Header & Vehicles Interfaces
-interface VehicleOption {
-  vehicle_id: string;
-  plate_no?: string;
-  vehicle_plate?: string;
-  model_name?: string;
+// Equipment Telemetry View Interface
+interface EquipmentPm {
+  plate_no: string;
+  service_rdg?: number | null;
+  make_name?: string | null;
+  model_name?: string | null;
+  type_description?: string | null;
+  vehicle_id?: string;
+  equipment_id?: string;
+  id?: string;
+  [key: string]: unknown;
+}
+
+interface EmployeeOption {
+  employee_id: string;
+  employee_no?: string;
+  full_name: string;
+  department?: string;
+  position?: string;
+}
+
+interface StatusOption {
+  status_id: string;
+  status_name?: string;
+  name?: string;
 }
 
 interface IncidentRecord {
@@ -41,6 +64,9 @@ interface IncidentRecord {
   incident_severity: 'Low' | 'Medium' | 'High' | 'Critical';
   reported_by: string;
   validated_by: string;
+  status_id?: string | null;
+  status_name?: string;
+  reportcompleted_date?: string | null;
   reported_at?: string;
   created_at?: string;
   updated_at?: string;
@@ -53,58 +79,122 @@ interface TaxonomyOption {
   description: string;
 }
 
+interface ConditionDetailOption {
+  detail_id: string;
+  condition_id: string;
+  code: string;
+  description: string;
+}
+
+interface ActDetailOption {
+  detail_id: string;
+  act_id: string;
+  code: string;
+  description: string;
+}
+
+interface FactorDetailOption {
+  detail_id: string;
+  factor_id: string;
+  code: string;
+  description: string;
+}
+
+interface CauseDetailOption {
+  detail_id: string;
+  cause_id: string;
+  code: string;
+  description: string;
+}
+
 // Child Record Interfaces
 interface IncidentConditionRecord {
   incident_conditions_id: string;
   incident_id: string;
   condition_id: string;
+  detail_id?: string | null;
   remarks: string;
   code?: string;
   description?: string;
+  detail_code?: string;
+  detail_description?: string;
 }
 
 interface IncidentActRecord {
   incident_act_id: string;
   incident_id: string;
   act_id: string;
+  detail_id?: string | null;
   remarks: string;
   code?: string;
   description?: string;
+  detail_code?: string;
+  detail_description?: string;
 }
 
 interface IncidentPersonalRecord {
   incident_personal_id: string;
   incident_id: string;
   factor_id: string;
+  detail_id?: string | null;
   remarks: string;
   code?: string;
   description?: string;
+  detail_code?: string;
+  detail_description?: string;
 }
 
 interface IncidentWorkRelatedRecord {
   incident_workrelated_id: string;
   incident_id: string;
   cause_id: string;
+  detail_id?: string | null;
   remarks: string;
   code?: string;
   description?: string;
+  detail_code?: string;
+  detail_description?: string;
 }
 
 type AnalysisTab = 'conditions' | 'acts' | 'personal' | 'workrelated';
 
 export function IncidentReport() {
+  // Collapsible State for 2nd Area (Incident Record Display)
+  const [isSecondAreaOpen, setIsSecondAreaOpen] = useState<boolean>(true);
+
   // Master Incident Data
   const [incidents, setIncidents] = useState<IncidentRecord[]>([]);
-  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null); 
   const [loadingIncidents, setLoadingIncidents] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Dropdown References
-  const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
+  // Search Modal for Incident Reports
+  const [isIncidentSearchOpen, setIsIncidentSearchOpen] = useState<boolean>(false);
+  const [incidentSearchQuery, setIncidentSearchQuery] = useState<string>('');
+
+  // Equipment Picker Modal State
+  const [equipmentList, setEquipmentList] = useState<EquipmentPm[]>([]);
+  const [selectedEquipment, setSelectedEquipment] = useState<EquipmentPm | null>(null);
+  const [showEquipmentPicker, setShowEquipmentPicker] = useState<boolean>(false);
+  const [equipmentSearchQuery, setEquipmentSearchQuery] = useState<string>('');
+  const [loadingEquipment, setLoadingEquipment] = useState<boolean>(false);
+
+  // References
+  const [employees, setEmployees] = useState<EmployeeOption[]>([]);
+  const [statuses, setStatuses] = useState<StatusOption[]>([]);
   const [conditionOptions, setConditionOptions] = useState<TaxonomyOption[]>([]);
+  const [conditionDetailOptions, setConditionDetailOptions] = useState<ConditionDetailOption[]>([]);
   const [actOptions, setActOptions] = useState<TaxonomyOption[]>([]);
+  const [actDetailOptions, setActDetailOptions] = useState<ActDetailOption[]>([]);
   const [factorOptions, setFactorOptions] = useState<TaxonomyOption[]>([]);
+  const [factorDetailOptions, setFactorDetailOptions] = useState<FactorDetailOption[]>([]);
   const [causeOptions, setCauseOptions] = useState<TaxonomyOption[]>([]);
+  const [causeDetailOptions, setCauseDetailOptions] = useState<CauseDetailOption[]>([]);
+
+  // Search query states within Details pickers
+  const [conditionDetailSearchQuery, setConditionDetailSearchQuery] = useState<string>('');
+  const [actDetailSearchQuery, setActDetailSearchQuery] = useState<string>('');
+  const [factorDetailSearchQuery, setFactorDetailSearchQuery] = useState<string>('');
+  const [causeDetailSearchQuery, setCauseDetailSearchQuery] = useState<string>('');
 
   // Active Analysis Tab for Child Tables
   const [activeAnalysisTab, setActiveAnalysisTab] = useState<AnalysisTab>('conditions');
@@ -120,64 +210,144 @@ export function IncidentReport() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Master Modal State
+  // Master Incident Form Modal State
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     incident_refno: '',
     incident_date: new Date().toISOString().split('T')[0],
     vehicle_id: '',
+    vehicle_plate: '',
     incident_severity: 'Low' as IncidentRecord['incident_severity'],
     incident_description: '',
     incident_impact: '',
     incident_loss: 0,
     reported_by: '',
-    validated_by: ''
+    validated_by: '',
+    status_id: '',
+    reportcompleted_date: ''
   });
 
-  // Child Modal State
+  // Employee Modal Search States
+  const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState<boolean>(false);
+  const [employeeModalTarget, setEmployeeModalTarget] = useState<'reported_by' | 'validated_by' | null>(null);
+  const [employeeSearchQuery, setEmployeeSearchQuery] = useState<string>('');
+
+  // Child Analysis Form Modal State
   const [isChildModalOpen, setIsChildModalOpen] = useState<boolean>(false);
   const [childEditingId, setChildEditingId] = useState<string | null>(null);
   const [childForm, setChildForm] = useState({
     selectedOptionId: '',
+    selectedDetailId: '',
     remarks: ''
   });
 
-  // Fetch Incident List
+  // O(1) Lookup Maps
+  const conditionMap = useMemo(() => new Map(conditionOptions.map(c => [c.id, c])), [conditionOptions]);
+  const conditionDetailMap = useMemo(() => new Map(conditionDetailOptions.map(d => [d.detail_id, d])), [conditionDetailOptions]);
+  const actMap = useMemo(() => new Map(actOptions.map(a => [a.id, a])), [actOptions]);
+  const actDetailMap = useMemo(() => new Map(actDetailOptions.map(d => [d.detail_id, d])), [actDetailOptions]);
+  const factorMap = useMemo(() => new Map(factorOptions.map(f => [f.id, f])), [factorOptions]);
+  const factorDetailMap = useMemo(() => new Map(factorDetailOptions.map(d => [d.detail_id, d])), [factorDetailOptions]);
+  const causeMap = useMemo(() => new Map(causeOptions.map(c => [c.id, c])), [causeOptions]);
+  const causeDetailMap = useMemo(() => new Map(causeDetailOptions.map(d => [d.detail_id, d])), [causeDetailOptions]);
+
+  // Fetch Equipment List for Modal Picker
+  const fetchEquipmentList = useCallback(async (queryToRun?: string) => {
+    try {
+      setLoadingEquipment(true);
+      const activeQuery = queryToRun !== undefined ? queryToRun : equipmentSearchQuery;
+
+      let equipmentQuery = supabase
+        .from('vw_vehicle_pm_details')
+        .select('*')
+        .order('plate_no', { ascending: true })
+        .limit(50);
+
+      if (activeQuery.trim()) {
+        equipmentQuery = equipmentQuery.ilike('plate_no', `%${activeQuery.trim()}%`);
+      }
+
+      const { data, error } = await equipmentQuery;
+
+      if (error) {
+        const { data: vehData } = await supabase
+          .from('vehicles')
+          .select('*')
+          .ilike('plate_no', `%${activeQuery.trim()}%`)
+          .limit(50);
+
+        setEquipmentList((vehData || []).map((v: Record<string, unknown>) => ({
+          vehicle_id: String(v.vehicle_id),
+          plate_no: String(v.plate_no || v.vehicle_plate || 'N/A'),
+          make_name: String(v.make_name || v.make || ''),
+          model_name: String(v.model_name || v.model || ''),
+          type_description: String(v.type_description || v.type || '')
+        })));
+      } else {
+        setEquipmentList(data || []);
+      }
+    } catch (err: unknown) {
+      console.error('Error loading equipment:', err);
+    } finally {
+      setLoadingEquipment(false);
+    }
+  }, [equipmentSearchQuery]);
+
+  // Fetch Incident List and Statuses
   const fetchIncidentList = useCallback(async () => {
     try {
       setLoadingIncidents(true);
       setErrorMsg(null);
 
-      const { data: incData, error: incError } = await supabase
-        .from('incident_report')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const [incRes, empRes, statusRes] = await Promise.all([
+        supabase.from('incident_report').select('*, joborder_status(status_id, status_name)').order('created_at', { ascending: false }),
+        supabase.from('employees').select('*'),
+        supabase.from('joborder_status').select('*')
+      ]);
 
-      if (incError) throw incError;
+      if (incRes.error) throw incRes.error;
 
-      const { data: vehData } = await supabase.from('vehicles').select('*');
-      const vehList: VehicleOption[] = (vehData || []).map((v: Record<string, unknown>) => ({
-        vehicle_id: String(v.vehicle_id),
-        plate_no: String(v.plate_no || v.vehicle_plate || 'N/A'),
-        model_name: String(v.model_name || '')
-      }));
-      setVehicles(vehList);
+      if (statusRes.data) {
+        setStatuses(statusRes.data.map((s: Record<string, unknown>) => ({
+          status_id: String(s.status_id),
+          status_name: String(s.status_name || s.name || 'Active')
+        })));
+      }
 
-      const formatted: IncidentRecord[] = (incData || []).map((row: Record<string, unknown>) => {
-        const matchedVeh = vehList.find(v => v.vehicle_id === String(row.vehicle_id));
+      // Employees Lookup
+      const empList: EmployeeOption[] = (empRes.data || []).map((e: Record<string, unknown>) => {
+        const fname = String(e.first_name || '');
+        const lname = String(e.last_name || '');
+        const constructedName = `${fname} ${lname}`.trim();
+        return {
+          employee_id: String(e.employee_id),
+          employee_no: String(e.employee_no || e.code || ''),
+          full_name: String(e.full_name || constructedName || e.employee_name || 'Unknown Employee'),
+          department: String(e.department || ''),
+          position: String(e.position || e.job_title || '')
+        };
+      });
+      setEmployees(empList);
+
+      // Formatted Master Incidents
+      const formatted: IncidentRecord[] = (incRes.data || []).map((row: Record<string, unknown>) => {
+        const statusObj = row.joborder_status as Record<string, unknown> | null;
         return {
           incident_id: String(row.incident_id),
           incident_refno: String(row.incident_refno || ''),
           incident_date: String(row.incident_date || ''),
           vehicle_id: String(row.vehicle_id),
-          vehicle_plate: matchedVeh?.plate_no || 'Unknown Plate',
+          vehicle_plate: String(row.vehicle_plate || row.plate_no || 'Assigned Vehicle'),
           incident_description: String(row.incident_description || ''),
           incident_impact: String(row.incident_impact || ''),
           incident_loss: Number(row.incident_loss || 0),
           incident_severity: (row.incident_severity as IncidentRecord['incident_severity']) || 'Low',
           reported_by: String(row.reported_by || ''),
           validated_by: String(row.validated_by || ''),
+          status_id: row.status_id ? String(row.status_id) : null,
+          status_name: String(statusObj?.status_name || '—'),
+          reportcompleted_date: row.reportcompleted_date ? String(row.reportcompleted_date) : null,
           reported_at: String(row.reported_at || ''),
           created_at: String(row.created_at || ''),
           updated_at: String(row.updated_at || '')
@@ -185,25 +355,26 @@ export function IncidentReport() {
       });
 
       setIncidents(formatted);
-      if (formatted.length > 0 && !selectedIncidentId) {
-        setSelectedIncidentId(formatted[0].incident_id);
-      }
     } catch (err: unknown) {
       console.error('Error fetching incident_report:', err);
       setErrorMsg('Failed to load incident reports from database.');
     } finally {
       setLoadingIncidents(false);
     }
-  }, [selectedIncidentId]);
+  }, []);
 
-  // Fetch Taxonomy Options for Child Forms
+  // Fetch Taxonomy Options and Details
   const fetchTaxonomyOptions = useCallback(async () => {
     try {
-      const [condRes, actRes, factorRes, causeRes] = await Promise.all([
+      const [condRes, condDetailRes, actRes, actDetailRes, factorRes, factorDetailRes, causeRes, causeDetailRes] = await Promise.all([
         supabase.from('unsafe_conditions').select('*').order('code'),
+        supabase.from('condition_details').select('*').order('code'),
+        supabase.from('unsafe_acts').select('*').order('code'),
         supabase.from('act_details').select('*').order('code'),
         supabase.from('personal_factors').select('*').order('code'),
-        supabase.from('work_causes').select('*').order('code')
+        supabase.from('factor_details').select('*').order('code'),
+        supabase.from('work_causes').select('*').order('code'),
+        supabase.from('cause_details').select('*').order('code')
       ]);
 
       if (condRes.data) {
@@ -213,9 +384,25 @@ export function IncidentReport() {
           description: String(r.description || '')
         })));
       }
+      if (condDetailRes.data) {
+        setConditionDetailOptions(condDetailRes.data.map((r: Record<string, unknown>) => ({
+          detail_id: String(r.detail_id),
+          condition_id: String(r.condition_id),
+          code: String(r.code || ''),
+          description: String(r.description || '')
+        })));
+      }
       if (actRes.data) {
         setActOptions(actRes.data.map((r: Record<string, unknown>) => ({
-          id: String(r.detail_id),
+          id: String(r.act_id),
+          code: String(r.code || ''),
+          description: String(r.description || '')
+        })));
+      }
+      if (actDetailRes.data) {
+        setActDetailOptions(actDetailRes.data.map((r: Record<string, unknown>) => ({
+          detail_id: String(r.detail_id),
+          act_id: String(r.act_id),
           code: String(r.code || ''),
           description: String(r.description || '')
         })));
@@ -227,9 +414,25 @@ export function IncidentReport() {
           description: String(r.description || '')
         })));
       }
+      if (factorDetailRes.data) {
+        setFactorDetailOptions(factorDetailRes.data.map((r: Record<string, unknown>) => ({
+          detail_id: String(r.detail_id),
+          factor_id: String(r.factor_id),
+          code: String(r.code || ''),
+          description: String(r.description || '')
+        })));
+      }
       if (causeRes.data) {
         setCauseOptions(causeRes.data.map((r: Record<string, unknown>) => ({
           id: String(r.cause_id),
+          code: String(r.code || ''),
+          description: String(r.description || '')
+        })));
+      }
+      if (causeDetailRes.data) {
+        setCauseDetailOptions(causeDetailRes.data.map((r: Record<string, unknown>) => ({
+          detail_id: String(r.detail_id),
+          cause_id: String(r.cause_id),
           code: String(r.code || ''),
           description: String(r.description || '')
         })));
@@ -239,7 +442,7 @@ export function IncidentReport() {
     }
   }, []);
 
-  // Fetch Child Records for Selected Incident
+  // Fetch Child Records with O(1) Lookup Maps
   const fetchChildRecords = useCallback(async (incId: string) => {
     try {
       setLoadingChild(true);
@@ -251,50 +454,66 @@ export function IncidentReport() {
       ]);
 
       setIncidentConditions((condRes.data || []).map((row: Record<string, unknown>) => {
-        const matched = conditionOptions.find(c => c.id === String(row.condition_id));
+        const matchedCond = conditionMap.get(String(row.condition_id));
+        const matchedDetail = conditionDetailMap.get(String(row.detail_id));
         return {
           incident_conditions_id: String(row.incident_conditions_id),
           incident_id: String(row.incident_id),
           condition_id: String(row.condition_id),
+          detail_id: row.detail_id ? String(row.detail_id) : null,
           remarks: String(row.remarks || ''),
-          code: matched?.code,
-          description: matched?.description
+          code: matchedCond?.code,
+          description: matchedCond?.description,
+          detail_code: matchedDetail?.code,
+          detail_description: matchedDetail?.description
         };
       }));
 
       setIncidentActs((actRes.data || []).map((row: Record<string, unknown>) => {
-        const matched = actOptions.find(a => a.id === String(row.act_id));
+        const matchedAct = actMap.get(String(row.act_id));
+        const matchedDetail = actDetailMap.get(String(row.detail_id));
         return {
           incident_act_id: String(row.incident_act_id),
           incident_id: String(row.incident_id),
           act_id: String(row.act_id),
+          detail_id: row.detail_id ? String(row.detail_id) : null,
           remarks: String(row.remarks || ''),
-          code: matched?.code,
-          description: matched?.description
+          code: matchedAct?.code,
+          description: matchedAct?.description,
+          detail_code: matchedDetail?.code,
+          detail_description: matchedDetail?.description
         };
       }));
 
       setIncidentPersonal((factorRes.data || []).map((row: Record<string, unknown>) => {
-        const matched = factorOptions.find(f => f.id === String(row.factor_id));
+        const matchedFactor = factorMap.get(String(row.factor_id));
+        const matchedDetail = factorDetailMap.get(String(row.detail_id));
         return {
           incident_personal_id: String(row.incident_personal_id),
           incident_id: String(row.incident_id),
           factor_id: String(row.factor_id),
+          detail_id: row.detail_id ? String(row.detail_id) : null,
           remarks: String(row.remarks || ''),
-          code: matched?.code,
-          description: matched?.description
+          code: matchedFactor?.code,
+          description: matchedFactor?.description,
+          detail_code: matchedDetail?.code,
+          detail_description: matchedDetail?.description
         };
       }));
 
       setIncidentWorkRelated((causeRes.data || []).map((row: Record<string, unknown>) => {
-        const matched = causeOptions.find(c => c.id === String(row.cause_id));
+        const matchedCause = causeMap.get(String(row.cause_id));
+        const matchedDetail = causeDetailMap.get(String(row.detail_id));
         return {
           incident_workrelated_id: String(row.incident_workrelated_id),
           incident_id: String(row.incident_id),
           cause_id: String(row.cause_id),
+          detail_id: row.detail_id ? String(row.detail_id) : null,
           remarks: String(row.remarks || ''),
-          code: matched?.code,
-          description: matched?.description
+          code: matchedCause?.code,
+          description: matchedCause?.description,
+          detail_code: matchedDetail?.code,
+          detail_description: matchedDetail?.description
         };
       }));
 
@@ -303,7 +522,7 @@ export function IncidentReport() {
     } finally {
       setLoadingChild(false);
     }
-  }, [conditionOptions, actOptions, factorOptions, causeOptions]);
+  }, [conditionMap, conditionDetailMap, actMap, actDetailMap, factorMap, factorDetailMap, causeMap, causeDetailMap]);
 
   // Initial Load Effect
   useEffect(() => {
@@ -312,6 +531,7 @@ export function IncidentReport() {
     queueMicrotask(() => {
       if (isMounted) {
         fetchTaxonomyOptions();
+        fetchEquipmentList();
         fetchIncidentList();
       }
     });
@@ -319,7 +539,7 @@ export function IncidentReport() {
     return () => {
       isMounted = false;
     };
-  }, [fetchIncidentList, fetchTaxonomyOptions]);
+  }, [fetchIncidentList, fetchEquipmentList, fetchTaxonomyOptions]);
 
   // Selected Incident Child Load Effect
   useEffect(() => {
@@ -341,41 +561,66 @@ export function IncidentReport() {
   // Master Incident Handlers
   const handleOpenCreateModal = () => {
     setEditingId(null);
+    setSelectedEquipment(null);
     const nextRefNo = `INC-${new Date().getFullYear()}-${String(incidents.length + 1).padStart(3, '0')}`;
     setFormData({
       incident_refno: nextRefNo,
       incident_date: new Date().toISOString().split('T')[0],
-      vehicle_id: vehicles[0]?.vehicle_id || '',
+      vehicle_id: '',
+      vehicle_plate: '',
       incident_severity: 'Low',
       incident_description: '',
       incident_impact: '',
       incident_loss: 0,
       reported_by: '',
-      validated_by: ''
+      validated_by: '',
+      status_id: statuses[0]?.status_id || '',
+      reportcompleted_date: ''
     });
     setIsModalOpen(true);
   };
 
   const handleOpenEditModal = (inc: IncidentRecord) => {
+    if (inc.status_name === 'Completed' || inc.status_name === 'Cancelled') return;
     setEditingId(inc.incident_id);
+    const matchedEq = equipmentList.find(e => (e.vehicle_id || e.equipment_id || e.id) === inc.vehicle_id);
+    setSelectedEquipment(matchedEq || {
+      plate_no: inc.vehicle_plate || 'Assigned Equipment',
+      vehicle_id: inc.vehicle_id
+    });
     setFormData({
       incident_refno: inc.incident_refno,
       incident_date: inc.incident_date,
       vehicle_id: inc.vehicle_id,
+      vehicle_plate: inc.vehicle_plate || '',
       incident_severity: inc.incident_severity,
       incident_description: inc.incident_description,
       incident_impact: inc.incident_impact,
       incident_loss: inc.incident_loss,
       reported_by: inc.reported_by,
-      validated_by: inc.validated_by
+      validated_by: inc.validated_by,
+      status_id: inc.status_id || '',
+      reportcompleted_date: inc.reportcompleted_date || ''
     });
     setIsModalOpen(true);
+  };
+
+  const handleStatusChange = (statusIdVal: string) => {
+    const selectedStatusObj = statuses.find(s => s.status_id === statusIdVal);
+    const currentStatusName = selectedStatusObj?.status_name;
+    
+    if (currentStatusName === 'Completed') {
+      const todayStr = new Date().toISOString().split('T')[0];
+      setFormData(prev => ({ ...prev, status_id: statusIdVal, reportcompleted_date: todayStr }));
+    } else {
+      setFormData(prev => ({ ...prev, status_id: statusIdVal, reportcompleted_date: '' }));
+    }
   };
 
   const handleSubmitMaster = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.vehicle_id) {
-      setErrorMsg('Please select a valid vehicle.');
+      setErrorMsg('Please select a valid equipment vehicle.');
       return;
     }
 
@@ -391,6 +636,8 @@ export function IncidentReport() {
         incident_loss: Number(formData.incident_loss || 0),
         reported_by: formData.reported_by.trim(),
         validated_by: formData.validated_by.trim(),
+        status_id: formData.status_id ? formData.status_id : null,
+        reportcompleted_date: formData.reportcompleted_date ? formData.reportcompleted_date : null,
         reported_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -404,12 +651,16 @@ export function IncidentReport() {
         if (error) throw error;
         setSuccessMsg('Incident Report updated successfully.');
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('incident_report')
-          .insert([payload]);
+          .insert([payload])
+          .select();
 
         if (error) throw error;
         setSuccessMsg('Incident Report created successfully.');
+        if (data && data.length > 0) {
+          setSelectedIncidentId(String(data[0].incident_id));
+        }
       }
 
       setIsModalOpen(false);
@@ -422,7 +673,8 @@ export function IncidentReport() {
     }
   };
 
-  const handleDeleteMaster = async (id: string) => {
+  const handleDeleteMaster = async (id: string, statusName?: string) => {
+    if (statusName === 'Completed' || statusName === 'Cancelled') return;
     if (!confirm('Are you sure you want to delete this incident report and all associated analysis records?')) return;
 
     try {
@@ -444,28 +696,71 @@ export function IncidentReport() {
     }
   };
 
+  // Employee Modal Lookup Handler
+  const handleOpenEmployeeModal = (target: 'reported_by' | 'validated_by') => {
+    setEmployeeModalTarget(target);
+    setEmployeeSearchQuery('');
+    setIsEmployeeModalOpen(true);
+  };
+
+  const handleSelectEmployee = (emp: EmployeeOption) => {
+    if (employeeModalTarget === 'reported_by') {
+      setFormData(prev => ({ ...prev, reported_by: emp.full_name }));
+    } else if (employeeModalTarget === 'validated_by') {
+      setFormData(prev => ({ ...prev, validated_by: emp.full_name }));
+    }
+    setIsEmployeeModalOpen(false);
+  };
+
   // Child Breakdown Handlers
   const handleOpenAddChild = () => {
     if (!selectedIncidentId) return;
+    if (selectedIncidentRecord?.status_name === 'Completed' || selectedIncidentRecord?.status_name === 'Cancelled') return;
     setChildEditingId(null);
+    setConditionDetailSearchQuery('');
+    setActDetailSearchQuery('');
+    setFactorDetailSearchQuery('');
+    setCauseDetailSearchQuery('');
 
     let defaultOptionId = '';
-    if (activeAnalysisTab === 'conditions') defaultOptionId = conditionOptions[0]?.id || '';
-    if (activeAnalysisTab === 'acts') defaultOptionId = actOptions[0]?.id || '';
-    if (activeAnalysisTab === 'personal') defaultOptionId = factorOptions[0]?.id || '';
-    if (activeAnalysisTab === 'workrelated') defaultOptionId = causeOptions[0]?.id || '';
+    let defaultDetailId = '';
+
+    if (activeAnalysisTab === 'conditions') {
+      defaultOptionId = conditionOptions[0]?.id || '';
+      const matchedDetails = conditionDetailOptions.filter(d => d.condition_id === defaultOptionId);
+      defaultDetailId = matchedDetails[0]?.detail_id || '';
+    } else if (activeAnalysisTab === 'acts') {
+      defaultOptionId = actOptions[0]?.id || '';
+      const matchedDetails = actDetailOptions.filter(d => d.act_id === defaultOptionId);
+      defaultDetailId = matchedDetails[0]?.detail_id || '';
+    } else if (activeAnalysisTab === 'personal') {
+      defaultOptionId = factorOptions[0]?.id || '';
+      const matchedDetails = factorDetailOptions.filter(d => d.factor_id === defaultOptionId);
+      defaultDetailId = matchedDetails[0]?.detail_id || '';
+    } else if (activeAnalysisTab === 'workrelated') {
+      defaultOptionId = causeOptions[0]?.id || '';
+      const matchedDetails = causeDetailOptions.filter(d => d.cause_id === defaultOptionId);
+      defaultDetailId = matchedDetails[0]?.detail_id || '';
+    }
 
     setChildForm({
       selectedOptionId: defaultOptionId,
+      selectedDetailId: defaultDetailId,
       remarks: ''
     });
     setIsChildModalOpen(true);
   };
 
-  const handleOpenEditChild = (rowId: string, optionId: string, remarks: string) => {
+  const handleOpenEditChild = (rowId: string, optionId: string, remarks: string, detailId?: string | null) => {
+    if (selectedIncidentRecord?.status_name === 'Completed' || selectedIncidentRecord?.status_name === 'Cancelled') return;
     setChildEditingId(rowId);
+    setConditionDetailSearchQuery('');
+    setActDetailSearchQuery('');
+    setFactorDetailSearchQuery('');
+    setCauseDetailSearchQuery('');
     setChildForm({
       selectedOptionId: optionId,
+      selectedDetailId: detailId || '',
       remarks: remarks || ''
     });
     setIsChildModalOpen(true);
@@ -479,32 +774,49 @@ export function IncidentReport() {
       setErrorMsg(null);
       let tableName = '';
       let pkField = '';
-      let fkField = '';
+      let payload: Record<string, unknown> = {};
 
       if (activeAnalysisTab === 'conditions') {
         tableName = 'incident_conditions';
         pkField = 'incident_conditions_id';
-        fkField = 'condition_id';
+        payload = {
+          incident_id: selectedIncidentId,
+          condition_id: childForm.selectedOptionId,
+          detail_id: childForm.selectedDetailId || null,
+          remarks: childForm.remarks.trim(),
+          updated_at: new Date().toISOString()
+        };
       } else if (activeAnalysisTab === 'acts') {
         tableName = 'incident_acts';
         pkField = 'incident_act_id';
-        fkField = 'act_id';
+        payload = {
+          incident_id: selectedIncidentId,
+          act_id: childForm.selectedOptionId,
+          detail_id: childForm.selectedDetailId || null,
+          remarks: childForm.remarks.trim(),
+          updated_at: new Date().toISOString()
+        };
       } else if (activeAnalysisTab === 'personal') {
         tableName = 'incident_personal';
         pkField = 'incident_personal_id';
-        fkField = 'factor_id';
+        payload = {
+          incident_id: selectedIncidentId,
+          factor_id: childForm.selectedOptionId,
+          detail_id: childForm.selectedDetailId || null,
+          remarks: childForm.remarks.trim(),
+          updated_at: new Date().toISOString()
+        };
       } else if (activeAnalysisTab === 'workrelated') {
         tableName = 'incident_workrelated';
         pkField = 'incident_workrelated_id';
-        fkField = 'cause_id';
+        payload = {
+          incident_id: selectedIncidentId,
+          cause_id: childForm.selectedOptionId,
+          detail_id: childForm.selectedDetailId || null,
+          remarks: childForm.remarks.trim(),
+          updated_at: new Date().toISOString()
+        };
       }
-
-      const payload = {
-        incident_id: selectedIncidentId,
-        [fkField]: childForm.selectedOptionId,
-        remarks: childForm.remarks.trim(),
-        updated_at: new Date().toISOString()
-      };
 
       if (childEditingId) {
         const { error } = await supabase
@@ -534,6 +846,7 @@ export function IncidentReport() {
   };
 
   const handleDeleteChild = async (rowId: string) => {
+    if (selectedIncidentRecord?.status_name === 'Completed' || selectedIncidentRecord?.status_name === 'Cancelled') return;
     if (!confirm('Are you sure you want to remove this analysis record?')) return;
 
     try {
@@ -571,19 +884,79 @@ export function IncidentReport() {
     }
   };
 
-  // Filtered master list
-  const filteredIncidents = incidents.filter(inc => 
-    inc.incident_refno.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (inc.vehicle_plate && inc.vehicle_plate.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    inc.reported_by.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    inc.incident_description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Memoized Search Filter Computations
+  const filteredIncidents = useMemo(() => {
+    const query = incidentSearchQuery.toLowerCase().trim();
+    if (!query) return incidents;
+    return incidents.filter(inc => 
+      inc.incident_refno.toLowerCase().includes(query) ||
+      (inc.vehicle_plate && inc.vehicle_plate.toLowerCase().includes(query)) ||
+      inc.reported_by.toLowerCase().includes(query) ||
+      inc.incident_description.toLowerCase().includes(query)
+    );
+  }, [incidents, incidentSearchQuery]);
 
-  const selectedIncidentRecord = incidents.find(inc => inc.incident_id === selectedIncidentId);
+  const filteredEmployees = useMemo(() => {
+    const query = employeeSearchQuery.toLowerCase().trim();
+    if (!query) return employees;
+    return employees.filter(e => 
+      e.full_name.toLowerCase().includes(query) ||
+      (e.employee_no && e.employee_no.toLowerCase().includes(query)) ||
+      (e.department && e.department.toLowerCase().includes(query)) ||
+      (e.position && e.position.toLowerCase().includes(query))
+    );
+  }, [employees, employeeSearchQuery]);
+
+  const filteredConditionDetails = useMemo(() => {
+    const query = conditionDetailSearchQuery.toLowerCase().trim();
+    return conditionDetailOptions.filter(d => {
+      const matchesCategory = !childForm.selectedOptionId || d.condition_id === childForm.selectedOptionId;
+      const matchesQuery = !query || 
+        d.code.toLowerCase().includes(query) ||
+        d.description.toLowerCase().includes(query);
+      return matchesCategory && matchesQuery;
+    });
+  }, [conditionDetailOptions, childForm.selectedOptionId, conditionDetailSearchQuery]);
+
+  const filteredActDetails = useMemo(() => {
+    const query = actDetailSearchQuery.toLowerCase().trim();
+    return actDetailOptions.filter(d => {
+      const matchesCategory = !childForm.selectedOptionId || d.act_id === childForm.selectedOptionId;
+      const matchesQuery = !query || 
+        d.code.toLowerCase().includes(query) ||
+        d.description.toLowerCase().includes(query);
+      return matchesCategory && matchesQuery;
+    });
+  }, [actDetailOptions, childForm.selectedOptionId, actDetailSearchQuery]);
+
+  const filteredFactorDetails = useMemo(() => {
+    const query = factorDetailSearchQuery.toLowerCase().trim();
+    return factorDetailOptions.filter(d => {
+      const matchesCategory = !childForm.selectedOptionId || d.factor_id === childForm.selectedOptionId;
+      const matchesQuery = !query || 
+        d.code.toLowerCase().includes(query) ||
+        d.description.toLowerCase().includes(query);
+      return matchesCategory && matchesQuery;
+    });
+  }, [factorDetailOptions, childForm.selectedOptionId, factorDetailSearchQuery]);
+
+  const filteredCauseDetails = useMemo(() => {
+    const query = causeDetailSearchQuery.toLowerCase().trim();
+    return causeDetailOptions.filter(d => {
+      const matchesCategory = !childForm.selectedOptionId || d.cause_id === childForm.selectedOptionId;
+      const matchesQuery = !query || 
+        d.code.toLowerCase().includes(query) ||
+        d.description.toLowerCase().includes(query);
+      return matchesCategory && matchesQuery;
+    });
+  }, [causeDetailOptions, childForm.selectedOptionId, causeDetailSearchQuery]);
+
+  const selectedIncidentRecord = incidents.find(inc => inc.incident_id === selectedIncidentId) || null;
+  const isLockedRecord = selectedIncidentRecord?.status_name === 'Completed' || selectedIncidentRecord?.status_name === 'Cancelled';
 
   return (
-    <div className="p-6 w-full max-w-7xl mx-auto space-y-6">
-      {/* Header */}
+    <div className="p-6 w-full max-w-7xl mx-auto space-y-6 max-h-screen overflow-y-auto">
+      {/* Main Header */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-red-600/20 text-red-400 rounded-xl">
@@ -619,111 +992,194 @@ export function IncidentReport() {
         </div>
       )}
 
-      {/* Master Incident List Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="relative max-w-md flex-1">
-            <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search ref #, plate number, or reporter..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:border-blue-500"
-            />
+      {/* AREA 2: COLLAPSIBLE SINGLE INCIDENT RECORD DISPLAY */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <div className="flex items-center gap-3">
+            {/* Dynamic Incident Ref Number & Severity */}
+            <div className="text-xs font-semibold whitespace-nowrap">
+              {selectedIncidentRecord ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="text-blue-400 font-mono font-bold">
+                    {selectedIncidentRecord.incident_refno}
+                  </span>
+                  <span className="text-slate-400 font-normal">
+                    ({selectedIncidentRecord.incident_severity} Severity)
+                  </span>
+                </span>
+              ) : (
+                <span className="text-slate-500 font-normal">No Incident Selected</span>
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                setIncidentSearchQuery('');
+                setIsIncidentSearchOpen(true);
+              }}
+              className="bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-700 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer"
+            >
+              <Search className="w-4 h-4 text-blue-400" />
+              <span>Search Incident Reports...</span>
+            </button>
           </div>
-          <span className="text-xs text-slate-400">
-            Total Incident Records: <strong className="text-slate-200">{filteredIncidents.length}</strong>
-          </span>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsSecondAreaOpen(!isSecondAreaOpen)}
+              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors cursor-pointer"
+              title={isSecondAreaOpen ? "Collapse Incident Record Display" : "Expand Incident Record Display"}
+            >
+              {isSecondAreaOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
 
-        {/* Scrollable Container with Sticky Table Headers */}
-        <div className="overflow-y-auto overflow-x-auto max-h-[calc(100vh-500px)] border border-slate-800/60 rounded-lg">
-          {loadingIncidents ? (
-            <div className="p-12 text-center text-slate-400 flex items-center justify-center gap-2 text-xs">
-              <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
-              <span>Loading incident reports...</span>
-            </div>
-          ) : (
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 text-slate-400 uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
-                  <th className="p-3">Incident Ref #</th>
-                  <th className="p-3">Date</th>
-                  <th className="p-3">Equipment Plate</th>
-                  <th className="p-3">Severity</th>
-                  <th className="p-3 text-right">Est. Loss ($)</th>
-                  <th className="p-3">Reported By</th>
-                  <th className="p-3">Description</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
-                {filteredIncidents.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="p-8 text-center text-slate-500">No incident reports found.</td>
-                  </tr>
-                ) : (
-                  filteredIncidents.map((inc) => {
-                    const isSelected = inc.incident_id === selectedIncidentId;
-                    return (
-                      <tr
-                        key={inc.incident_id}
-                        onClick={() => setSelectedIncidentId(inc.incident_id)}
-                        className={`cursor-pointer transition-colors ${
-                          isSelected
-                            ? 'bg-blue-950/60 text-blue-200 border-l-2 border-l-blue-500 font-medium'
-                            : 'hover:bg-slate-950/40'
-                        }`}
-                      >
-                        <td className="p-3 font-semibold text-blue-400 font-mono">{inc.incident_refno}</td>
-                        <td className="p-3 font-mono text-slate-400">{inc.incident_date}</td>
-                        <td className="p-3 font-bold text-slate-200">{inc.vehicle_plate}</td>
-                        <td className="p-3">
-                          <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
-                            inc.incident_severity === 'Critical' ? 'bg-red-950 text-red-400 border border-red-800' :
-                            inc.incident_severity === 'High' ? 'bg-amber-950 text-amber-400 border border-amber-800' :
-                            inc.incident_severity === 'Medium' ? 'bg-yellow-950 text-yellow-400 border border-yellow-800' :
-                            'bg-slate-800 text-slate-300'
-                          }`}>
-                            {inc.incident_severity}
-                          </span>
-                        </td>
-                        <td className="p-3 text-right font-mono text-slate-200">
-                          ${inc.incident_loss.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="p-3 text-slate-300">{inc.reported_by || '—'}</td>
-                        <td className="p-3 text-slate-400 truncate max-w-xs">{inc.incident_description}</td>
-                        <td className="p-3 text-right space-x-2 shrink-0">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenEditModal(inc);
-                            }}
-                            className="text-blue-400 hover:text-blue-300 p-1 rounded hover:bg-slate-800 cursor-pointer inline-flex items-center gap-1 text-xs"
-                            title="Edit Incident"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" /> Edit
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteMaster(inc.incident_id);
-                            }}
-                            className="text-red-400 hover:text-red-300 p-1 rounded hover:bg-slate-800 cursor-pointer inline-flex items-center gap-1 text-xs"
-                            title="Delete Incident"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" /> Delete
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
+        {/* Collapsible Body of Area 2 */}
+        {isSecondAreaOpen && (
+          <>
+            {loadingIncidents ? (
+              <div className="p-12 text-center text-slate-400 flex items-center justify-center gap-2 text-xs">
+                <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                <span>Loading incident report details...</span>
+              </div>
+            ) : !selectedIncidentRecord ? (
+              <div className="p-12 text-center text-slate-400 space-y-3">
+                <FolderSearch className="w-10 h-10 text-slate-600 mx-auto" />
+                <p className="text-sm">No Incident Report selected.</p>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  Use the search button above to load an incident record or click "New Incident Report" to create a record.
+                </p>
+                <button
+                  onClick={() => {
+                    setIncidentSearchQuery('');
+                    setIsIncidentSearchOpen(true);
+                  }}
+                  className="mt-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  <span>Browse & Select Incident</span>
+                </button>
+              </div>
+            ) : (
+              <div className="bg-slate-950 border border-slate-800 rounded-xl p-5 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-3">
+                  <div>
+                    <span className="text-[10px] uppercase font-semibold text-slate-500 block">Incident Ref #</span>
+                    <div className="text-lg font-bold text-blue-400 font-mono flex items-center gap-2">
+                      {selectedIncidentRecord.incident_refno}
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                        selectedIncidentRecord.incident_severity === 'Critical' ? 'bg-red-950 text-red-400 border border-red-800' :
+                        selectedIncidentRecord.incident_severity === 'High' ? 'bg-amber-950 text-amber-400 border border-amber-800' :
+                        selectedIncidentRecord.incident_severity === 'Medium' ? 'bg-yellow-950 text-yellow-400 border border-yellow-800' :
+                        'bg-slate-800 text-slate-300'
+                      }`}>
+                        {selectedIncidentRecord.incident_severity} Severity
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={isLockedRecord}
+                      onClick={() => handleOpenEditModal(selectedIncidentRecord)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors ${
+                        isLockedRecord 
+                          ? 'bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed opacity-60' 
+                          : 'bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 cursor-pointer'
+                      }`}
+                      title={isLockedRecord ? `Cannot edit because status is "${selectedIncidentRecord.status_name}"` : 'Edit Record'}
+                    >
+                      {isLockedRecord ? <Lock className="w-3.5 h-3.5" /> : <Edit2 className="w-3.5 h-3.5" />}
+                      <span>Edit Record</span>
+                    </button>
+                    <button
+                      disabled={isLockedRecord}
+                      onClick={() => handleDeleteMaster(selectedIncidentRecord.incident_id, selectedIncidentRecord.status_name)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors ${
+                        isLockedRecord 
+                          ? 'bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed opacity-60' 
+                          : 'bg-slate-800 hover:bg-slate-700 text-red-400 border border-slate-700 cursor-pointer'
+                      }`}
+                      title={isLockedRecord ? `Cannot delete because status is "${selectedIncidentRecord.status_name}"` : 'Delete'}
+                    >
+                      {isLockedRecord ? <Lock className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Top Row Grid details */}
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-xs">
+                  <div>
+                    <span className="text-[11px] text-slate-400 uppercase block">Incident Date</span>
+                    <span className="font-semibold text-slate-200 font-mono">{selectedIncidentRecord.incident_date}</span>
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-slate-400 uppercase block">Equipment Vehicle</span>
+                    <span className="font-bold text-slate-100">{selectedIncidentRecord.vehicle_plate}</span>
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-slate-400 uppercase block">Estimated Loss</span>
+                    <span className="font-semibold text-emerald-400 font-mono">
+                      ₱{selectedIncidentRecord.incident_loss.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-slate-400 uppercase block">Status</span>
+                    <span className="font-semibold text-blue-300 bg-blue-950/60 px-2 py-0.5 rounded border border-blue-900 inline-block">
+                      {selectedIncidentRecord.status_name || '—'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-slate-400 uppercase block">Completed Date</span>
+                    <span className="font-semibold text-slate-200 font-mono">
+                      {selectedIncidentRecord.reportcompleted_date || '—'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Description Block */}
+                <div className="pt-2 border-t border-slate-800/60">
+                  <span className="text-[11px] text-slate-400 uppercase block mb-1">Description</span>
+                  <p className="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-3 rounded-lg border border-slate-800/80">
+                    {selectedIncidentRecord.incident_description || 'No description provided.'}
+                  </p>
+                </div>
+
+                {/* Separate Reported By and Validated By Below Description */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-slate-800/60">
+                  <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-800/80 flex items-center gap-3">
+                    <div className="p-2 bg-blue-950/60 text-blue-400 rounded-lg shrink-0">
+                      <User className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase font-semibold block">Reported By</span>
+                      <span className="text-xs font-bold text-slate-100">{selectedIncidentRecord.reported_by || '—'}</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-800/80 flex items-center gap-3">
+                    <div className="p-2 bg-emerald-950/60 text-emerald-400 rounded-lg shrink-0">
+                      <UserCheck2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase font-semibold block">Validated By</span>
+                      <span className="text-xs font-bold text-slate-100">{selectedIncidentRecord.validated_by || '—'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedIncidentRecord.incident_impact && (
+                  <div>
+                    <span className="text-[11px] text-slate-400 uppercase block mb-1">Impact Summary</span>
+                    <p className="text-xs text-slate-400">{selectedIncidentRecord.incident_impact}</p>
+                  </div>
                 )}
-              </tbody>
-            </table>
-          )}
-        </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Child Analysis Tabs Section */}
@@ -742,14 +1198,19 @@ export function IncidentReport() {
             <p className="text-xs text-slate-400">
               {selectedIncidentRecord 
                 ? `Manage environmental conditions, unsafe acts, personal factors, and work-related causes.`
-                : 'Select an incident from the table above to view and assign detailed RCA classifications.'}
+                : 'Select an incident report using search above to view and assign root cause items.'}
             </p>
           </div>
 
           <button
-            disabled={!selectedIncidentId}
+            disabled={!selectedIncidentId || isLockedRecord}
             onClick={handleOpenAddChild}
-            className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow"
+            className={`px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow ${
+              !selectedIncidentId || isLockedRecord 
+                ? 'bg-slate-800 text-slate-500 opacity-50 cursor-not-allowed' 
+                : 'bg-blue-600 hover:bg-blue-500 text-white cursor-pointer'
+            }`}
+            title={isLockedRecord ? 'Analysis items cannot be added because the incident is Completed or Cancelled' : 'Add Analysis Item'}
           >
             <Plus className="w-4 h-4" />
             <span>Add Analysis Item</span>
@@ -807,8 +1268,8 @@ export function IncidentReport() {
           </button>
         </div>
 
-        {/* Scrollable Container with Sticky Table Headers for Child Tabs */}
-        <div className="overflow-y-auto overflow-x-auto max-h-[calc(100vh-500px)] border border-slate-800/60 rounded-lg">
+        {/* Scrollable Container for Child Tabs */}
+        <div className="overflow-y-auto overflow-x-auto max-h-64 border border-slate-800/60 rounded-lg">
           {loadingChild ? (
             <div className="p-8 text-center text-slate-400 flex items-center justify-center gap-2 text-xs">
               <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
@@ -816,7 +1277,7 @@ export function IncidentReport() {
             </div>
           ) : !selectedIncidentId ? (
             <div className="p-12 text-center text-slate-500 text-xs">
-              Select an Incident Report from the top table to view or add root cause items.
+              Select or search an Incident Report to view or add root cause items.
             </div>
           ) : (
             <>
@@ -826,7 +1287,8 @@ export function IncidentReport() {
                   <thead>
                     <tr className="border-b border-slate-800 text-slate-400 uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
                       <th className="p-2.5 w-32">Condition Code</th>
-                      <th className="p-2.5">Category / Description</th>
+                      <th className="p-2.5">Category</th>
+                      <th className="p-2.5">Condition Detail</th>
                       <th className="p-2.5">Investigation Remarks</th>
                       <th className="p-2.5 text-right w-24">Actions</th>
                     </tr>
@@ -834,26 +1296,29 @@ export function IncidentReport() {
                   <tbody className="divide-y divide-slate-800 text-slate-300">
                     {incidentConditions.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="p-8 text-center text-slate-500">No unsafe conditions recorded for this incident.</td>
+                        <td colSpan={5} className="p-8 text-center text-slate-500">No unsafe conditions recorded for this incident.</td>
                       </tr>
                     ) : (
                       incidentConditions.map((row) => (
                         <tr key={row.incident_conditions_id} className="hover:bg-slate-950/40 transition-colors">
-                          <td className="p-2.5 font-mono font-bold text-amber-400">{row.code || '—'}</td>
+                          <td className="p-2.5 font-mono font-bold text-amber-400">{row.detail_code || row.code || '—'}</td>
                           <td className="p-2.5 text-slate-200">{row.description || '—'}</td>
+                          <td className="p-2.5 text-slate-300 font-medium">{row.detail_description || '—'}</td>
                           <td className="p-2.5 text-slate-400">{row.remarks || '—'}</td>
                           <td className="p-2.5 text-right space-x-2 shrink-0">
                             <button
-                              onClick={() => handleOpenEditChild(row.incident_conditions_id, row.condition_id, row.remarks)}
-                              className="text-blue-400 hover:text-blue-300 p-1 rounded hover:bg-slate-800 cursor-pointer"
-                              title="Edit"
+                              disabled={isLockedRecord}
+                              onClick={() => handleOpenEditChild(row.incident_conditions_id, row.condition_id, row.remarks, row.detail_id)}
+                              className={`p-1 rounded ${isLockedRecord ? 'text-slate-700 cursor-not-allowed' : 'text-blue-400 hover:text-blue-300 hover:bg-slate-800 cursor-pointer'}`}
+                              title={isLockedRecord ? 'Locked' : 'Edit'}
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
                             <button
+                              disabled={isLockedRecord}
                               onClick={() => handleDeleteChild(row.incident_conditions_id)}
-                              className="text-red-400 hover:text-red-300 p-1 rounded hover:bg-slate-800 cursor-pointer"
-                              title="Delete"
+                              className={`p-1 rounded ${isLockedRecord ? 'text-slate-700 cursor-not-allowed' : 'text-red-400 hover:text-red-300 hover:bg-slate-800 cursor-pointer'}`}
+                              title={isLockedRecord ? 'Locked' : 'Delete'}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -871,7 +1336,8 @@ export function IncidentReport() {
                   <thead>
                     <tr className="border-b border-slate-800 text-slate-400 uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
                       <th className="p-2.5 w-32">Act Code</th>
-                      <th className="p-2.5">Act Detail Description</th>
+                      <th className="p-2.5">Category</th>
+                      <th className="p-2.5">Act Detail</th>
                       <th className="p-2.5">Investigation Remarks</th>
                       <th className="p-2.5 text-right w-24">Actions</th>
                     </tr>
@@ -879,26 +1345,29 @@ export function IncidentReport() {
                   <tbody className="divide-y divide-slate-800 text-slate-300">
                     {incidentActs.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="p-8 text-center text-slate-500">No unsafe acts recorded for this incident.</td>
+                        <td colSpan={5} className="p-8 text-center text-slate-500">No unsafe acts recorded for this incident.</td>
                       </tr>
                     ) : (
                       incidentActs.map((row) => (
                         <tr key={row.incident_act_id} className="hover:bg-slate-950/40 transition-colors">
-                          <td className="p-2.5 font-mono font-bold text-amber-400">{row.code || '—'}</td>
+                          <td className="p-2.5 font-mono font-bold text-amber-400">{row.detail_code || row.code || '—'}</td>
                           <td className="p-2.5 text-slate-200">{row.description || '—'}</td>
+                          <td className="p-2.5 text-slate-300 font-medium">{row.detail_description || '—'}</td>
                           <td className="p-2.5 text-slate-400">{row.remarks || '—'}</td>
                           <td className="p-2.5 text-right space-x-2 shrink-0">
                             <button
-                              onClick={() => handleOpenEditChild(row.incident_act_id, row.act_id, row.remarks)}
-                              className="text-blue-400 hover:text-blue-300 p-1 rounded hover:bg-slate-800 cursor-pointer"
-                              title="Edit"
+                              disabled={isLockedRecord}
+                              onClick={() => handleOpenEditChild(row.incident_act_id, row.act_id, row.remarks, row.detail_id)}
+                              className={`p-1 rounded ${isLockedRecord ? 'text-slate-700 cursor-not-allowed' : 'text-blue-400 hover:text-blue-300 hover:bg-slate-800 cursor-pointer'}`}
+                              title={isLockedRecord ? 'Locked' : 'Edit'}
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
                             <button
+                              disabled={isLockedRecord}
                               onClick={() => handleDeleteChild(row.incident_act_id)}
-                              className="text-red-400 hover:text-red-300 p-1 rounded hover:bg-slate-800 cursor-pointer"
-                              title="Delete"
+                              className={`p-1 rounded ${isLockedRecord ? 'text-slate-700 cursor-not-allowed' : 'text-red-400 hover:text-red-300 hover:bg-slate-800 cursor-pointer'}`}
+                              title={isLockedRecord ? 'Locked' : 'Delete'}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -916,7 +1385,8 @@ export function IncidentReport() {
                   <thead>
                     <tr className="border-b border-slate-800 text-slate-400 uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
                       <th className="p-2.5 w-32">Factor Code</th>
-                      <th className="p-2.5">Factor Description</th>
+                      <th className="p-2.5">Category</th>
+                      <th className="p-2.5">Factor Detail</th>
                       <th className="p-2.5">Investigation Remarks</th>
                       <th className="p-2.5 text-right w-24">Actions</th>
                     </tr>
@@ -924,26 +1394,29 @@ export function IncidentReport() {
                   <tbody className="divide-y divide-slate-800 text-slate-300">
                     {incidentPersonal.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="p-8 text-center text-slate-500">No personal factors recorded for this incident.</td>
+                        <td colSpan={5} className="p-8 text-center text-slate-500">No personal factors recorded for this incident.</td>
                       </tr>
                     ) : (
                       incidentPersonal.map((row) => (
                         <tr key={row.incident_personal_id} className="hover:bg-slate-950/40 transition-colors">
-                          <td className="p-2.5 font-mono font-bold text-amber-400">{row.code || '—'}</td>
+                          <td className="p-2.5 font-mono font-bold text-amber-400">{row.detail_code || row.code || '—'}</td>
                           <td className="p-2.5 text-slate-200">{row.description || '—'}</td>
+                          <td className="p-2.5 text-slate-300 font-medium">{row.detail_description || '—'}</td>
                           <td className="p-2.5 text-slate-400">{row.remarks || '—'}</td>
                           <td className="p-2.5 text-right space-x-2 shrink-0">
                             <button
-                              onClick={() => handleOpenEditChild(row.incident_personal_id, row.factor_id, row.remarks)}
-                              className="text-blue-400 hover:text-blue-300 p-1 rounded hover:bg-slate-800 cursor-pointer"
-                              title="Edit"
+                              disabled={isLockedRecord}
+                              onClick={() => handleOpenEditChild(row.incident_personal_id, row.factor_id, row.remarks, row.detail_id)}
+                              className={`p-1 rounded ${isLockedRecord ? 'text-slate-700 cursor-not-allowed' : 'text-blue-400 hover:text-blue-300 hover:bg-slate-800 cursor-pointer'}`}
+                              title={isLockedRecord ? 'Locked' : 'Edit'}
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
                             <button
+                              disabled={isLockedRecord}
                               onClick={() => handleDeleteChild(row.incident_personal_id)}
-                              className="text-red-400 hover:text-red-300 p-1 rounded hover:bg-slate-800 cursor-pointer"
-                              title="Delete"
+                              className={`p-1 rounded ${isLockedRecord ? 'text-slate-700 cursor-not-allowed' : 'text-red-400 hover:text-red-300 hover:bg-slate-800 cursor-pointer'}`}
+                              title={isLockedRecord ? 'Locked' : 'Delete'}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -961,7 +1434,8 @@ export function IncidentReport() {
                   <thead>
                     <tr className="border-b border-slate-800 text-slate-400 uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
                       <th className="p-2.5 w-32">Cause Code</th>
-                      <th className="p-2.5">Cause Description</th>
+                      <th className="p-2.5">Category</th>
+                      <th className="p-2.5">Cause Detail</th>
                       <th className="p-2.5">Investigation Remarks</th>
                       <th className="p-2.5 text-right w-24">Actions</th>
                     </tr>
@@ -969,26 +1443,29 @@ export function IncidentReport() {
                   <tbody className="divide-y divide-slate-800 text-slate-300">
                     {incidentWorkRelated.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="p-8 text-center text-slate-500">No work-related causes recorded for this incident.</td>
+                        <td colSpan={5} className="p-8 text-center text-slate-500">No work-related causes recorded for this incident.</td>
                       </tr>
                     ) : (
                       incidentWorkRelated.map((row) => (
                         <tr key={row.incident_workrelated_id} className="hover:bg-slate-950/40 transition-colors">
-                          <td className="p-2.5 font-mono font-bold text-amber-400">{row.code || '—'}</td>
+                          <td className="p-2.5 font-mono font-bold text-amber-400">{row.detail_code || row.code || '—'}</td>
                           <td className="p-2.5 text-slate-200">{row.description || '—'}</td>
+                          <td className="p-2.5 text-slate-300 font-medium">{row.detail_description || '—'}</td>
                           <td className="p-2.5 text-slate-400">{row.remarks || '—'}</td>
                           <td className="p-2.5 text-right space-x-2 shrink-0">
                             <button
-                              onClick={() => handleOpenEditChild(row.incident_workrelated_id, row.cause_id, row.remarks)}
-                              className="text-blue-400 hover:text-blue-300 p-1 rounded hover:bg-slate-800 cursor-pointer"
-                              title="Edit"
+                              disabled={isLockedRecord}
+                              onClick={() => handleOpenEditChild(row.incident_workrelated_id, row.cause_id, row.remarks, row.detail_id)}
+                              className={`p-1 rounded ${isLockedRecord ? 'text-slate-700 cursor-not-allowed' : 'text-blue-400 hover:text-blue-300 hover:bg-slate-800 cursor-pointer'}`}
+                              title={isLockedRecord ? 'Locked' : 'Edit'}
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
                             <button
+                              disabled={isLockedRecord}
                               onClick={() => handleDeleteChild(row.incident_workrelated_id)}
-                              className="text-red-400 hover:text-red-300 p-1 rounded hover:bg-slate-800 cursor-pointer"
-                              title="Delete"
+                              className={`p-1 rounded ${isLockedRecord ? 'text-slate-700 cursor-not-allowed' : 'text-red-400 hover:text-red-300 hover:bg-slate-800 cursor-pointer'}`}
+                              title={isLockedRecord ? 'Locked' : 'Delete'}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -1003,6 +1480,91 @@ export function IncidentReport() {
           )}
         </div>
       </div>
+
+      {/* INCIDENT REPORT SEARCH MODAL */}
+      {isIncidentSearchOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-60">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-950">
+              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                <Search className="w-4 h-4 text-blue-400" />
+                Search & Select Incident Report
+              </h3>
+              <button onClick={() => setIsIncidentSearchOpen(false)} className="text-slate-400 hover:text-slate-100 cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 border-b border-slate-800 bg-slate-950/40">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="Filter ref #, plate, reporter name, or description..."
+                  value={incidentSearchQuery}
+                  onChange={(e) => setIncidentSearchQuery(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 overflow-y-auto flex-1 space-y-2">
+              {filteredIncidents.length === 0 ? (
+                <div className="text-center text-slate-500 text-xs py-8">
+                  No incident reports match your query.
+                </div>
+              ) : (
+                filteredIncidents.map(inc => (
+                  <div
+                    key={inc.incident_id}
+                    onClick={() => {
+                      setSelectedIncidentId(inc.incident_id);
+                      setIsIncidentSearchOpen(false);
+                    }}
+                    className={`p-3 border rounded-xl cursor-pointer transition-all flex items-center justify-between group ${
+                      inc.incident_id === selectedIncidentId
+                        ? 'bg-blue-950/80 border-blue-500 text-slate-100'
+                        : 'bg-slate-950 hover:bg-slate-800/80 border-slate-800'
+                    }`}
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-blue-400 text-xs">{inc.incident_refno}</span>
+                        <span className="text-[11px] text-slate-400">({inc.incident_date})</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-300">
+                          {inc.incident_severity}
+                        </span>
+                        {inc.status_name && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-950 text-blue-300 border border-blue-900">
+                            {inc.status_name}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-200">
+                        Equipment: <strong>{inc.vehicle_plate}</strong> | Reported by: {inc.reported_by || '—'}
+                      </div>
+                      <div className="text-[11px] text-slate-400 truncate max-w-lg">
+                        {inc.incident_description}
+                      </div>
+                    </div>
+                    <span className="text-xs text-blue-400 group-hover:underline font-semibold shrink-0">Select</span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="p-3 border-t border-slate-800 bg-slate-950 text-right">
+              <button
+                onClick={() => setIsIncidentSearchOpen(false)}
+                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MASTER FORM MODAL */}
       {isModalOpen && (
@@ -1019,6 +1581,62 @@ export function IncidentReport() {
             </div>
 
             <form onSubmit={handleSubmitMaster} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              {/* Equipment Selector Section */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                  Selected Equipment <span className="text-red-500">*</span>
+                </label>
+                
+                {selectedEquipment ? (
+                  <div className="flex items-center justify-between bg-slate-950 border border-blue-900/60 p-4 rounded-xl">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full text-xs">
+                      <div>
+                        <span className="text-[11px] text-slate-400 uppercase block">Plate Number / ID</span>
+                        <div className="font-bold text-blue-400 text-sm font-mono">{selectedEquipment.plate_no}</div>
+                      </div>
+                      <div>
+                        <span className="text-[11px] text-slate-400 uppercase block">Current Reading</span>
+                        <div className="font-semibold text-slate-100">{selectedEquipment.service_rdg ?? '0'}</div>
+                      </div>
+                      <div>
+                        <span className="text-[11px] text-slate-400 uppercase block">Make / Model</span>
+                        <div className="font-semibold text-slate-100">{selectedEquipment.make_name || 'N/A'} {selectedEquipment.model_name ? `/ ${selectedEquipment.model_name}` : ''}</div>
+                      </div>
+                      <div>
+                        <span className="text-[11px] text-slate-400 uppercase block">Type</span>
+                        <div className="font-semibold text-slate-100">{selectedEquipment.type_description || 'N/A'}</div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedEquipment(null);
+                        setFormData(prev => ({ ...prev, vehicle_id: '', vehicle_plate: '' }));
+                      }}
+                      className="text-slate-400 hover:text-red-400 p-2 transition-colors cursor-pointer shrink-0"
+                      title="Change equipment"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEquipmentPicker(true);
+                      fetchEquipmentList();
+                    }}
+                    className="w-full bg-slate-950 border border-slate-700 hover:border-blue-500 text-slate-300 px-4 py-3 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Search className="w-4 h-4 text-blue-400" />
+                      {equipmentList.length > 0 ? `Click here to select an equipment (${equipmentList.length} loaded)...` : 'Click here to select an equipment...'}
+                    </span>
+                    <span className="text-xs bg-blue-600/20 text-blue-400 px-2 py-1 rounded font-medium">Browse</span>
+                  </button>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
@@ -1050,29 +1668,7 @@ export function IncidentReport() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                    Equipment Vehicle <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <Car className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-                    <select
-                      required
-                      value={formData.vehicle_id}
-                      onChange={(e) => setFormData({ ...formData, vehicle_id: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="">Select Equipment Vehicle</option>
-                      {vehicles.map((v) => (
-                        <option key={v.vehicle_id} value={v.vehicle_id}>
-                          {v.plate_no} {v.model_name ? `(${v.model_name})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
                     Incident Severity Level
@@ -1087,6 +1683,55 @@ export function IncidentReport() {
                     <option value="High">High</option>
                     <option value="Critical">Critical</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                    Estimated Loss (₱)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2 text-xs font-mono font-bold text-slate-400">₱</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formData.incident_loss}
+                      onChange={(e) => setFormData({ ...formData, incident_loss: parseFloat(e.target.value) || 0 })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3.5 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={formData.status_id}
+                    onChange={(e) => handleStatusChange(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="">Select Status...</option>
+                    {statuses.map(st => (
+                      <option key={st.status_id} value={st.status_id}>{st.status_name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Read Only Completed Date Field */}
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                  Completed Date (Read-only)
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
+                  <input
+                    type="date"
+                    readOnly
+                    value={formData.reportcompleted_date}
+                    placeholder="Automatically set when status is Completed"
+                    className="w-full bg-slate-950/60 border border-slate-800/80 rounded-lg pl-9 pr-3.5 py-2 text-xs font-mono text-slate-400 cursor-not-allowed focus:outline-none"
+                  />
                 </div>
               </div>
 
@@ -1104,67 +1749,69 @@ export function IncidentReport() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                    Incident Impact Summary
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.incident_impact}
-                    onChange={(e) => setFormData({ ...formData, incident_impact: e.target.value })}
-                    placeholder="e.g. Downtime 4 hrs, minor bumper damage"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                    Estimated Loss ($)
-                  </label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formData.incident_loss}
-                      onChange={(e) => setFormData({ ...formData, incident_loss: parseFloat(e.target.value) || 0 })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3.5 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                  Incident Impact Summary
+                </label>
+                <input
+                  type="text"
+                  value={formData.incident_impact}
+                  onChange={(e) => setFormData({ ...formData, incident_impact: e.target.value })}
+                  placeholder="e.g. Downtime 4 hrs, minor bumper damage"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
+                {/* Reported By Employee Picker */}
                 <div>
                   <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
                     Reported By
                   </label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-                    <input
-                      type="text"
-                      value={formData.reported_by}
-                      onChange={(e) => setFormData({ ...formData, reported_by: e.target.value })}
-                      placeholder="e.g. Driver John Doe"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                    />
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <User className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                      <input
+                        type="text"
+                        value={formData.reported_by}
+                        onChange={(e) => setFormData({ ...formData, reported_by: e.target.value })}
+                        placeholder="Select or enter reporter name..."
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEmployeeModal('reported_by')}
+                      className="bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                    >
+                      <Search className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
 
+                {/* Validated By Employee Picker */}
                 <div>
                   <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
                     Validated By
                   </label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-                    <input
-                      type="text"
-                      value={formData.validated_by}
-                      onChange={(e) => setFormData({ ...formData, validated_by: e.target.value })}
-                      placeholder="e.g. Safety Mgr. Smith"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                    />
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <UserCheck2 className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                      <input
+                        type="text"
+                        value={formData.validated_by}
+                        onChange={(e) => setFormData({ ...formData, validated_by: e.target.value })}
+                        placeholder="Select or enter validator name..."
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEmployeeModal('validated_by')}
+                      className="bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                    >
+                      <Search className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1189,10 +1836,177 @@ export function IncidentReport() {
         </div>
       )}
 
+      {/* EQUIPMENT PICKER MODAL */}
+      {showEquipmentPicker && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-800 bg-slate-950">
+              <h3 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                <Car className="w-4 h-4 text-blue-400" />
+                Select Equipment
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowEquipmentPicker(false)}
+                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                fetchEquipmentList(equipmentSearchQuery);
+              }}
+              className="p-4 border-b border-slate-800 bg-slate-950/50 flex gap-2"
+            >
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Filter by Equipment Plate / ID..."
+                  value={equipmentSearchQuery}
+                  onChange={(e) => setEquipmentSearchQuery(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 text-slate-100 pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+              >
+                Search
+              </button>
+            </form>
+
+            <div className="p-4 max-h-96 overflow-y-auto space-y-2">
+              {loadingEquipment ? (
+                <div className="py-12 text-center text-slate-400 flex items-center justify-center gap-2 text-xs">
+                  <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                  <span>Loading equipment records...</span>
+                </div>
+              ) : equipmentList.length === 0 ? (
+                <div className="py-12 text-center text-slate-400 text-xs">
+                  No equipment records found.
+                </div>
+              ) : (
+                equipmentList.map((eq, index) => {
+                  const vehId = String(eq.vehicle_id || eq.equipment_id || eq.id || '');
+                  return (
+                    <div
+                      key={vehId || index}
+                      onClick={() => {
+                        setSelectedEquipment(eq);
+                        setFormData(prev => ({
+                          ...prev,
+                          vehicle_id: vehId,
+                          vehicle_plate: eq.plate_no
+                        }));
+                        setShowEquipmentPicker(false);
+                      }}
+                      className="flex items-center justify-between bg-slate-950 hover:bg-blue-950/40 border border-slate-800 hover:border-blue-600/50 p-3 rounded-lg transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-slate-900 rounded-lg group-hover:bg-blue-900/40 text-blue-400 transition-colors">
+                          <Car className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-blue-400 text-xs font-mono">{eq.plate_no}</div>
+                          <div className="text-[11px] text-slate-400">
+                            {eq.make_name || 'N/A'} {eq.model_name ? `/ ${eq.model_name}` : ''} ({eq.type_description || 'N/A'})
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-slate-400 uppercase block">Service Rdg</span>
+                        <div className="text-xs font-semibold text-slate-200">{eq.service_rdg ?? '0'}</div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EMPLOYEE SEARCH MODAL */}
+      {isEmployeeModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-60">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-950">
+              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                <User className="w-4 h-4 text-blue-400" />
+                Select Employee ({employeeModalTarget === 'reported_by' ? 'Reported By' : 'Validated By'})
+              </h3>
+              <button onClick={() => setIsEmployeeModalOpen(false)} className="text-slate-400 hover:text-slate-100 cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 border-b border-slate-800 bg-slate-950/40">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="Search employee name, ID, or department..."
+                  value={employeeSearchQuery}
+                  onChange={(e) => setEmployeeSearchQuery(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 overflow-y-auto flex-1">
+              {filteredEmployees.length === 0 ? (
+                <div className="text-center text-slate-500 text-xs py-8">
+                  No employee records found matching your query.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-2">
+                  {filteredEmployees.map(emp => (
+                    <div
+                      key={emp.employee_id}
+                      onClick={() => handleSelectEmployee(emp)}
+                      className="p-3 bg-slate-950 hover:bg-blue-950/60 border border-slate-800/80 hover:border-blue-600/50 rounded-xl cursor-pointer transition-all flex items-center justify-between group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-slate-800 group-hover:bg-blue-600/20 text-slate-300 group-hover:text-blue-400 rounded-lg">
+                          <User className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-slate-100">{emp.full_name}</div>
+                          <div className="text-[11px] text-slate-400">
+                            {emp.employee_no && <span className="font-mono text-blue-400 mr-2">{emp.employee_no}</span>}
+                            {emp.position && <span>{emp.position}</span>}
+                            {emp.department && <span className="text-slate-500"> ({emp.department})</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-xs text-blue-400 group-hover:underline font-semibold">Select</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-3 border-t border-slate-800 bg-slate-950 text-right">
+              <button
+                onClick={() => setIsEmployeeModalOpen(false)}
+                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* CHILD ANALYSIS FORM MODAL */}
       {isChildModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-950">
               <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wide">
                 {childEditingId ? 'Edit' : 'Add'} {
@@ -1206,7 +2020,7 @@ export function IncidentReport() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmitChild} className="p-6 space-y-4">
+            <form onSubmit={handleSubmitChild} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
               <div>
                 <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
                   Incident Ref
@@ -1219,31 +2033,321 @@ export function IncidentReport() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                  Select Classification Option <span className="text-red-500">*</span>
-                </label>
-                <select
-                  required
-                  value={childForm.selectedOptionId}
-                  onChange={(e) => setChildForm({ ...childForm, selectedOptionId: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                >
-                  <option value="">Select Option...</option>
-                  {activeAnalysisTab === 'conditions' && conditionOptions.map(opt => (
-                    <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
-                  ))}
-                  {activeAnalysisTab === 'acts' && actOptions.map(opt => (
-                    <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
-                  ))}
-                  {activeAnalysisTab === 'personal' && factorOptions.map(opt => (
-                    <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
-                  ))}
-                  {activeAnalysisTab === 'workrelated' && causeOptions.map(opt => (
-                    <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
-                  ))}
-                </select>
-              </div>
+              {/* UNSAFE CONDITIONS CUSTOM SEARCH & PICKER */}
+              {activeAnalysisTab === 'conditions' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                      Unsafe Condition Category <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required
+                      value={childForm.selectedOptionId}
+                      onChange={(e) => {
+                        const newCondId = e.target.value;
+                        const matchingDetails = conditionDetailOptions.filter(d => d.condition_id === newCondId);
+                        setChildForm(prev => ({
+                          ...prev,
+                          selectedOptionId: newCondId,
+                          selectedDetailId: matchingDetails[0]?.detail_id || ''
+                        }));
+                      }}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="">Select Condition Category...</option>
+                      {conditionOptions.map(opt => (
+                        <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                      Search Condition Detail (<span className="text-blue-400 font-mono">condition_details</span>)
+                    </label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Search detail code or description..."
+                        value={conditionDetailSearchQuery}
+                        onChange={(e) => setConditionDetailSearchQuery(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div className="border border-slate-800 rounded-xl max-h-40 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
+                      {filteredConditionDetails.length === 0 ? (
+                        <div className="p-3 text-center text-slate-500 text-xs">
+                          No matching condition details found.
+                        </div>
+                      ) : (
+                        filteredConditionDetails.map(det => {
+                          const isSelected = childForm.selectedDetailId === det.detail_id;
+                          return (
+                            <div
+                              key={det.detail_id}
+                              onClick={() => {
+                                setChildForm(prev => ({
+                                  ...prev,
+                                  selectedDetailId: det.detail_id,
+                                  selectedOptionId: det.condition_id
+                                }));
+                              }}
+                              className={`p-2.5 cursor-pointer text-xs transition-colors flex items-center justify-between ${
+                                isSelected ? 'bg-blue-950/80 border-l-2 border-blue-500 text-blue-200' : 'hover:bg-slate-900 text-slate-300'
+                              }`}
+                            >
+                              <div>
+                                <span className="font-mono font-bold text-amber-400 mr-2">[{det.code}]</span>
+                                <span>{det.description}</span>
+                              </div>
+                              {isSelected && <CheckCircle className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* UNSAFE ACTS CUSTOM SEARCH & PICKER */}
+              {activeAnalysisTab === 'acts' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                      Unsafe Act Category <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required
+                      value={childForm.selectedOptionId}
+                      onChange={(e) => {
+                        const newActId = e.target.value;
+                        const matchingDetails = actDetailOptions.filter(d => d.act_id === newActId);
+                        setChildForm(prev => ({
+                          ...prev,
+                          selectedOptionId: newActId,
+                          selectedDetailId: matchingDetails[0]?.detail_id || ''
+                        }));
+                      }}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="">Select Unsafe Act Category...</option>
+                      {actOptions.map(opt => (
+                        <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                      Search Act Detail (<span className="text-blue-400 font-mono">act_details</span>)
+                    </label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Search detail code or description..."
+                        value={actDetailSearchQuery}
+                        onChange={(e) => setActDetailSearchQuery(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div className="border border-slate-800 rounded-xl max-h-40 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
+                      {filteredActDetails.length === 0 ? (
+                        <div className="p-3 text-center text-slate-500 text-xs">
+                          No matching act details found.
+                        </div>
+                      ) : (
+                        filteredActDetails.map(det => {
+                          const isSelected = childForm.selectedDetailId === det.detail_id;
+                          return (
+                            <div
+                              key={det.detail_id}
+                              onClick={() => {
+                                setChildForm(prev => ({
+                                  ...prev,
+                                  selectedDetailId: det.detail_id,
+                                  selectedOptionId: det.act_id
+                                }));
+                              }}
+                              className={`p-2.5 cursor-pointer text-xs transition-colors flex items-center justify-between ${
+                                isSelected ? 'bg-blue-950/80 border-l-2 border-blue-500 text-blue-200' : 'hover:bg-slate-900 text-slate-300'
+                              }`}
+                            >
+                              <div>
+                                <span className="font-mono font-bold text-amber-400 mr-2">[{det.code}]</span>
+                                <span>{det.description}</span>
+                              </div>
+                              {isSelected && <CheckCircle className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* PERSONAL FACTORS CUSTOM SEARCH & PICKER */}
+              {activeAnalysisTab === 'personal' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                      Personal Factor Category <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required
+                      value={childForm.selectedOptionId}
+                      onChange={(e) => {
+                        const newFactorId = e.target.value;
+                        const matchingDetails = factorDetailOptions.filter(d => d.factor_id === newFactorId);
+                        setChildForm(prev => ({
+                          ...prev,
+                          selectedOptionId: newFactorId,
+                          selectedDetailId: matchingDetails[0]?.detail_id || ''
+                        }));
+                      }}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="">Select Personal Factor Category...</option>
+                      {factorOptions.map(opt => (
+                        <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                      Search Factor Detail (<span className="text-blue-400 font-mono">factor_details</span>)
+                    </label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Search detail code or description..."
+                        value={factorDetailSearchQuery}
+                        onChange={(e) => setFactorDetailSearchQuery(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div className="border border-slate-800 rounded-xl max-h-40 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
+                      {filteredFactorDetails.length === 0 ? (
+                        <div className="p-3 text-center text-slate-500 text-xs">
+                          No matching factor details found.
+                        </div>
+                      ) : (
+                        filteredFactorDetails.map(det => {
+                          const isSelected = childForm.selectedDetailId === det.detail_id;
+                          return (
+                            <div
+                              key={det.detail_id}
+                              onClick={() => {
+                                setChildForm(prev => ({
+                                  ...prev,
+                                  selectedDetailId: det.detail_id,
+                                  selectedOptionId: det.factor_id
+                                }));
+                              }}
+                              className={`p-2.5 cursor-pointer text-xs transition-colors flex items-center justify-between ${
+                                isSelected ? 'bg-blue-950/80 border-l-2 border-blue-500 text-blue-200' : 'hover:bg-slate-900 text-slate-300'
+                              }`}
+                            >
+                              <div>
+                                <span className="font-mono font-bold text-amber-400 mr-2">[{det.code}]</span>
+                                <span>{det.description}</span>
+                              </div>
+                              {isSelected && <CheckCircle className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* WORK RELATED CAUSES CUSTOM SEARCH & PICKER */}
+              {activeAnalysisTab === 'workrelated' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                      Work Related Cause Category <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required
+                      value={childForm.selectedOptionId}
+                      onChange={(e) => {
+                        const newCauseId = e.target.value;
+                        const matchingDetails = causeDetailOptions.filter(d => d.cause_id === newCauseId);
+                        setChildForm(prev => ({
+                          ...prev,
+                          selectedOptionId: newCauseId,
+                          selectedDetailId: matchingDetails[0]?.detail_id || ''
+                        }));
+                      }}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="">Select Work Cause Category...</option>
+                      {causeOptions.map(opt => (
+                        <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                      Search Cause Detail (<span className="text-blue-400 font-mono">cause_details</span>)
+                    </label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Search detail code or description..."
+                        value={causeDetailSearchQuery}
+                        onChange={(e) => setCauseDetailSearchQuery(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div className="border border-slate-800 rounded-xl max-h-40 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
+                      {filteredCauseDetails.length === 0 ? (
+                        <div className="p-3 text-center text-slate-500 text-xs">
+                          No matching cause details found.
+                        </div>
+                      ) : (
+                        filteredCauseDetails.map(det => {
+                          const isSelected = childForm.selectedDetailId === det.detail_id;
+                          return (
+                            <div
+                              key={det.detail_id}
+                              onClick={() => {
+                                setChildForm(prev => ({
+                                  ...prev,
+                                  selectedDetailId: det.detail_id,
+                                  selectedOptionId: det.cause_id
+                                }));
+                              }}
+                              className={`p-2.5 cursor-pointer text-xs transition-colors flex items-center justify-between ${
+                                isSelected ? 'bg-blue-950/80 border-l-2 border-blue-500 text-blue-200' : 'hover:bg-slate-900 text-slate-300'
+                              }`}
+                            >
+                              <div>
+                                <span className="font-mono font-bold text-amber-400 mr-2">[{det.code}]</span>
+                                <span>{det.description}</span>
+                              </div>
+                              {isSelected && <CheckCircle className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
