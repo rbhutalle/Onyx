@@ -202,7 +202,7 @@ export function DailyInspection() {
   };
 
   return (
-    <div className="p-6 w-full max-w-4xl mx-auto space-y-6">
+    <div className="p-6 w-full max-w-4xl mx-auto space-y-6 max-h-screen overflow-y-auto">
       <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
         <ClipboardList className="w-8 h-8 text-blue-500" />
         <div>
@@ -225,9 +225,9 @@ export function DailyInspection() {
         </div>
       )}
 
-      {/* Form Scroller Container */}
+      {/* Form Container */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-xl overflow-hidden">
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[calc(100vh-180px)] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
           
           {/* Equipment Selector Section */}
           <div className="space-y-2">
@@ -402,7 +402,7 @@ export function DailyInspection() {
                 <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Filter by Equipment ID  / ID..."
+                  placeholder="Filter by Equipment Plate / ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 text-slate-100 pl-9 pr-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
