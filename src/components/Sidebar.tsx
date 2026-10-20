@@ -24,7 +24,7 @@ import {
   History,
   AlertTriangle,
   FileWarning,
-  SearchCheck,
+  // SearchCheck,
   GitFork,
   AlertCircle,
   ChevronLeft,
@@ -311,7 +311,7 @@ export function Sidebar() {
                 <span className="truncate">Incident Report</span>
               </button>
 
-              <button
+              {/* <button
                 onClick={() => navigate('/incident-management/fmea-rca')}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   currentPath === '/incident-management/fmea-rca'
@@ -321,7 +321,7 @@ export function Sidebar() {
               >
                 <SearchCheck className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">FMEA RCA</span>
-              </button>
+              </button> */}
             </div>
           )}
         </div>

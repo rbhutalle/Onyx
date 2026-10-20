@@ -16,7 +16,7 @@ import { EmployeeRegistry } from '@/components/EmployeeRegistry';
 import { ComponentRegistry } from '@/components/ComponentRegistry';
 import { ComponentHistory } from '@/components/ComponentHistory';
 import { IncidentReport } from '@/components/IncidentReport';
-import { FmeaRca } from '@/components/FmeaRca';
+// import { FmeaRca } from '@/components/FmeaRca';
 import { FmeaSettings } from '@/components/FmeaSettings';
 import { RcaSettings } from '@/components/RcaSettings';
 
@@ -39,7 +39,7 @@ export function App() {
             
             {/* Incident Management Routes */}
             <Route path="/incident-management/incident-report" element={<IncidentReport />} />
-            <Route path="/incident-management/fmea-rca" element={<FmeaRca />} />
+            {/* <Route path="/incident-management/fmea-rca" element={<FmeaRca />} /> */}
 
             {/* Global Settings / Registry Routes */}
             <Route path="/global-settings/vehicle-registry" element={<VehicleRegistry />} />
