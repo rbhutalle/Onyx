@@ -1,13 +1,31 @@
-# React + TypeScript + Vite
+# Onyx MRO
+**Reliability-Centered Maintenance, Repair, and Overhaul Management System**
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Onyx MRO is an enterprise web application designed for fleet operators and industrial equipment maintenance teams. It delivers predictive maintenance scheduling, work order cost accounting, component lifecycle tracking, incident management with 4-pillar Root Cause Analysis (RCA), and Failure Mode and Effects Analysis (FMEA).
 
-Currently, two official plugins are available:
+## Complete User Manual
+- **Web App Manual**: Available directly at `/manual.html` (or `/user-manual.html`) when running or deploying the application.
+- **In-App Access**: Click the **User Manual** button located directly above the Database Status indicator in the application sidebar.
+- **Markdown Version**: Also available in the repository root as [USER_MANUAL.md](USER_MANUAL.md).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## Tech Stack & Architecture
+- **Frontend**: React 19, TypeScript, Tailwind CSS, Lucide Icons, Vite
+- **Backend / Database**: Supabase (PostgreSQL with real-time heartbeat and RPC procedures)
+
+## Getting Started
+```bash
+# Install dependencies
+npm install
+
+# Start local development server
+npm run dev
+
+# Build for production
+npm run build
+```
+
 
 The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 

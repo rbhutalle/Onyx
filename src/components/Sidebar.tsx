@@ -28,7 +28,9 @@ import {
   GitFork,
   AlertCircle,
   ChevronLeft,
-  ChevronRight as ChevronRightIcon
+  ChevronRight as ChevronRightIcon,
+  BookOpen,
+  ExternalLink
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -522,6 +524,25 @@ export function Sidebar() {
           )}
         </div>
       </nav>
+
+      {/* User Manual External Link */}
+      <div className="px-3 pb-2">
+        <a
+          href="/manual.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          title={isMinimized ? "User Manual & Operations Guide" : undefined}
+          className={`w-full flex items-center ${isMinimized ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'} rounded-xl text-xs font-semibold text-blue-400 bg-blue-950/30 hover:bg-blue-900/40 border border-blue-800/40 transition-colors shadow-sm`}
+        >
+          <BookOpen className="w-4 h-4 shrink-0 text-blue-400" />
+          {!isMinimized && (
+            <div className="flex items-center justify-between w-full">
+              <span>User Manual</span>
+              <ExternalLink className="w-3 h-3 text-blue-400/70" />
+            </div>
+          )}
+        </a>
+      </div>
 
       {/* Database Status Footer */}
       <div className="p-3 border-t border-slate-800">
