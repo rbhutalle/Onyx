@@ -50,7 +50,6 @@ interface ComponentHistoryRecord {
   remove_date?: string | null;
   remove_srv_rdg?: number | null;
   remove_remarks?: string | null;
-  cost_per_srv_rdg?: number | null;
   installed_status?: boolean | string | null;
   component_code?: string;
   system_name?: string;
@@ -149,7 +148,6 @@ export function ComponentHistory() {
     remove_date: '',
     remove_srv_rdg: '',
     remove_remarks: '',
-    cost_per_srv_rdg: '',
     installed_status: 'Installed',
   });
 
@@ -410,14 +408,14 @@ export function ComponentHistory() {
 
     setHistoryForm(prev => {
       if (editingId) {
-        // Edit / Removal Details Modal: update Remove Service Reading
+        // Removal Modal: update Remove Service Reading
         return {
           ...prev,
           vehicle_id: newVehicleId,
           remove_srv_rdg: readingValue || prev.remove_srv_rdg,
         };
       } else {
-        // Record Installation Modal: update Install Service Reading
+        // Installation Modal: update Install Service Reading
         return {
           ...prev,
           vehicle_id: newVehicleId,
@@ -443,7 +441,6 @@ export function ComponentHistory() {
       remove_date: '',
       remove_srv_rdg: '',
       remove_remarks: '',
-      cost_per_srv_rdg: selectedComponent?.cost_rdg !== null && selectedComponent?.cost_rdg !== undefined ? String(selectedComponent.cost_rdg) : '0',
       installed_status: 'Installed',
     });
     setIsModalOpen(true);
@@ -471,7 +468,6 @@ export function ComponentHistory() {
         remove_date: activeRecord.remove_date ? String(activeRecord.remove_date).split('T')[0] : new Date().toISOString().split('T')[0],
         remove_srv_rdg: activeRecord.remove_srv_rdg !== null && activeRecord.remove_srv_rdg !== undefined ? String(activeRecord.remove_srv_rdg) : currentRdg,
         remove_remarks: activeRecord.remove_remarks || '',
-        cost_per_srv_rdg: activeRecord.cost_per_srv_rdg !== null && activeRecord.cost_per_srv_rdg !== undefined ? String(activeRecord.cost_per_srv_rdg) : '',
         installed_status: 'Removed',
       });
     } else {
@@ -489,7 +485,6 @@ export function ComponentHistory() {
         remove_date: new Date().toISOString().split('T')[0],
         remove_srv_rdg: defaultReading,
         remove_remarks: '',
-        cost_per_srv_rdg: selectedComponent?.cost_rdg !== null && selectedComponent?.cost_rdg !== undefined ? String(selectedComponent.cost_rdg) : '0',
         installed_status: 'Removed',
       });
     }
@@ -531,9 +526,8 @@ export function ComponentHistory() {
     setErrorMsg(null);
 
     try {
-      let statusValue: boolean | string = historyForm.installed_status;
-      if (historyForm.installed_status === 'Installed') statusValue = true;
-      if (historyForm.installed_status === 'Removed') statusValue = false;
+      // Force status to true/false based on modal context
+      const statusValue = editingId ? false : true;
 
       const payload = {
         equipment_component_id: selectedComponent.equipment_component_id,
@@ -544,7 +538,6 @@ export function ComponentHistory() {
         remove_date: historyForm.remove_date || null,
         remove_srv_rdg: historyForm.remove_srv_rdg !== '' ? Number(historyForm.remove_srv_rdg) : null,
         remove_remarks: historyForm.remove_remarks.trim() || null,
-        cost_per_srv_rdg: historyForm.cost_per_srv_rdg !== '' ? Number(historyForm.cost_per_srv_rdg) : null,
         installed_status: statusValue,
       };
 
@@ -555,7 +548,7 @@ export function ComponentHistory() {
           .eq('equipment_component_child_id', editingId);
 
         if (error) throw error;
-        setSuccessMsg('Installation history updated successfully!');
+        setSuccessMsg('Component removal recorded successfully!');
       } else {
         const { error } = await supabase
           .from('component_history')
@@ -610,7 +603,7 @@ export function ComponentHistory() {
         </div>
         <div>
           <h1 className="text-xl font-bold tracking-tight text-slate-100">Component History & Installation Lifecycle</h1>
-          <p className="text-xs text-slate-400">Track equipment component installation, removal metrics, service readings, and cost performance.</p>
+          <p className="text-xs text-slate-400">Track equipment component installation, removal metrics, and service readings.</p>
         </div>
       </div>
 
@@ -755,14 +748,13 @@ export function ComponentHistory() {
                   <th className="p-3 font-mono">Install Service Rdg</th>
                   <th className="p-3 font-mono">Remove Date</th>
                   <th className="p-3 font-mono">Remove Service Rdg</th>
-                  <th className="p-3 font-mono">Cost Per Service Rdg</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 text-slate-300">
                 {loadingHistory ? (
                   <tr>
-                    <td colSpan={8} className="p-6 text-center text-slate-400">
+                    <td colSpan={7} className="p-6 text-center text-slate-400">
                       <div className="flex items-center justify-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
                         <span>Loading telemetry records for selected component...</span>
@@ -771,13 +763,13 @@ export function ComponentHistory() {
                   </tr>
                 ) : !selectedComponent ? (
                   <tr>
-                    <td colSpan={8} className="py-6 text-center text-slate-500 text-xs">
+                    <td colSpan={7} className="py-6 text-center text-slate-500 text-xs">
                       Please select an active component above to view its installation lifecycle history.
                     </td>
                   </tr>
                 ) : displayedHistory.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-6 text-center text-slate-500 text-xs">
+                    <td colSpan={7} className="py-6 text-center text-slate-500 text-xs">
                       No installation history records found for this component. Click "Record Installation" above to add one.
                     </td>
                   </tr>
@@ -801,9 +793,6 @@ export function ComponentHistory() {
                       </td>
                       <td className="p-3 font-mono text-xs text-slate-300">
                         {item.remove_srv_rdg !== null && item.remove_srv_rdg !== undefined ? item.remove_srv_rdg : '—'}
-                      </td>
-                      <td className="p-3 font-mono text-xs text-emerald-400 font-semibold">
-                        ₱{Number(item.cost_per_srv_rdg ?? 0).toFixed(2)}
                       </td>
                       <td className="p-3 text-right">
                         <button
@@ -1012,13 +1001,13 @@ export function ComponentHistory() {
         </div>
       )}
 
-      {/* Record / Edit Installation Modal */}
+      {/* Record Installation / Record Component Removal Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <h3 className="text-lg font-bold text-slate-100">
-                {editingId ? 'Edit Installation & Removal Details' : 'Record Component Installation'}
+                {editingId ? 'Record Component Removal' : 'Record Component Installation'}
               </h3>
               <button 
                 onClick={() => setIsModalOpen(false)}
@@ -1040,31 +1029,34 @@ export function ComponentHistory() {
                 )}
               </div>
 
-              {/* Vehicle Search & Select Field */}
+              {/* Vehicle Field (Read-only on Removal modal with current value) */}
               <div className="space-y-2">
                 <label className="block text-xs font-semibold uppercase text-slate-400">
-                  Vehicle <span className="text-red-500">*</span>
+                  Vehicle {editingId ? '(Read-only)' : <span className="text-red-500">*</span>}
                 </label>
                 
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Type to filter vehicles by plate or label..."
-                    value={vehicleSearchQuery}
-                    onChange={(e) => setVehicleSearchQuery(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
+                {!editingId && (
+                  <div className="relative">
+                    <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Type to filter vehicles by plate or label..."
+                      value={vehicleSearchQuery}
+                      onChange={(e) => setVehicleSearchQuery(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                )}
 
                 <select
                   required
+                  disabled={Boolean(editingId)}
                   value={historyForm.vehicle_id}
                   onChange={handleVehicleChange}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 disabled:opacity-75 disabled:cursor-not-allowed"
                 >
                   <option value="">-- Select Target Vehicle --</option>
-                  {filteredVehicles.map((v) => {
+                  {(editingId ? vehicles : filteredVehicles).map((v) => {
                     const plate = v.plate_no || v.equipment_code || 'No Plate';
                     const label = v.label || v.name || v.vehicle_id;
                     return (
@@ -1076,22 +1068,18 @@ export function ComponentHistory() {
                 </select>
               </div>
 
-              {/* Installed Status Field */}
+              {/* Installed Status Field (Read-only / Fixed to "Installed" on Installation modal) */}
               <div className="space-y-1">
                 <label className="block text-xs font-semibold uppercase text-slate-400">Installed Status</label>
-                <select
-                  value={historyForm.installed_status}
-                  onChange={(e) => setHistoryForm({ ...historyForm, installed_status: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer"
-                >
-                  <option value="Installed">Installed</option>
-                  <option value="Removed">Removed</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Maintenance">Maintenance</option>
-                </select>
+                <input
+                  type="text"
+                  disabled
+                  value={editingId ? 'Removed' : 'Installed'}
+                  className="w-full bg-slate-950/60 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-300 font-semibold cursor-not-allowed"
+                />
               </div>
 
-              {/* Installation Section - Read only on Edit modal */}
+              {/* Installation Section - Read only on Removal modal */}
               <div className="bg-slate-950/60 border border-slate-800 p-4 rounded-xl space-y-3">
                 <h4 className="text-xs font-bold uppercase text-blue-400 tracking-wider flex items-center gap-1.5">
                   <Calendar className="w-4 h-4" /> Installation Information
@@ -1108,15 +1096,15 @@ export function ComponentHistory() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-400 mb-1">Install Service Reading</label>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">Install Service Reading (Read-only)</label>
                     <input
                       type="number"
                       step="any"
-                      disabled={Boolean(editingId)}
+                      disabled={true}
                       value={historyForm.install_srv_rdg}
                       onChange={(e) => setHistoryForm({ ...historyForm, install_srv_rdg: e.target.value })}
                       placeholder="0"
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-400 focus:outline-none focus:border-blue-500 font-mono cursor-not-allowed opacity-75"
                     />
                   </div>
                 </div>
@@ -1136,7 +1124,7 @@ export function ComponentHistory() {
               {/* Removal Section - Read only on Record Installation modal */}
               <div className="bg-slate-950/60 border border-slate-800 p-4 rounded-xl space-y-3">
                 <h4 className="text-xs font-bold uppercase text-amber-400 tracking-wider flex items-center gap-1.5">
-                  <FileText className="w-4 h-4" /> Removal Information (Optional)
+                  <FileText className="w-4 h-4" /> Removal Information
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
@@ -1150,15 +1138,15 @@ export function ComponentHistory() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-400 mb-1">Remove Service Reading</label>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">Remove Service Reading (Read-only)</label>
                     <input
                       type="number"
                       step="any"
-                      disabled={!editingId}
+                      disabled={true}
                       value={historyForm.remove_srv_rdg}
                       onChange={(e) => setHistoryForm({ ...historyForm, remove_srv_rdg: e.target.value })}
                       placeholder="0"
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-400 focus:outline-none focus:border-blue-500 font-mono cursor-not-allowed opacity-75"
                     />
                   </div>
                 </div>
@@ -1175,18 +1163,6 @@ export function ComponentHistory() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Cost Per Service Reading (₱)</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={historyForm.cost_per_srv_rdg}
-                  onChange={(e) => setHistoryForm({ ...historyForm, cost_per_srv_rdg: e.target.value })}
-                  placeholder="0.00"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 font-mono"
-                />
-              </div>
-
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
                 <button
                   type="button"
@@ -1201,7 +1177,7 @@ export function ComponentHistory() {
                   className="px-4 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  <span>{editingId ? 'Update History' : 'Save History'}</span>
+                  <span>{editingId ? 'Save Removal' : 'Save History'}</span>
                 </button>
               </div>
             </form>

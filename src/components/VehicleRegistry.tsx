@@ -585,7 +585,7 @@ export function VehicleRegistry() {
   });
 
   return (
-    <div className="p-6 w-full max-w-7xl mx-auto space-y-6">
+    <div className="p-6 w-full max-w-7xl mx-auto space-y-6 max-h-screen overflow-y-auto">
       <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
         <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl">
           <Car className="w-7 h-7" />
@@ -802,10 +802,10 @@ export function VehicleRegistry() {
                       );
                     })
                   )}
-                </tbody>
-              </table>
-            </div>
-          </>
+              </tbody>
+            </table>
+          </div>
+        </>
         )}
 
         {activeTab === 'pm_status' && (
@@ -838,9 +838,9 @@ export function VehicleRegistry() {
                           </h3>
                           <p className="text-xs text-slate-400">Current Reading: <span className="font-mono text-amber-400 font-semibold">{pm.current_rdg ?? '0'}</span></p>
                         </div>
-                      </div>
-                      
-                      <div className="flex flex-col items-end gap-1">
+                    </div>
+                    
+                    <div className="flex flex-col items-end gap-1">
                         <button
                           type="button"
                           onClick={() => handleOpenPmEdit(pm)}
@@ -850,45 +850,45 @@ export function VehicleRegistry() {
                           <RefreshCw className="w-3.5 h-3.5" />
                           <span>Update PM Schedule</span>
                         </button>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {pmLevels.map((pml, idx) => (
-                        <div key={idx} className={`p-4 rounded-xl border transition-all ${pml.flag ? 'bg-amber-950/20 border-amber-800/60' : 'bg-slate-900/80 border-slate-800'}`}>
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="font-bold text-sm text-blue-400">{pml.level}</span>
-                            <span className={`text-[10px] uppercase font-semibold px-2 py-0.5 rounded ${pml.flag ? 'bg-amber-900/40 text-amber-300 border border-amber-700' : 'bg-slate-800 text-slate-400'}`}>
-                              {pml.flag ? 'Flagged / Due' : 'Normal'}
-                            </span>
-                          </div>
-
-                          <div className="space-y-2 text-xs font-mono">
-                            <div className="flex justify-between bg-slate-950 px-2.5 py-1.5 rounded border border-slate-800/60">
-                              <span className="text-slate-400">Previous:</span>
-                              <span className="text-slate-200">{pml.prev ?? '—'}</span>
-                            </div>
-                            <div className="flex justify-between bg-slate-950 px-2.5 py-1.5 rounded border border-slate-800/60">
-                              <span className="text-slate-400">Current:</span>
-                              <span className="text-amber-400 font-semibold">{pml.curr ?? '—'}</span>
-                            </div>
-                            <div className="flex justify-between bg-slate-950 px-2.5 py-1.5 rounded border border-slate-800/60">
-                              <span className="text-slate-400">Next Target:</span>
-                              <span className="text-blue-400 font-semibold">{pml.next ?? '—'}</span>
-                            </div>
-                            <div className="flex justify-between bg-slate-950 px-2.5 py-1.5 rounded border border-slate-800/60">
-                              <span className="text-slate-400">Completed:</span>
-                              <span className="text-emerald-400">{pml.date ? new Date(pml.date).toLocaleDateString() : '—'}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
                     </div>
                   </div>
-                );
-              })
-            )}
-          </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {pmLevels.map((pml, idx) => (
+                      <div key={idx} className={`p-4 rounded-xl border transition-all ${pml.flag ? 'bg-amber-950/20 border-amber-800/60' : 'bg-slate-900/80 border-slate-800'}`}>
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="font-bold text-sm text-blue-400">{pml.level}</span>
+                          <span className={`text-[10px] uppercase font-semibold px-2 py-0.5 rounded ${pml.flag ? 'bg-amber-900/40 text-amber-300 border border-amber-700' : 'bg-slate-800 text-slate-400'}`}>
+                            {pml.flag ? 'Flagged / Due' : 'Normal'}
+                          </span>
+                        </div>
+
+                        <div className="space-y-2 text-xs font-mono">
+                          <div className="flex justify-between bg-slate-950 px-2.5 py-1.5 rounded border border-slate-800/60">
+                            <span className="text-slate-400">Previous:</span>
+                            <span className="text-slate-200">{pml.prev ?? '—'}</span>
+                          </div>
+                          <div className="flex justify-between bg-slate-950 px-2.5 py-1.5 rounded border border-slate-800/60">
+                            <span className="text-slate-400">Current:</span>
+                            <span className="text-amber-400 font-semibold">{pml.curr ?? '—'}</span>
+                          </div>
+                          <div className="flex justify-between bg-slate-950 px-2.5 py-1.5 rounded border border-slate-800/60">
+                            <span className="text-slate-400">Next Target:</span>
+                            <span className="text-blue-400 font-semibold">{pml.next ?? '—'}</span>
+                          </div>
+                          <div className="flex justify-between bg-slate-950 px-2.5 py-1.5 rounded border border-slate-800/60">
+                            <span className="text-slate-400">Completed:</span>
+                            <span className="text-emerald-400">{pml.date ? new Date(pml.date).toLocaleDateString() : '—'}</span>
+                          </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              );
+            })
+          )}
+        </div>
         )}
 
         {activeTab === 'daily_logs' && (
@@ -1043,10 +1043,10 @@ export function VehicleRegistry() {
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   <span>Save PM Schedule</span>
                 </button>
-              </div>
-            </form>
-          </div>
+            </div>
+          </form>
         </div>
+      </div>
       )}
 
       {/* Vehicle Picker Modal */}
@@ -1115,12 +1115,12 @@ export function VehicleRegistry() {
                       <span className="text-xs text-slate-400 uppercase">Service Rdg</span>
                       <div className="text-sm font-semibold text-slate-200">{v.service_rdg ?? '0'}</div>
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
+      </div>
       )}
 
       {/* Edit/Add Modal */}
@@ -1243,7 +1243,7 @@ export function VehicleRegistry() {
                           ))
                         )}
                       </div>
-                    </div>
+                  </div>
                   )}
                 </div>
               </div>
