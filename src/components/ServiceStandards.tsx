@@ -77,6 +77,7 @@ export function ServiceStandards() {
     average_lookback: '' 
   });
 
+  // Define loadTabData locally or include it properly
   useEffect(() => {
     let isMounted = true;
 
@@ -87,9 +88,7 @@ export function ServiceStandards() {
         if (stdRes.error) throw stdRes.error;
         if (isMounted) setStandards(stdRes.data || []);
 
-        if (activeTab === 'standards') {
-          // already loaded
-        } else if (activeTab === 'intervals') {
+        if (activeTab === 'intervals') {
           const { data, error } = await supabase.from('service_intervals').select('*');
           if (error) throw error;
           if (isMounted) setIntervals(data || []);
@@ -110,6 +109,24 @@ export function ServiceStandards() {
       isMounted = false;
     };
   }, [activeTab]);
+
+  // Reusable refresh trigger for post-mutation actions
+  const refreshCurrentData = async () => {
+    try {
+      const stdRes = await supabase.from('service_standards').select('*');
+      if (stdRes.data) setStandards(stdRes.data);
+
+      if (activeTab === 'intervals') {
+        const { data } = await supabase.from('service_intervals').select('*');
+        if (data) setIntervals(data);
+      } else if (activeTab === 'thresholds') {
+        const { data } = await supabase.from('service_thresholds').select('*');
+        if (data) setThresholds(data);
+      }
+    } catch (err) {
+      console.error('Error refreshing data:', err);
+    }
+  };
 
   const handleOpenAdd = () => {
     setEditingId(null);
@@ -173,7 +190,7 @@ export function ServiceStandards() {
 
       setSuccessMsg('Record deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 3000);
-      window.location.reload();
+      refreshCurrentData();
     } catch (err: unknown) {
       console.error('Error deleting record:', err);
       setErrorMsg('Failed to delete record. Check foreign key constraints.');
@@ -231,7 +248,7 @@ export function ServiceStandards() {
 
       setIsModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 4000);
-      window.location.reload(); 
+      refreshCurrentData();
     } catch (err: unknown) {
       console.error('Error saving record:', err);
       setErrorMsg('Failed to save record. Please check required fields or constraints.');
