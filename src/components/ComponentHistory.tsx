@@ -50,6 +50,7 @@ interface ComponentHistoryRecord {
   remove_date?: string | null;
   remove_srv_rdg?: number | null;
   remove_remarks?: string | null;
+  srv_run?: number | null;
   installed_status?: boolean | string | null;
   component_code?: string;
   system_name?: string;
@@ -101,6 +102,8 @@ interface VehicleOption {
   equipment_code?: string;
   label?: string;
   name?: string;
+  make_name?: string;
+  model_name?: string;
   srv_rdg?: number | null;
   service_rdg?: number | null;
   [key: string]: unknown;
@@ -223,14 +226,27 @@ export function ComponentHistory() {
     return makeStr || modelStr || '—';
   };
 
+  // Helper to format vehicle label with Plate No and Make/Model
+  const formatVehicleLabel = (veh: VehicleOption): string => {
+    const plate = veh.plate_no || veh.equipment_code || 'No Plate';
+    const make = veh.make_name || '';
+    const model = veh.model_name || '';
+    const makeModelStr = make && model ? `${make} ${model}` : (make || model);
+    const label = veh.label || veh.name || '';
+
+    const parts = [plate];
+    if (makeModelStr) parts.push(makeModelStr);
+    if (label && label !== plate) parts.push(`(${label})`);
+
+    return parts.join(' — ');
+  };
+
   // Helper to get formatted vehicle display name
   const getVehicleDisplay = (vehicleId?: string | null): string => {
     if (!vehicleId) return '—';
     const veh = vehicles.find(v => v.vehicle_id === vehicleId);
     if (!veh) return 'Vehicle Record';
-    const plate = veh.plate_no || veh.equipment_code || 'No Plate';
-    const label = veh.label || veh.name || '';
-    return label ? `${plate} (${label})` : plate;
+    return formatVehicleLabel(veh);
   };
 
   // Safe helper badge color renderer for Installed Status
@@ -526,18 +542,21 @@ export function ComponentHistory() {
     setErrorMsg(null);
 
     try {
-      // Force status to true/false based on modal context
       const statusValue = editingId ? false : true;
+      const installRdgNum = historyForm.install_srv_rdg !== '' ? Number(historyForm.install_srv_rdg) : 0;
+      const removeRdgNum = historyForm.remove_srv_rdg !== '' ? Number(historyForm.remove_srv_rdg) : 0;
+      const computedSrvRun = editingId && removeRdgNum >= installRdgNum ? removeRdgNum - installRdgNum : null;
 
       const payload = {
         equipment_component_id: selectedComponent.equipment_component_id,
         vehicle_id: historyForm.vehicle_id,
         install_date: historyForm.install_date || null,
-        install_srv_rdg: historyForm.install_srv_rdg !== '' ? Number(historyForm.install_srv_rdg) : null,
+        install_srv_rdg: historyForm.install_srv_rdg !== '' ? installRdgNum : null,
         install_remarks: historyForm.install_remarks.trim() || null,
         remove_date: historyForm.remove_date || null,
-        remove_srv_rdg: historyForm.remove_srv_rdg !== '' ? Number(historyForm.remove_srv_rdg) : null,
+        remove_srv_rdg: historyForm.remove_srv_rdg !== '' ? removeRdgNum : null,
         remove_remarks: historyForm.remove_remarks.trim() || null,
+        srv_run: computedSrvRun,
         installed_status: statusValue,
       };
 
@@ -586,7 +605,9 @@ export function ComponentHistory() {
     const q = vehicleSearchQuery.toLowerCase();
     const plate = (v.plate_no || v.equipment_code || '').toLowerCase();
     const label = (v.label || v.name || '').toLowerCase();
-    return plate.includes(q) || label.includes(q);
+    const make = (v.make_name || '').toLowerCase();
+    const model = (v.model_name || '').toLowerCase();
+    return plate.includes(q) || label.includes(q) || make.includes(q) || model.includes(q);
   });
 
   const totalItems = historyRecords.length;
@@ -603,7 +624,7 @@ export function ComponentHistory() {
         </div>
         <div>
           <h1 className="text-xl font-bold tracking-tight text-slate-100">Component History & Installation Lifecycle</h1>
-          <p className="text-xs text-slate-400">Track equipment component installation, removal metrics, and service readings.</p>
+          <p className="text-xs text-slate-400">Track equipment component installation, removal metrics, SRV Run, and service readings.</p>
         </div>
       </div>
 
@@ -748,13 +769,14 @@ export function ComponentHistory() {
                   <th className="p-3 font-mono">Install Service Rdg</th>
                   <th className="p-3 font-mono">Remove Date</th>
                   <th className="p-3 font-mono">Remove Service Rdg</th>
+                  <th className="p-3 font-mono">SRV Run</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 text-slate-300">
                 {loadingHistory ? (
                   <tr>
-                    <td colSpan={7} className="p-6 text-center text-slate-400">
+                    <td colSpan={8} className="p-6 text-center text-slate-400">
                       <div className="flex items-center justify-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
                         <span>Loading telemetry records for selected component...</span>
@@ -763,13 +785,13 @@ export function ComponentHistory() {
                   </tr>
                 ) : !selectedComponent ? (
                   <tr>
-                    <td colSpan={7} className="py-6 text-center text-slate-500 text-xs">
+                    <td colSpan={8} className="py-6 text-center text-slate-500 text-xs">
                       Please select an active component above to view its installation lifecycle history.
                     </td>
                   </tr>
                 ) : displayedHistory.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-6 text-center text-slate-500 text-xs">
+                    <td colSpan={8} className="py-6 text-center text-slate-500 text-xs">
                       No installation history records found for this component. Click "Record Installation" above to add one.
                     </td>
                   </tr>
@@ -793,6 +815,9 @@ export function ComponentHistory() {
                       </td>
                       <td className="p-3 font-mono text-xs text-slate-300">
                         {item.remove_srv_rdg !== null && item.remove_srv_rdg !== undefined ? item.remove_srv_rdg : '—'}
+                      </td>
+                      <td className="p-3 font-mono text-xs text-blue-400 font-semibold">
+                        {item.srv_run !== null && item.srv_run !== undefined ? item.srv_run : '—'}
                       </td>
                       <td className="p-3 text-right">
                         <button
@@ -1029,7 +1054,7 @@ export function ComponentHistory() {
                 )}
               </div>
 
-              {/* Vehicle Field (Read-only on Removal modal with current value) */}
+              {/* Vehicle Field (Read-only on Removal modal with Make/Model display) */}
               <div className="space-y-2">
                 <label className="block text-xs font-semibold uppercase text-slate-400">
                   Vehicle {editingId ? '(Read-only)' : <span className="text-red-500">*</span>}
@@ -1040,7 +1065,7 @@ export function ComponentHistory() {
                     <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Type to filter vehicles by plate or label..."
+                      placeholder="Type to filter vehicles by plate, make, model, or label..."
                       value={vehicleSearchQuery}
                       onChange={(e) => setVehicleSearchQuery(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
@@ -1056,15 +1081,11 @@ export function ComponentHistory() {
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 disabled:opacity-75 disabled:cursor-not-allowed"
                 >
                   <option value="">-- Select Target Vehicle --</option>
-                  {(editingId ? vehicles : filteredVehicles).map((v) => {
-                    const plate = v.plate_no || v.equipment_code || 'No Plate';
-                    const label = v.label || v.name || v.vehicle_id;
-                    return (
-                      <option key={v.vehicle_id} value={v.vehicle_id}>
-                        {plate} ({label})
-                      </option>
-                    );
-                  })}
+                  {(editingId ? vehicles : filteredVehicles).map((v) => (
+                    <option key={v.vehicle_id} value={v.vehicle_id}>
+                      {formatVehicleLabel(v)}
+                    </option>
+                  ))}
                 </select>
               </div>
 
