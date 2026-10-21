@@ -36,6 +36,7 @@ export function OperationsStandards() {
     description: '' 
   });
 
+  // Fetch statuses cleanly inside useEffect to prevent cascading render warnings
   useEffect(() => {
     let isMounted = true;
 
@@ -66,6 +67,21 @@ export function OperationsStandards() {
     };
   }, []);
 
+  // Reusable fetch for post-mutation updates without full page reloads
+  const refreshStatuses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('operations_status')
+        .select('*')
+        .order('status_name', { ascending: true });
+
+      if (error) throw error;
+      setStatuses(data || []);
+    } catch (err) {
+      console.error('Error refreshing statuses:', err);
+    }
+  };
+
   const handleOpenAdd = () => {
     setEditingId(null);
     setStatusForm({ status_name: '', description: '' });
@@ -94,7 +110,7 @@ export function OperationsStandards() {
 
       setSuccessMsg('Operations standard deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 3000);
-      window.location.reload();
+      refreshStatuses();
     } catch (err: unknown) {
       console.error('Error deleting record:', err);
       setErrorMsg('Failed to delete record. Check foreign key constraints.');
@@ -112,7 +128,9 @@ export function OperationsStandards() {
     setErrorMsg(null);
 
     try {
-      const payload = { 
+      // NOTE: Ensure your operations_status table has a 'description' column, 
+      // or remove description from the payload if your table only contains status_name.
+      const payload: { status_name: string; description?: string | null } = { 
         status_name: statusForm.status_name.trim(), 
         description: statusForm.description.trim() || null 
       };
@@ -136,10 +154,10 @@ export function OperationsStandards() {
 
       setIsModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 4000);
-      window.location.reload(); 
+      refreshStatuses();
     } catch (err: unknown) {
       console.error('Error saving record:', err);
-      setErrorMsg('Failed to save record. Please check required fields or constraints.');
+      setErrorMsg('Failed to save record. Please check required fields or schema constraints.');
     } finally {
       setSubmitting(false);
     }

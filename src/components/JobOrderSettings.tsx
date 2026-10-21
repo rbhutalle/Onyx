@@ -9,7 +9,9 @@ import {
   Edit2,
   Trash2,
   CheckSquare,
-  Layers
+  Layers,
+  Save,
+  Loader2
 } from 'lucide-react';
 
 interface JobOrderTypeRecord {
@@ -45,6 +47,7 @@ export function JobOrderSettings() {
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState<boolean>(false);
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -54,6 +57,7 @@ export function JobOrderSettings() {
   const [priorityForm, setPriorityForm] = useState({ priority_desc: '' });
   const [statusForm, setStatusForm] = useState({ status_name: '' });
 
+  // Define loadTabData directly inside useEffect to prevent cascading render warnings
   useEffect(() => {
     let isMounted = true;
 
@@ -85,6 +89,24 @@ export function JobOrderSettings() {
       isMounted = false;
     };
   }, [activeTab]);
+
+  // Reusable refresh handler for mutations
+  const refreshTabData = async () => {
+    try {
+      if (activeTab === 'types') {
+        const { data } = await supabase.from('joborder_type').select('*').order('type_desc');
+        if (data) setTypes(data);
+      } else if (activeTab === 'priorities') {
+        const { data } = await supabase.from('joborder_priority').select('*').order('priority_desc');
+        if (data) setPriorities(data);
+      } else if (activeTab === 'statuses') {
+        const { data } = await supabase.from('joborder_status').select('*').order('status_name');
+        if (data) setStatuses(data);
+      }
+    } catch (err) {
+      console.error('Error refreshing tab data:', err);
+    }
+  };
 
   const handleOpenAdd = () => {
     setEditingId(null);
@@ -120,7 +142,7 @@ export function JobOrderSettings() {
 
       setSuccessMsg('Record deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 3000);
-      window.location.reload();
+      refreshTabData();
     } catch (err: unknown) {
       console.error('Error deleting record:', err);
       setErrorMsg('Failed to delete record. Check foreign key constraints.');
@@ -129,6 +151,7 @@ export function JobOrderSettings() {
 
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     setErrorMsg(null);
 
     try {
@@ -166,10 +189,12 @@ export function JobOrderSettings() {
 
       setIsModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 4000);
-      window.location.reload();
+      refreshTabData();
     } catch (err: unknown) {
       console.error('Error saving record:', err);
       setErrorMsg('Failed to save record. Please check required fields or constraints.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -440,9 +465,11 @@ export function JobOrderSettings() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow"
+                  disabled={submitting}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow disabled:opacity-50"
                 >
-                  Save Changes
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Save Changes</span>
                 </button>
               </div>
             </form>

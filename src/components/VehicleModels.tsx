@@ -10,7 +10,9 @@ import {
   X,
   Edit2,
   Trash2,
-  Filter
+  Filter,
+  Save,
+  Loader2
 } from 'lucide-react';
 
 interface VehicleMakeRecord {
@@ -55,6 +57,7 @@ export function VehicleModels() {
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState<boolean>(false);
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -69,6 +72,7 @@ export function VehicleModels() {
     is_active: true 
   });
 
+  // Load data inside useEffect cleanly with mounting check
   useEffect(() => {
     let isMounted = true;
 
@@ -76,7 +80,6 @@ export function VehicleModels() {
       try {
         setErrorMsg(null);
         
-        // Always load makes and types for dropdown references
         const makesRes = await supabase.from('vehicle_makes').select('*').order('name');
         if (makesRes.error) throw makesRes.error;
         if (isMounted) setMakes(makesRes.data || []);
@@ -89,7 +92,7 @@ export function VehicleModels() {
         if (modelsRes.error) throw modelsRes.error;
         if (isMounted) setModels(modelsRes.data || []);
       } catch (err: unknown) {
-        console.error(`Error fetching data for ${activeTab}:`, err);
+        console.error(`Error fetching equipment data:`, err);
         if (isMounted) setErrorMsg(`Failed to load data. Please check table permissions.`);
       }
     }
@@ -100,6 +103,22 @@ export function VehicleModels() {
       isMounted = false;
     };
   }, [activeTab]);
+
+  // Reusable refresh function for post-mutation updates without full page reloads
+  const refreshData = async () => {
+    try {
+      const makesRes = await supabase.from('vehicle_makes').select('*').order('name');
+      if (makesRes.data) setMakes(makesRes.data);
+
+      const typesRes = await supabase.from('vehicle_types').select('*').order('code');
+      if (typesRes.data) setTypes(typesRes.data);
+
+      const modelsRes = await supabase.from('vehicle_models').select('*').order('name');
+      if (modelsRes.data) setModels(modelsRes.data);
+    } catch (err) {
+      console.error('Error refreshing data:', err);
+    }
+  };
 
   const handleOpenAdd = () => {
     setEditingId(null);
@@ -152,7 +171,7 @@ export function VehicleModels() {
 
       setSuccessMsg('Record deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 3000);
-      window.location.reload();
+      refreshData();
     } catch (err: unknown) {
       console.error('Error deleting record:', err);
       setErrorMsg('Failed to delete record. Check foreign key dependencies.');
@@ -161,6 +180,7 @@ export function VehicleModels() {
 
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     setErrorMsg(null);
 
     try {
@@ -210,10 +230,12 @@ export function VehicleModels() {
 
       setIsModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 4000);
-      window.location.reload();
+      refreshData();
     } catch (err: unknown) {
       console.error('Error saving record:', err);
       setErrorMsg('Failed to save record. Please check unique constraints or required fields.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -615,9 +637,11 @@ export function VehicleModels() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow"
+                  disabled={submitting}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow disabled:opacity-50"
                 >
-                  Save Changes
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Save Changes</span>
                 </button>
               </div>
             </form>

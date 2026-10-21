@@ -9,7 +9,9 @@ import {
   X,
   Edit2,
   Trash2,
-  Filter
+  Filter,
+  Save,
+  Loader2
 } from 'lucide-react';
 
 interface EquipmentTaskRecord {
@@ -64,6 +66,7 @@ export function TaskStandards() {
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState<boolean>(false);
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -81,6 +84,7 @@ export function TaskStandards() {
     est_materials_cost: '0' 
   });
 
+  // Define loadData directly inside useEffect to prevent cascading render warnings
   useEffect(() => {
     let isMounted = true;
 
@@ -104,7 +108,7 @@ export function TaskStandards() {
         if (compsRes.error) throw compsRes.error;
         if (isMounted) setComponents(compsRes.data || []);
       } catch (err: unknown) {
-        console.error(`Error fetching data for ${activeTab}:`, err);
+        console.error(`Error fetching data:`, err);
         if (isMounted) setErrorMsg(`Failed to load data. Please check table permissions or RLS policies.`);
       }
     }
@@ -115,6 +119,25 @@ export function TaskStandards() {
       isMounted = false;
     };
   }, [activeTab]);
+
+  // Reusable asynchronous refresh function for mutations (avoids window.location.reload() 404s)
+  const refreshData = async () => {
+    try {
+      const tasksRes = await supabase.from('equipment_tasks').select('*').order('task_name');
+      if (tasksRes.data) setTasks(tasksRes.data);
+
+      const standardsRes = await supabase.from('equipment_taskstandards').select('*');
+      if (standardsRes.data) setStandards(standardsRes.data);
+
+      const systemsRes = await supabase.from('equipment_system').select('*').order('system_code');
+      if (systemsRes.data) setSystems(systemsRes.data);
+
+      const compsRes = await supabase.from('equipment_component').select('*').order('component_code');
+      if (compsRes.data) setComponents(compsRes.data);
+    } catch (err) {
+      console.error('Error refreshing data:', err);
+    }
+  };
 
   const handleOpenAdd = () => {
     setEditingId(null);
@@ -166,7 +189,7 @@ export function TaskStandards() {
 
       setSuccessMsg('Record deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 3000);
-      window.location.reload();
+      refreshData();
     } catch (err: unknown) {
       console.error('Error deleting record:', err);
       setErrorMsg('Failed to delete record. Check foreign key dependencies.');
@@ -175,6 +198,7 @@ export function TaskStandards() {
 
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     setErrorMsg(null);
 
     try {
@@ -214,10 +238,12 @@ export function TaskStandards() {
 
       setIsModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 4000);
-      window.location.reload();
+      refreshData();
     } catch (err: unknown) {
       console.error('Error saving record:', err);
       setErrorMsg('Failed to save record. Please check unique constraints or required fields.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -578,9 +604,11 @@ export function TaskStandards() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow"
+                  disabled={submitting}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow disabled:opacity-50"
                 >
-                  Save Changes
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Save Changes</span>
                 </button>
               </div>
             </form>

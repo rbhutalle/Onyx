@@ -9,7 +9,9 @@ import {
   X,
   Edit2,
   Trash2,
-  Filter
+  Filter,
+  Save,
+  Loader2
 } from 'lucide-react';
 
 interface EquipmentSystemRecord {
@@ -42,6 +44,7 @@ export function SystemComponents() {
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState<boolean>(false);
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -54,6 +57,7 @@ export function SystemComponents() {
     component_desc: '' 
   });
 
+  // Define loadData cleanly inside useEffect or as a self-contained handler
   useEffect(() => {
     let isMounted = true;
 
@@ -61,7 +65,6 @@ export function SystemComponents() {
       try {
         setErrorMsg(null);
         
-        // Always load systems for dropdown references
         const systemsRes = await supabase.from('equipment_system').select('*').order('system_code');
         if (systemsRes.error) throw systemsRes.error;
         if (isMounted) setSystems(systemsRes.data || []);
@@ -70,7 +73,7 @@ export function SystemComponents() {
         if (compsRes.error) throw compsRes.error;
         if (isMounted) setComponents(compsRes.data || []);
       } catch (err: unknown) {
-        console.error(`Error fetching data for ${activeTab}:`, err);
+        console.error(`Error fetching system/component data:`, err);
         if (isMounted) setErrorMsg(`Failed to load data. Please check table permissions.`);
       }
     }
@@ -81,6 +84,19 @@ export function SystemComponents() {
       isMounted = false;
     };
   }, [activeTab]);
+
+  // Reusable refresh handler for mutations
+  const refreshData = async () => {
+    try {
+      const systemsRes = await supabase.from('equipment_system').select('*').order('system_code');
+      if (systemsRes.data) setSystems(systemsRes.data);
+
+      const compsRes = await supabase.from('equipment_component').select('*').order('component_code');
+      if (compsRes.data) setComponents(compsRes.data);
+    } catch (err) {
+      console.error('Error refreshing data:', err);
+    }
+  };
 
   const handleOpenAdd = () => {
     setEditingId(null);
@@ -122,7 +138,7 @@ export function SystemComponents() {
 
       setSuccessMsg('Record deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 3000);
-      window.location.reload();
+      refreshData();
     } catch (err: unknown) {
       console.error('Error deleting record:', err);
       setErrorMsg('Failed to delete record. Check foreign key dependencies.');
@@ -131,6 +147,7 @@ export function SystemComponents() {
 
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     setErrorMsg(null);
 
     try {
@@ -165,10 +182,12 @@ export function SystemComponents() {
 
       setIsModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 4000);
-      window.location.reload();
+      refreshData();
     } catch (err: unknown) {
       console.error('Error saving record:', err);
       setErrorMsg('Failed to save record. Please check unique constraints or required fields.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -452,9 +471,11 @@ export function SystemComponents() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow"
+                  disabled={submitting}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow disabled:opacity-50"
                 >
-                  Save Changes
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Save Changes</span>
                 </button>
               </div>
             </form>
