@@ -65,12 +65,24 @@ Interactive HTML Version: [`public/manual.html`](public/manual.html) (accessible
 ### Step 1.1: Registering Fleet Equipment & Baseline Counters
 * **Route**: `/global-settings/vehicle-registry`
 * **Screenshot**: ![Equipment Registry](public/screenshots/flow_01_vehicle_registry.png)
-* **Action Steps**:
+
+> [!TIP]
+> **How to Properly Initialize Preventive Maintenance of an Equipment**  
+> Follow this mandatory 5-step sequence when onboarding equipment or heavy machinery into Onyx:
+> 1. **Go to Equipment Registry & Operations**: Navigate to `/global-settings/vehicle-registry`.
+> 2. **Search to Edit or Add Equipment**: Find an existing asset row to edit or click **"+ Add Equipment"**.
+> 3. **Input Initial Service Reading and Save**: Enter the baseline engine operating hours or odometer reading, fill in vehicle metadata and standard, then click **Save**.
+> 4. **If the Odometer Did Not Start at 0 (Not Brand New) → Update PM Schedule**: If the asset has prior runtime history, select the unit, switch to the **"Equipment PM Status"** tab, and click **"Update PM Schedule"** to input the customized PM schedule (historical previous readings, completion dates, and next target thresholds for PM2–PM7) and click **Save**. *(Note: For brand new assets starting at 0, standard interval increments apply automatically).*
+> 5. **Start Using Daily Inspection & Telemetry**: The asset is now synchronized and ready for shift operations! Proceed to **Daily Inspection & Telemetry** (`/daily-inspection`) to record ongoing meter readings.
+
+* **Detailed Action Steps**:
   1. Click **Add Equipment**.
-  2. Input **Plate Number** (or Asset Code), **Conduction Sticker Number**, **Make**, and **Model**.
-  3. Assign the **Service Standard Profile** (e.g., `STD-HEAVY` for prime movers, `STD-LIGHT` for passenger vans).
-  4. Enter the starting **Baseline Service Reading** and toggle **Active Status** to `TRUE`.
-  5. The system initializes the PM tracking registers (`pm2_current` through `pm7_current`).
+  2. Input **Plate Number** (or Unit/Asset ID), **Conduction Sticker Number**, **Make**, and **Model**.
+  3. Assign the **Service Standard Profile** (e.g., `STD-HEAVY` for prime movers/excavators, `STD-LIGHT` for service vans).
+  4. Enter starting **Baseline Service Reading** (Operating Hours for heavy equipment/engines or Kilometers for transport). Toggle **Active Status** to `TRUE` and save.
+  5. In the table row, click **"Initialize"** to seed the PM2 to PM7 tracking records.
+  6. Switch to the **"PM Status"** tab, click **"Edit Schedule Data"**, and customize the PM tiers based on the equipment's actual physical maintenance logs.
+
 
 ### Step 1.2: Enrolling Technicians & Costing Rates
 * **Route**: `/global-settings/employee-registry`
@@ -189,6 +201,38 @@ Interactive HTML Version: [`public/manual.html`](public/manual.html) (accessible
      * **3. Personal Factors**: Human drivers (e.g., fatigue, lack of training).
      * **4. Work-Related Causes**: Systemic defects (e.g., inadequate PM inspection checklist).
   3. Update Master RCA and FMEA libraries ([RCA Settings](public/screenshots/flow_11_rca_settings.png) & [FMEA Settings](public/screenshots/flow_12_fmea_settings.png)) to close the reliability loop.
+
+### Operationalizing FMEA — End-to-End Setup & Daily Use
+
+Before FMEA risk flags can be used during daily inspections, the following three phases must be completed **in order** by System Administrators:
+
+> [!IMPORTANT]
+> **FMEA must be fully configured before Inspection Flags are used in Daily Inspection & Telemetry.**
+
+#### Phase 1: Fill-Up Root Cause Analysis (RCA) Settings
+* **Route**: `/settings/rca`
+* Populate the four taxonomy pillars for classifying all incident causes:
+  * **1.1 Unsafe Conditions** — Physical/environmental hazards (e.g., defective part, poor lighting)
+  * **1.1 Unsafe Acts** — Operator behavior deviations (e.g., bypassing safety checklist)
+  * **1.1 Personal Factors** — Human-side causes (e.g., fatigue, inadequate training)
+  * **1.1 Work-Related Causes** — Systemic root causes (e.g., missing SOP, inadequate PM schedule)
+* These four pillars feed directly into the 4-Pillar RCA framework used in Incident Reports.
+
+#### Phase 2: Fill-Up and Validate FMEA Settings
+* **Route**: `/settings/fmea`
+* Complete the following three sub-tasks:
+  1. **2.1 – Review and Validate RPN Values**: Confirm each entry's RPN score.
+     > `RPN = Severity × Occurrence × Detection`
+     Flag high-RPN entries for immediate corrective action priority.
+  2. **2.2 – Populate FMEA Constants (Control and Effects)**: Define detection control methods (how a failure is caught, e.g., visual inspection) and failure effects (system impact, e.g., engine shutdown) for each failure mode.
+  3. **2.3 – Populate Master FMEA**: Map each failure mode to one of the four RCA taxonomy categories (Unsafe Conditions, Unsafe Acts, Personal Factors, Work-Related Causes). This creates the selectable **Master FMEA List** used in Inspection Flags.
+
+#### Phase 3: Operationalize FMEA in Daily Inspection & Telemetry
+* **Route**: `/daily-inspection`
+* Once Master FMEA is populated, inspectors can tag field observations with FMEA risk codes:
+  1. **3.1 – Inspect the Equipment and Input Daily Inspection Form and Save**: Select the equipment via the Vehicle Picker, enter the current service reading, add remarks, and click **Submit Daily Log**.
+  2. **3.2 – Move to Inspection Flags, Search for the Equipment/Vehicle and Select Flags**: Switch to the **Inspection Flags** tab. Search for the unit. Select one or more condition flags from the **Master FMEA List** (Unsafe Conditions / Unsafe Acts / Personal Factors / Work-Related Causes). Save the flag record.
+     > ⚠️ *Flags are sourced exclusively from the Master FMEA List — Phases 1 & 2 must be completed first.*
 
 ---
 
