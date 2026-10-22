@@ -199,37 +199,37 @@ export function JobOrderSettings() {
   };
 
   return (
-    <div className="p-6 w-full max-w-6xl mx-auto space-y-6">
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-4">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
+      <div className="shrink-0 flex items-center gap-3 border-b border-slate-800 pb-4">
         <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl">
           <Wrench className="w-7 h-7" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-100">Job Order Configuration</h1>
-          <p className="text-sm text-slate-400">Configure job order types, priority levels, and workflow statuses.</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-100">Job Order Configuration</h1>
+          <p className="text-xs sm:text-sm text-slate-400">Configure job order types, priority levels, and workflow statuses.</p>
         </div>
       </div>
 
       {successMsg && (
-        <div className="bg-emerald-950/50 border border-emerald-800 text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
+        <div className="shrink-0 bg-emerald-950/50 border border-emerald-800 text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
           <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="bg-red-950/50 border border-red-800 text-red-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
+        <div className="shrink-0 bg-red-950/50 border border-red-800 text-red-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
           <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* Clean Tab Navigation */}
-      <div className="flex border-b border-slate-800 gap-2">
+      <div className="shrink-0 flex border-b border-slate-800 gap-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('types')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'types'
               ? 'border-blue-500 text-blue-400 bg-blue-950/20'
               : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
@@ -241,7 +241,7 @@ export function JobOrderSettings() {
 
         <button
           onClick={() => setActiveTab('priorities')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'priorities'
               ? 'border-blue-500 text-blue-400 bg-blue-950/20'
               : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
@@ -253,7 +253,7 @@ export function JobOrderSettings() {
 
         <button
           onClick={() => setActiveTab('statuses')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'statuses'
               ? 'border-blue-500 text-blue-400 bg-blue-950/20'
               : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
@@ -265,8 +265,8 @@ export function JobOrderSettings() {
       </div>
 
       {/* Tab Content Container */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-        <div className="flex justify-end">
+      <div className="flex flex-col flex-1 min-h-0 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
+        <div className="shrink-0 flex justify-end">
           <button
             onClick={handleOpenAdd}
             className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow"
@@ -276,7 +276,7 @@ export function JobOrderSettings() {
           </button>
         </div>
 
-        <div className="overflow-y-auto overflow-x-auto max-h-[calc(100vh-360px)] border border-slate-800/60 rounded-lg">
+        <div className="flex-1 min-h-0 overflow-auto border border-slate-800/60 rounded-lg bg-slate-950">
           {/* TAB 1: JOB ORDER TYPES */}
           {activeTab === 'types' && (
             <table className="w-full text-left border-collapse text-sm">
@@ -399,8 +399,8 @@ export function JobOrderSettings() {
       {/* FORM MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4 shrink-0">
               <h3 className="text-lg font-bold text-slate-100">
                 {editingId ? 'Edit Record' : 'Add New Record'}
               </h3>
@@ -412,50 +412,52 @@ export function JobOrderSettings() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmitForm} className="space-y-4">
-              {activeTab === 'types' && (
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Type Description</label>
-                  <input
-                    type="text"
-                    required
-                    value={typeForm.type_desc}
-                    onChange={(e) => setTypeForm({ ...typeForm, type_desc: e.target.value })}
-                    placeholder="e.g. Corrective, Preventive"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              )}
+            <form onSubmit={handleSubmitForm} className="flex flex-col flex-1 overflow-hidden">
+              <div className="overflow-y-auto space-y-4 p-1 flex-1">
+                {activeTab === 'types' && (
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Type Description</label>
+                    <input
+                      type="text"
+                      required
+                      value={typeForm.type_desc}
+                      onChange={(e) => setTypeForm({ ...typeForm, type_desc: e.target.value })}
+                      placeholder="e.g. Corrective, Preventive"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                )}
 
-              {activeTab === 'priorities' && (
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Priority Description</label>
-                  <input
-                    type="text"
-                    required
-                    value={priorityForm.priority_desc}
-                    onChange={(e) => setPriorityForm({ ...priorityForm, priority_desc: e.target.value })}
-                    placeholder="e.g. High, Medium, Low"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              )}
+                {activeTab === 'priorities' && (
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Priority Description</label>
+                    <input
+                      type="text"
+                      required
+                      value={priorityForm.priority_desc}
+                      onChange={(e) => setPriorityForm({ ...priorityForm, priority_desc: e.target.value })}
+                      placeholder="e.g. High, Medium, Low"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                )}
 
-              {activeTab === 'statuses' && (
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Status Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={statusForm.status_name}
-                    onChange={(e) => setStatusForm({ ...statusForm, status_name: e.target.value })}
-                    placeholder="e.g. Open, In Progress, Closed"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              )}
+                {activeTab === 'statuses' && (
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Status Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={statusForm.status_name}
+                      onChange={(e) => setStatusForm({ ...statusForm, status_name: e.target.value })}
+                      placeholder="e.g. Open, In Progress, Closed"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                )}
+              </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800 shrink-0 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
