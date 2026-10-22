@@ -252,13 +252,13 @@ export function TaskStandards() {
   const availableComponents = components.filter(c => c.system_id === standardForm.system_id);
 
   return (
-    // Fixed layout container mapping strictly to the window minus layout paddings
-    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-7xl mx-auto space-y-4">
+    // Updated container padding and max-w width matching SystemComponents reference layout
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-4">
       
-      {/* HEADER: Shrink-0 keeps it from collapsing */}
-      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center gap-3 border-b border-slate-800 pb-2">
-        <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl w-fit">
-          <CheckSquare className="w-6 h-6 sm:w-7 sm:h-7" />
+      {/* Header */}
+      <div className="shrink-0 flex items-center gap-3 border-b border-slate-800 pb-4">
+        <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl">
+          <CheckSquare className="w-7 h-7" />
         </div>
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-100">Task Standards Management</h1>
@@ -266,7 +266,6 @@ export function TaskStandards() {
         </div>
       </div>
 
-      {/* MESSAGES */}
       {successMsg && (
         <div className="shrink-0 bg-emerald-950/50 border border-emerald-800 text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
           <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
@@ -281,11 +280,11 @@ export function TaskStandards() {
         </div>
       )}
 
-      {/* TABS: Shrink-0 keeps them intact */}
-      <div className="shrink-0 flex border-b border-slate-800 gap-2 overflow-x-auto">
+      {/* Clean Tab Navigation */}
+      <div className="shrink-0 flex border-b border-slate-800 gap-2">
         <button
           onClick={() => setActiveTab('tasks')}
-          className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
             activeTab === 'tasks'
               ? 'border-blue-500 text-blue-400 bg-blue-950/20'
               : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
@@ -297,7 +296,7 @@ export function TaskStandards() {
 
         <button
           onClick={() => setActiveTab('standards')}
-          className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
             activeTab === 'standards'
               ? 'border-blue-500 text-blue-400 bg-blue-950/20'
               : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
@@ -308,19 +307,17 @@ export function TaskStandards() {
         </button>
       </div>
 
-      {/* MAIN PANEL: min-h-0 prevents overflow on smaller screens */}
-      <div className="flex flex-col flex-1 min-h-0 bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl space-y-4">
-        
-        {/* FILTER / ACTION BAR */}
-        <div className="shrink-0 flex flex-wrap justify-between items-center gap-3">
-          <div className="w-full sm:w-auto">
+      {/* Tab Content Container */}
+      <div className="flex flex-col flex-1 min-h-0 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
+        <div className="shrink-0 flex flex-wrap justify-between items-center gap-4">
+          <div>
             {activeTab === 'standards' && (
               <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+                <Filter className="w-4 h-4 text-slate-400" />
                 <select
                   value={selectedTaskFilter}
                   onChange={(e) => setSelectedTaskFilter(e.target.value)}
-                  className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer w-full sm:w-auto"
+                  className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer"
                 >
                   <option value="all">All Tasks (Filter by Task)</option>
                   {tasks.map((t) => (
@@ -335,19 +332,19 @@ export function TaskStandards() {
 
           <button
             onClick={handleOpenAdd}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow ml-auto w-full sm:w-auto justify-center"
+            className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow ml-auto"
           >
             <Plus className="w-4 h-4" />
             <span>Add Record</span>
           </button>
         </div>
 
-        {/* TABLE CONTAINER: Overflow forced within min-h-0 and flex-1 */}
+        {/* Scrollable Container with Sticky Table Headers */}
         <div className="flex-1 min-h-0 overflow-auto border border-slate-800/60 rounded-lg bg-slate-950">
           {activeTab === 'tasks' && (
-            <table className="w-full min-w-125 text-left border-collapse text-xs sm:text-sm">
+            <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400 text-[11px] uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
+                <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
                   <th className="p-3">Task Name</th>
                   <th className="p-3">Description</th>
                   <th className="p-3 text-right">Actions</th>
@@ -360,10 +357,10 @@ export function TaskStandards() {
                   </tr>
                 ) : (
                   tasks.map((item) => (
-                    <tr key={item.task_id} className="hover:bg-slate-900/60 transition-colors">
+                    <tr key={item.task_id} className="hover:bg-slate-950/40 transition-colors">
                       <td className="p-3 font-semibold text-slate-100">{item.task_name}</td>
                       <td className="p-3 text-slate-400">{item.task_description || '—'}</td>
-                      <td className="p-3 text-right space-x-3 whitespace-nowrap">
+                      <td className="p-3 text-right space-x-3">
                         <button
                           onClick={() => handleOpenEdit(item)}
                           className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
@@ -385,9 +382,9 @@ export function TaskStandards() {
           )}
 
           {activeTab === 'standards' && (
-            <table className="w-full min-w-195 text-left border-collapse text-xs sm:text-sm">
+            <table className="w-full min-w-195 text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400 text-[11px] uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
+                <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
                   <th className="p-3">Task</th>
                   <th className="p-3">System / Component</th>
                   <th className="p-3">Description</th>
@@ -408,7 +405,7 @@ export function TaskStandards() {
                     const matchedSystem = systems.find((s) => s.system_id === item.system_id);
                     const matchedComp = components.find((c) => c.component_id === item.component_id);
                     return (
-                      <tr key={item.task_standard_id} className="hover:bg-slate-900/60 transition-colors">
+                      <tr key={item.task_standard_id} className="hover:bg-slate-950/40 transition-colors">
                         <td className="p-3 font-semibold text-blue-400">{matchedTask ? matchedTask.task_name : '—'}</td>
                         <td className="p-3">
                           <div className="text-slate-100 font-medium">{matchedSystem ? matchedSystem.system_code : '—'}</div>
@@ -442,14 +439,12 @@ export function TaskStandards() {
         </div>
       </div>
 
-      {/* RESPONSIVE MODAL & SCROLLABLE FORM */}
+      {/* FORM MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-6 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-[95vw] max-w-xl shadow-2xl flex flex-col max-h-[92vh]">
-            
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-800 p-4 sm:p-6 pb-3 sm:pb-4 shrink-0">
-              <h3 className="text-base sm:text-lg font-bold text-slate-100">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4 shrink-0">
+              <h3 className="text-lg font-bold text-slate-100">
                 {editingId ? 'Edit Record' : 'Add New Record'}
               </h3>
               <button 
@@ -460,30 +455,29 @@ export function TaskStandards() {
               </button>
             </div>
 
-            {/* Scrollable Form Body */}
             <form onSubmit={handleSubmitForm} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
+              <div className="overflow-y-auto space-y-4 p-1 flex-1">
                 {activeTab === 'tasks' && (
                   <>
                     <div>
-                      <label className="block text-[11px] sm:text-xs font-semibold uppercase text-slate-400 mb-1">Task Name</label>
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Task Name</label>
                       <input
                         type="text"
                         required
                         value={taskForm.task_name}
                         onChange={(e) => setTaskForm({ ...taskForm, task_name: e.target.value })}
                         placeholder="e.g. Oil Change & Filter Replacement"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] sm:text-xs font-semibold uppercase text-slate-400 mb-1">Description</label>
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Description</label>
                       <textarea
                         rows={3}
                         value={taskForm.task_description}
                         onChange={(e) => setTaskForm({ ...taskForm, task_description: e.target.value })}
                         placeholder="Task details and instructions..."
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
                       />
                     </div>
                   </>
@@ -492,12 +486,12 @@ export function TaskStandards() {
                 {activeTab === 'standards' && (
                   <>
                     <div>
-                      <label className="block text-[11px] sm:text-xs font-semibold uppercase text-slate-400 mb-1">Equipment Task</label>
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Equipment Task</label>
                       <select
                         required
                         value={standardForm.task_id}
                         onChange={(e) => setStandardForm({ ...standardForm, task_id: e.target.value })}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
                       >
                         <option value="">Select Task</option>
                         {tasks.map((t) => (
@@ -508,12 +502,12 @@ export function TaskStandards() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-[11px] sm:text-xs font-semibold uppercase text-slate-400 mb-1">Equipment System</label>
+                        <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Equipment System</label>
                         <select
                           required
                           value={standardForm.system_id}
                           onChange={(e) => setStandardForm({ ...standardForm, system_id: e.target.value, component_id: '' })}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
                         >
                           <option value="">Select System</option>
                           {systems.map((sys) => (
@@ -523,12 +517,12 @@ export function TaskStandards() {
                       </div>
 
                       <div>
-                        <label className="block text-[11px] sm:text-xs font-semibold uppercase text-slate-400 mb-1">Equipment Component</label>
+                        <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Equipment Component</label>
                         <select
                           required
                           value={standardForm.component_id}
                           onChange={(e) => setStandardForm({ ...standardForm, component_id: e.target.value })}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
                         >
                           <option value="">Select Component</option>
                           {availableComponents.map((c) => (
@@ -539,69 +533,68 @@ export function TaskStandards() {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] sm:text-xs font-semibold uppercase text-slate-400 mb-1">Task Standard Description</label>
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Task Standard Description</label>
                       <textarea
                         rows={2}
                         required
                         value={standardForm.task_standard_desc}
                         onChange={(e) => setStandardForm({ ...standardForm, task_standard_desc: e.target.value })}
                         placeholder="Detailed standard guidelines..."
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
                       />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-[11px] sm:text-xs font-semibold uppercase text-slate-400 mb-1">Standard Time (mins)</label>
+                        <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Standard Time (mins)</label>
                         <input
                           type="number"
                           required
                           min="0"
                           value={standardForm.standard_time}
                           onChange={(e) => setStandardForm({ ...standardForm, standard_time: e.target.value })}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] sm:text-xs font-semibold uppercase text-slate-400 mb-1">Est. Labor Cost ($)</label>
+                        <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Est. Labor Cost ($)</label>
                         <input
                           type="number"
                           step="any"
                           min="0"
                           value={standardForm.est_labor_cost}
                           onChange={(e) => setStandardForm({ ...standardForm, est_labor_cost: e.target.value })}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] sm:text-xs font-semibold uppercase text-slate-400 mb-1">Est. Materials Cost ($)</label>
+                        <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Est. Materials Cost ($)</label>
                         <input
                           type="number"
                           step="any"
                           min="0"
                           value={standardForm.est_materials_cost}
                           onChange={(e) => setStandardForm({ ...standardForm, est_materials_cost: e.target.value })}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-[11px] sm:text-xs font-semibold uppercase text-slate-400 mb-1">Item / Part No (Optional)</label>
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Item / Part No (Optional)</label>
                       <input
                         type="text"
                         value={standardForm.item}
                         onChange={(e) => setStandardForm({ ...standardForm, item: e.target.value })}
                         placeholder="e.g. FLT-01"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
                       />
                     </div>
                   </>
                 )}
               </div>
 
-              {/* Modal Footer */}
-              <div className="flex justify-end gap-3 p-4 sm:p-6 pt-3 sm:pt-4 border-t border-slate-800 bg-slate-900 shrink-0">
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800 shrink-0 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -619,7 +612,6 @@ export function TaskStandards() {
                 </button>
               </div>
             </form>
-
           </div>
         </div>
       )}
