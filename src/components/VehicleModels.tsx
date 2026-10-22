@@ -244,37 +244,37 @@ export function VehicleModels() {
     : models.filter((m) => m.make_id === selectedMakeFilter);
 
   return (
-    <div className="p-6 w-full max-w-6xl mx-auto space-y-6">
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-4">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
+      <div className="shrink-0 flex items-center gap-3 border-b border-slate-800 pb-4">
         <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl">
           <Car className="w-7 h-7" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-100">Equipment Models & Configurations</h1>
-          <p className="text-sm text-slate-400">Manage manufacturers (makes), equipment models, and equipment classifications (types).</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-100">Equipment Models & Configurations</h1>
+          <p className="text-xs sm:text-sm text-slate-400">Manage manufacturers (makes), equipment models, and equipment classifications (types).</p>
         </div>
       </div>
 
       {successMsg && (
-        <div className="bg-emerald-950/50 border border-emerald-800 text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
+        <div className="shrink-0 bg-emerald-950/50 border border-emerald-800 text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
           <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="bg-red-950/50 border border-red-800 text-red-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
+        <div className="shrink-0 bg-red-950/50 border border-red-800 text-red-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
           <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* Clean Tab Navigation */}
-      <div className="flex border-b border-slate-800 gap-2">
+      <div className="shrink-0 flex border-b border-slate-800 gap-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('makes')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'makes'
               ? 'border-blue-500 text-blue-400 bg-blue-950/20'
               : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
@@ -286,7 +286,7 @@ export function VehicleModels() {
 
         <button
           onClick={() => setActiveTab('models')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'models'
               ? 'border-blue-500 text-blue-400 bg-blue-950/20'
               : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
@@ -298,7 +298,7 @@ export function VehicleModels() {
 
         <button
           onClick={() => setActiveTab('types')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'types'
               ? 'border-blue-500 text-blue-400 bg-blue-950/20'
               : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
@@ -310,8 +310,8 @@ export function VehicleModels() {
       </div>
 
       {/* Tab Content Container */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-        <div className="flex flex-wrap justify-between items-center gap-4">
+      <div className="flex flex-col flex-1 min-h-0 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
+        <div className="shrink-0 flex flex-wrap justify-between items-center gap-4">
           <div>
             {activeTab === 'models' && (
               <div className="flex items-center gap-2">
@@ -342,7 +342,7 @@ export function VehicleModels() {
         </div>
 
         {/* Scrollable Container with Sticky Table Headers */}
-        <div className="overflow-y-auto overflow-x-auto max-h-[calc(100vh-360px)] border border-slate-800/60 rounded-lg">
+        <div className="flex-1 min-h-0 overflow-auto border border-slate-800/60 rounded-lg bg-slate-950">
           {/* TAB 1: VEHICLE MAKES */}
           {activeTab === 'makes' && (
             <table className="w-full text-left border-collapse text-sm">
@@ -493,8 +493,8 @@ export function VehicleModels() {
       {/* FORM MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4 shrink-0">
               <h3 className="text-lg font-bold text-slate-100">
                 {editingId ? 'Edit Record' : 'Add New Record'}
               </h3>
@@ -506,128 +506,130 @@ export function VehicleModels() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmitForm} className="space-y-4">
-              {activeTab === 'makes' && (
-                <>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Make Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={makeForm.name}
-                      onChange={(e) => setMakeForm({ ...makeForm, name: e.target.value })}
-                      placeholder="e.g. Toyota, Ford"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 pt-2">
-                    <input
-                      type="checkbox"
-                      id="make_active_chk"
-                      checked={makeForm.is_active}
-                      onChange={(e) => setMakeForm({ ...makeForm, is_active: e.target.checked })}
-                      className="rounded bg-slate-950 border-slate-800 text-blue-600 focus:ring-0 w-4 h-4 cursor-pointer"
-                    />
-                    <label htmlFor="make_active_chk" className="text-xs font-semibold uppercase text-slate-400 cursor-pointer">Is Active</label>
-                  </div>
-                </>
-              )}
+            <form onSubmit={handleSubmitForm} className="flex flex-col flex-1 overflow-hidden">
+              <div className="overflow-y-auto space-y-4 p-1 flex-1">
+                {activeTab === 'makes' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Make Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={makeForm.name}
+                        onChange={(e) => setMakeForm({ ...makeForm, name: e.target.value })}
+                        placeholder="e.g. Toyota, Ford"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 pt-2">
+                      <input
+                        type="checkbox"
+                        id="make_active_chk"
+                        checked={makeForm.is_active}
+                        onChange={(e) => setMakeForm({ ...makeForm, is_active: e.target.checked })}
+                        className="rounded bg-slate-950 border-slate-800 text-blue-600 focus:ring-0 w-4 h-4 cursor-pointer"
+                      />
+                      <label htmlFor="make_active_chk" className="text-xs font-semibold uppercase text-slate-400 cursor-pointer">Is Active</label>
+                    </div>
+                  </>
+                )}
 
-              {activeTab === 'models' && (
-                <>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Equipment Make</label>
-                    <select
-                      required
-                      value={modelForm.make_id}
-                      onChange={(e) => setModelForm({ ...modelForm, make_id: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="">Select Equipment Make</option>
-                      {makes.map((make) => (
-                        <option key={make.make_id} value={make.make_id}>
-                          {make.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Equipment Type (Optional)</label>
-                    <select
-                      value={modelForm.type_id}
-                      onChange={(e) => setModelForm({ ...modelForm, type_id: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="">Select Equipment Type</option>
-                      {types.map((type) => (
-                        <option key={type.type_id} value={type.type_id}>
-                          {type.code} - {type.description}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Model Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={modelForm.name}
-                      onChange={(e) => setModelForm({ ...modelForm, name: e.target.value })}
-                      placeholder="e.g. Hilux, Ranger"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 pt-2">
-                    <input
-                      type="checkbox"
-                      id="model_active_chk"
-                      checked={modelForm.is_active}
-                      onChange={(e) => setModelForm({ ...modelForm, is_active: e.target.checked })}
-                      className="rounded bg-slate-950 border-slate-800 text-blue-600 focus:ring-0 w-4 h-4 cursor-pointer"
-                    />
-                    <label htmlFor="model_active_chk" className="text-xs font-semibold uppercase text-slate-400 cursor-pointer">Is Active</label>
-                  </div>
-                </>
-              )}
+                {activeTab === 'models' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Equipment Make</label>
+                      <select
+                        required
+                        value={modelForm.make_id}
+                        onChange={(e) => setModelForm({ ...modelForm, make_id: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="">Select Equipment Make</option>
+                        {makes.map((make) => (
+                          <option key={make.make_id} value={make.make_id}>
+                            {make.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Equipment Type (Optional)</label>
+                      <select
+                        value={modelForm.type_id}
+                        onChange={(e) => setModelForm({ ...modelForm, type_id: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="">Select Equipment Type</option>
+                        {types.map((type) => (
+                          <option key={type.type_id} value={type.type_id}>
+                            {type.code} - {type.description}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Model Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={modelForm.name}
+                        onChange={(e) => setModelForm({ ...modelForm, name: e.target.value })}
+                        placeholder="e.g. Hilux, Ranger"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 pt-2">
+                      <input
+                        type="checkbox"
+                        id="model_active_chk"
+                        checked={modelForm.is_active}
+                        onChange={(e) => setModelForm({ ...modelForm, is_active: e.target.checked })}
+                        className="rounded bg-slate-950 border-slate-800 text-blue-600 focus:ring-0 w-4 h-4 cursor-pointer"
+                      />
+                      <label htmlFor="model_active_chk" className="text-xs font-semibold uppercase text-slate-400 cursor-pointer">Is Active</label>
+                    </div>
+                  </>
+                )}
 
-              {activeTab === 'types' && (
-                <>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Type Code</label>
-                    <input
-                      type="text"
-                      required
-                      value={typeForm.code}
-                      onChange={(e) => setTypeForm({ ...typeForm, code: e.target.value })}
-                      placeholder="e.g. SUV, Pickup"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Description</label>
-                    <textarea
-                      rows={3}
-                      required
-                      value={typeForm.description}
-                      onChange={(e) => setTypeForm({ ...typeForm, description: e.target.value })}
-                      placeholder="Describe Equipment classification..."
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 pt-2">
-                    <input
-                      type="checkbox"
-                      id="type_active_chk"
-                      checked={typeForm.is_active}
-                      onChange={(e) => setTypeForm({ ...typeForm, is_active: e.target.checked })}
-                      className="rounded bg-slate-950 border-slate-800 text-blue-600 focus:ring-0 w-4 h-4 cursor-pointer"
-                    />
-                    <label htmlFor="type_active_chk" className="text-xs font-semibold uppercase text-slate-400 cursor-pointer">Is Active</label>
-                  </div>
-                </>
-              )}
+                {activeTab === 'types' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Type Code</label>
+                      <input
+                        type="text"
+                        required
+                        value={typeForm.code}
+                        onChange={(e) => setTypeForm({ ...typeForm, code: e.target.value })}
+                        placeholder="e.g. SUV, Pickup"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Description</label>
+                      <textarea
+                        rows={3}
+                        required
+                        value={typeForm.description}
+                        onChange={(e) => setTypeForm({ ...typeForm, description: e.target.value })}
+                        placeholder="Describe Equipment classification..."
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 pt-2">
+                      <input
+                        type="checkbox"
+                        id="type_active_chk"
+                        checked={typeForm.is_active}
+                        onChange={(e) => setTypeForm({ ...typeForm, is_active: e.target.checked })}
+                        className="rounded bg-slate-950 border-slate-800 text-blue-600 focus:ring-0 w-4 h-4 cursor-pointer"
+                      />
+                      <label htmlFor="type_active_chk" className="text-xs font-semibold uppercase text-slate-400 cursor-pointer">Is Active</label>
+                    </div>
+                  </>
+                )}
+              </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800 shrink-0 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
