@@ -252,14 +252,10 @@ export function TaskStandards() {
   const availableComponents = components.filter(c => c.system_id === standardForm.system_id);
 
   return (
-    /* 
-      1. FLEXBOX ROOT: h-[calc(100vh-140px)] explicitly constrains this module to the window height
-         (subtracting 140px safely accounts for your AppLayout headers and paddings).
-         flex-col enables its children to use flex-1 to fill space.
-    */
-    <div className="flex flex-col h-[calc(100vh-140px)] min-h-125 w-full max-w-7xl mx-auto space-y-4">
+    // Fixed layout container mapping strictly to the window minus layout paddings
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-7xl mx-auto space-y-4">
       
-      {/* 2. SHRINK-0 HEADER: Prevents the header from squishing */}
+      {/* HEADER: Shrink-0 keeps it from collapsing */}
       <div className="shrink-0 flex flex-col sm:flex-row sm:items-center gap-3 border-b border-slate-800 pb-2">
         <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl w-fit">
           <CheckSquare className="w-6 h-6 sm:w-7 sm:h-7" />
@@ -270,7 +266,7 @@ export function TaskStandards() {
         </div>
       </div>
 
-      {/* Messages */}
+      {/* MESSAGES */}
       {successMsg && (
         <div className="shrink-0 bg-emerald-950/50 border border-emerald-800 text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
           <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
@@ -285,7 +281,7 @@ export function TaskStandards() {
         </div>
       )}
 
-      {/* 3. SHRINK-0 TABS: Prevents the tabs from squishing */}
+      {/* TABS: Shrink-0 keeps them intact */}
       <div className="shrink-0 flex border-b border-slate-800 gap-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('tasks')}
@@ -312,10 +308,10 @@ export function TaskStandards() {
         </button>
       </div>
 
-      {/* 4. FLEX-1 TAB CONTENT CONTAINER: Automatically expands to fill the remaining vertical space */}
+      {/* MAIN PANEL: min-h-0 prevents overflow on smaller screens */}
       <div className="flex flex-col flex-1 min-h-0 bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl space-y-4">
         
-        {/* Action Bar (shrink-0 ensures it stays anchored at the top of the card) */}
+        {/* FILTER / ACTION BAR */}
         <div className="shrink-0 flex flex-wrap justify-between items-center gap-3">
           <div className="w-full sm:w-auto">
             {activeTab === 'standards' && (
@@ -346,7 +342,7 @@ export function TaskStandards() {
           </button>
         </div>
 
-        {/* 5. FLEX-1 TABLE CONTAINER: Automatically shrinks/grows perfectly within the card. No calc() needed! */}
+        {/* TABLE CONTAINER: Overflow forced within min-h-0 and flex-1 */}
         <div className="flex-1 min-h-0 overflow-auto border border-slate-800/60 rounded-lg bg-slate-950">
           {activeTab === 'tasks' && (
             <table className="w-full min-w-125 text-left border-collapse text-xs sm:text-sm">
