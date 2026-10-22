@@ -467,42 +467,33 @@ export function RcaSettings() {
               <span>Detail Breakdowns ({detailList.length})</span>
             </button>
           </div>
-
-          {activeSubTab === 'categories' ? (
-            <button
-              onClick={() => {
-                setMasterEditingId(null);
-                setMasterForm({ code: '', description: '' });
-                setIsMasterModalOpen(true);
-              }}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Category</span>
-            </button>
-          ) : (
-            <button
-              onClick={handleOpenAddDetail}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Detail Item</span>
-            </button>
-          )}
         </div>
 
         {/* SUB-TAB 1: CATEGORIES (MASTER TABLE) */}
         {activeSubTab === 'categories' && (
           <div className="flex flex-col flex-1 min-h-0 space-y-2">
-            <div className="shrink-0 relative">
-              <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Filter categories..."
-                value={masterSearch}
-                onChange={(e) => setMasterSearch(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
-              />
+            <div className="shrink-0 flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Filter categories..."
+                  value={masterSearch}
+                  onChange={(e) => setMasterSearch(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  setMasterEditingId(null);
+                  setMasterForm({ code: '', description: '' });
+                  setIsMasterModalOpen(true);
+                }}
+                className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Category</span>
+              </button>
             </div>
 
             <div className="flex-1 min-h-0 overflow-auto border border-slate-800/60 rounded-lg bg-slate-950">
@@ -559,7 +550,7 @@ export function RcaSettings() {
         {/* SUB-TAB 2: DETAIL BREAKDOWNS TABLE */}
         {activeSubTab === 'details' && (
           <div className="flex flex-col flex-1 min-h-0 space-y-2">
-            <div className="shrink-0 flex gap-2 flex-wrap sm:flex-nowrap">
+            <div className="shrink-0 flex gap-2 flex-wrap sm:flex-nowrap items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
                 <input
@@ -582,6 +573,13 @@ export function RcaSettings() {
                   ))}
                 </select>
               </div>
+              <button
+                onClick={handleOpenAddDetail}
+                className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Detail Item</span>
+              </button>
             </div>
 
             <div className="flex-1 min-h-0 overflow-auto border border-slate-800/60 rounded-lg bg-slate-950">
@@ -798,7 +796,6 @@ export function RcaSettings() {
 }
 
 export default RcaSettings;
-
 
 
 
