@@ -337,8 +337,8 @@ export function TaskStandards() {
           </button>
         </div>
 
-        {/* Fluid Scrollable Table Container using canonical min-h-55 */}
-        <div className="overflow-y-auto overflow-x-auto max-h-[calc(100vh-320px)] min-h-55 border border-slate-800/60 rounded-lg">
+        {/* Fluid Scrollable Table Container with compact height for tablet/small screens */}
+        <div className="overflow-y-auto overflow-x-auto max-h-[calc(100vh-380px)] min-h-55 border border-slate-800/60 rounded-lg">
           {activeTab === 'tasks' && (
             <table className="w-full min-w-125 text-left border-collapse text-xs sm:text-sm">
               <thead>
