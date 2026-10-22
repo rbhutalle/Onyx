@@ -252,9 +252,15 @@ export function TaskStandards() {
   const availableComponents = components.filter(c => c.system_id === standardForm.system_id);
 
   return (
-    <div className="p-3 sm:p-6 w-full max-w-7xl mx-auto space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 border-b border-slate-800 pb-4">
+    /* 
+      1. FLEXBOX ROOT: h-[calc(100vh-140px)] explicitly constrains this module to the window height
+         (subtracting 140px safely accounts for your AppLayout headers and paddings).
+         flex-col enables its children to use flex-1 to fill space.
+    */
+    <div className="flex flex-col h-[calc(100vh-140px)] min-h-125 w-full max-w-7xl mx-auto space-y-4">
+      
+      {/* 2. SHRINK-0 HEADER: Prevents the header from squishing */}
+      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center gap-3 border-b border-slate-800 pb-2">
         <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl w-fit">
           <CheckSquare className="w-6 h-6 sm:w-7 sm:h-7" />
         </div>
@@ -264,22 +270,23 @@ export function TaskStandards() {
         </div>
       </div>
 
+      {/* Messages */}
       {successMsg && (
-        <div className="bg-emerald-950/50 border border-emerald-800 text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
+        <div className="shrink-0 bg-emerald-950/50 border border-emerald-800 text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
           <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="bg-red-950/50 border border-red-800 text-red-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
+        <div className="shrink-0 bg-red-950/50 border border-red-800 text-red-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
           <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
-      {/* Clean Tab Navigation */}
-      <div className="flex border-b border-slate-800 gap-2 overflow-x-auto">
+      {/* 3. SHRINK-0 TABS: Prevents the tabs from squishing */}
+      <div className="shrink-0 flex border-b border-slate-800 gap-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('tasks')}
           className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
@@ -305,9 +312,11 @@ export function TaskStandards() {
         </button>
       </div>
 
-      {/* Tab Content Container */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-6 shadow-xl space-y-4">
-        <div className="flex flex-wrap justify-between items-center gap-3">
+      {/* 4. FLEX-1 TAB CONTENT CONTAINER: Automatically expands to fill the remaining vertical space */}
+      <div className="flex flex-col flex-1 min-h-0 bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl space-y-4">
+        
+        {/* Action Bar (shrink-0 ensures it stays anchored at the top of the card) */}
+        <div className="shrink-0 flex flex-wrap justify-between items-center gap-3">
           <div className="w-full sm:w-auto">
             {activeTab === 'standards' && (
               <div className="flex items-center gap-2">
@@ -337,8 +346,8 @@ export function TaskStandards() {
           </button>
         </div>
 
-        {/* Landscape & Portrait Responsive Height Container (h-64 for short landscape viewports, sm:h-96 for larger screens) */}
-        <div className="overflow-y-auto overflow-x-auto h-64 sm:h-96 border border-slate-800/60 rounded-lg">
+        {/* 5. FLEX-1 TABLE CONTAINER: Automatically shrinks/grows perfectly within the card. No calc() needed! */}
+        <div className="flex-1 min-h-0 overflow-auto border border-slate-800/60 rounded-lg bg-slate-950">
           {activeTab === 'tasks' && (
             <table className="w-full min-w-125 text-left border-collapse text-xs sm:text-sm">
               <thead>
@@ -355,7 +364,7 @@ export function TaskStandards() {
                   </tr>
                 ) : (
                   tasks.map((item) => (
-                    <tr key={item.task_id} className="hover:bg-slate-950/40 transition-colors">
+                    <tr key={item.task_id} className="hover:bg-slate-900/60 transition-colors">
                       <td className="p-3 font-semibold text-slate-100">{item.task_name}</td>
                       <td className="p-3 text-slate-400">{item.task_description || '—'}</td>
                       <td className="p-3 text-right space-x-3 whitespace-nowrap">
@@ -403,7 +412,7 @@ export function TaskStandards() {
                     const matchedSystem = systems.find((s) => s.system_id === item.system_id);
                     const matchedComp = components.find((c) => c.component_id === item.component_id);
                     return (
-                      <tr key={item.task_standard_id} className="hover:bg-slate-950/40 transition-colors">
+                      <tr key={item.task_standard_id} className="hover:bg-slate-900/60 transition-colors">
                         <td className="p-3 font-semibold text-blue-400">{matchedTask ? matchedTask.task_name : '—'}</td>
                         <td className="p-3">
                           <div className="text-slate-100 font-medium">{matchedSystem ? matchedSystem.system_code : '—'}</div>
