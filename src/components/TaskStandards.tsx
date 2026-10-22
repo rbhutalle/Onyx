@@ -337,8 +337,8 @@ export function TaskStandards() {
           </button>
         </div>
 
-        {/* Fixed responsive height container using canonical h-80 and sm:h-105 */}
-        <div className="overflow-y-auto overflow-x-auto h-80 sm:h-105 border border-slate-800/60 rounded-lg">
+        {/* Landscape & Portrait Responsive Height Container (h-64 for short landscape viewports, sm:h-96 for larger screens) */}
+        <div className="overflow-y-auto overflow-x-auto h-64 sm:h-96 border border-slate-800/60 rounded-lg">
           {activeTab === 'tasks' && (
             <table className="w-full min-w-125 text-left border-collapse text-xs sm:text-sm">
               <thead>
