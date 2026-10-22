@@ -14,10 +14,10 @@ import {
   CheckCircle, 
   AlertCircle, 
   Loader2, 
-  Layers 
+  Database,
+  ListTree
 } from 'lucide-react';
 
-// Common Record Types
 interface MasterRecord {
   id: string;
   code: string;
@@ -36,6 +36,7 @@ interface DetailRecord {
 }
 
 type TabType = 'conditions' | 'acts' | 'factors' | 'causes';
+type SubTabType = 'categories' | 'details';
 
 interface TableMapping {
   masterTable: string;
@@ -83,6 +84,7 @@ const TAB_CONFIGS: Record<TabType, TableMapping> = {
 
 export function RcaSettings() {
   const [activeTab, setActiveTab] = useState<TabType>('conditions');
+  const [activeSubTab, setActiveSubTab] = useState<SubTabType>('categories');
 
   // Master Data
   const [masterList, setMasterList] = useState<MasterRecord[]>([]);
@@ -96,6 +98,7 @@ export function RcaSettings() {
   // Search/Filter State
   const [masterSearch, setMasterSearch] = useState<string>('');
   const [detailSearch, setDetailSearch] = useState<string>('');
+  const [detailFilterParentId, setDetailFilterParentId] = useState<string>('');
 
   // Status Messages
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -109,12 +112,12 @@ export function RcaSettings() {
   // Modal States - Detail
   const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
   const [detailEditingId, setDetailEditingId] = useState<string | null>(null);
+  const [detailFormParentId, setDetailFormParentId] = useState<string>('');
   const [detailForm, setDetailForm] = useState({ code: '', description: '' });
 
   const currentConfig = TAB_CONFIGS[activeTab];
-  const selectedMasterRecord = masterList.find(m => m.id === selectedMasterId);
 
-  // Manual re-fetch handler for Master Records after mutations
+  // Fetch Master List
   const fetchMasterList = useCallback(async () => {
     try {
       setLoadingMaster(true);
@@ -135,9 +138,9 @@ export function RcaSettings() {
       }));
 
       setMasterList(formatted);
-      if (formatted.length > 0) {
+      if (formatted.length > 0 && !selectedMasterId) {
         setSelectedMasterId(formatted[0].id);
-      } else {
+      } else if (formatted.length === 0) {
         setSelectedMasterId(null);
       }
     } catch (err: unknown) {
@@ -146,17 +149,16 @@ export function RcaSettings() {
     } finally {
       setLoadingMaster(false);
     }
-  }, [currentConfig]);
+  }, [currentConfig, selectedMasterId]);
 
-  // Manual re-fetch handler for Detail Records after mutations
-  const fetchDetailList = useCallback(async (parentId: string) => {
+  // Fetch All Details across all categories for the tab
+  const fetchAllDetails = useCallback(async () => {
     try {
       setLoadingDetail(true);
       setErrorMsg(null);
       const { data, error } = await supabase
         .from(currentConfig.detailTable)
         .select('*')
-        .eq(currentConfig.foreignKey, parentId)
         .order('code', { ascending: true });
 
       if (error) throw error;
@@ -173,123 +175,26 @@ export function RcaSettings() {
       setDetailList(formatted);
     } catch (err: unknown) {
       console.error(`Error loading ${currentConfig.detailTable}:`, err);
-      setErrorMsg(`Failed to load details for ${currentConfig.label}.`);
+      setErrorMsg(`Failed to load detail items for ${currentConfig.label}.`);
     } finally {
       setLoadingDetail(false);
     }
   }, [currentConfig]);
 
-  // Fetch Master List on Tab Change
+  // Initial Load on Tab Change
   useEffect(() => {
     let isMounted = true;
-
-    const loadMaster = async () => {
-      try {
-        setLoadingMaster(true);
-        const { data, error } = await supabase
-          .from(currentConfig.masterTable)
-          .select('*')
-          .order('code', { ascending: true });
-
-        if (error) throw error;
-
-        if (isMounted) {
-          const formatted: MasterRecord[] = (data || []).map((row: Record<string, unknown>) => ({
-            id: String(row[currentConfig.masterPk]),
-            code: String(row.code || ''),
-            description: String(row.description || ''),
-            created_at: String(row.created_at || ''),
-            updated_at: String(row.updated_at || '')
-          }));
-
-          setMasterList(formatted);
-          if (formatted.length > 0) {
-            setSelectedMasterId(formatted[0].id);
-          } else {
-            setSelectedMasterId(null);
-          }
-        }
-      } catch (err: unknown) {
-        console.error(`Error loading ${currentConfig.masterTable}:`, err);
-        if (isMounted) {
-          setErrorMsg(`Failed to load ${currentConfig.label} category records.`);
-        }
-      } finally {
-        if (isMounted) {
-          setLoadingMaster(false);
-        }
-      }
+    const loadData = async () => {
+      await fetchMasterList();
+      await fetchAllDetails();
     };
-
     queueMicrotask(() => {
-      if (isMounted) {
-        loadMaster();
-      }
+      if (isMounted) loadData();
     });
+    return () => { isMounted = false; };
+  }, [activeTab, fetchMasterList, fetchAllDetails]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [activeTab, currentConfig]);
-
-  // Fetch Details when Selected Master Record Changes
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadDetail = async () => {
-      if (!selectedMasterId) {
-        if (isMounted) {
-          setDetailList([]);
-        }
-        return;
-      }
-
-      try {
-        setLoadingDetail(true);
-        const { data, error } = await supabase
-          .from(currentConfig.detailTable)
-          .select('*')
-          .eq(currentConfig.foreignKey, selectedMasterId)
-          .order('code', { ascending: true });
-
-        if (error) throw error;
-
-        if (isMounted) {
-          const formatted: DetailRecord[] = (data || []).map((row: Record<string, unknown>) => ({
-            id: String(row[currentConfig.detailPk]),
-            parentId: String(row[currentConfig.foreignKey]),
-            code: String(row.code || ''),
-            description: String(row.description || ''),
-            created_at: String(row.created_at || ''),
-            updated_at: String(row.updated_at || '')
-          }));
-
-          setDetailList(formatted);
-        }
-      } catch (err: unknown) {
-        console.error(`Error loading ${currentConfig.detailTable}:`, err);
-        if (isMounted) {
-          setErrorMsg(`Failed to load details for ${currentConfig.label}.`);
-        }
-      } finally {
-        if (isMounted) {
-          setLoadingDetail(false);
-        }
-      }
-    };
-
-    queueMicrotask(() => {
-      if (isMounted) {
-        loadDetail();
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedMasterId, currentConfig]);
-
-  // Handle Master Save/Update
+  // Save/Update Master Category
   const handleSaveMaster = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!masterForm.code.trim() || !masterForm.description.trim()) {
@@ -310,71 +215,68 @@ export function RcaSettings() {
           .from(currentConfig.masterTable)
           .update(payload)
           .eq(currentConfig.masterPk, masterEditingId);
-
         if (error) throw error;
-        setSuccessMsg(`${currentConfig.label} record updated successfully.`);
+        setSuccessMsg(`${currentConfig.label} category updated successfully.`);
       } else {
         const { error } = await supabase
           .from(currentConfig.masterTable)
           .insert([payload]);
-
         if (error) throw error;
-        setSuccessMsg(`${currentConfig.label} record created successfully.`);
+        setSuccessMsg(`${currentConfig.label} category created successfully.`);
       }
 
       setIsMasterModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 3000);
       await fetchMasterList();
     } catch (err: unknown) {
-      console.error('Error saving master record:', err);
       const msg = err instanceof Error ? err.message : 'Failed to save record.';
       setErrorMsg(msg);
     }
   };
 
-  // Handle Master Delete
+  // Delete Master Category
   const handleDeleteMaster = async (id: string) => {
-    if (!confirm(`Are you sure you want to delete this category and all associated detail items?`)) return;
-
+    if (!confirm('Are you sure you want to delete this category and all associated detail items?')) return;
     try {
       setErrorMsg(null);
       const { error } = await supabase
         .from(currentConfig.masterTable)
         .delete()
         .eq(currentConfig.masterPk, id);
-
       if (error) throw error;
 
       setSuccessMsg('Category deleted successfully.');
       setTimeout(() => setSuccessMsg(null), 3000);
       await fetchMasterList();
-    } catch (err: unknown) {
-      console.error('Error deleting master record:', err);
+      await fetchAllDetails();
+    } catch {
       setErrorMsg('Failed to delete category record.');
     }
   };
 
-  // Open Add Detail Modal with Prefix
+  // Open Detail Modal
   const handleOpenAddDetail = () => {
-    if (!selectedMasterRecord) return;
     setDetailEditingId(null);
-    const prefix = `${selectedMasterRecord.code}-`;
+    const defaultParent = detailFilterParentId || selectedMasterId || (masterList[0]?.id ?? '');
+    setDetailFormParentId(defaultParent);
+    const parentRec = masterList.find(m => m.id === defaultParent);
+    const prefix = parentRec ? `${parentRec.code}-` : '';
     setDetailForm({ code: prefix, description: '' });
     setIsDetailModalOpen(true);
   };
 
-  // Open Edit Detail Modal
   const handleOpenEditDetail = (item: DetailRecord) => {
     setDetailEditingId(item.id);
+    setDetailFormParentId(item.parentId);
     setDetailForm({ code: item.code, description: item.description });
     setIsDetailModalOpen(true);
   };
 
-  // Handle Detail Code Input Change with Prefix Enforcement
+  // Enforce Prefix on Detail Code Change
   const handleDetailCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const prefix = selectedMasterRecord ? `${selectedMasterRecord.code}-` : '';
+    const parentRec = masterList.find(m => m.id === detailFormParentId);
+    const prefix = parentRec ? `${parentRec.code}-` : '';
     const val = e.target.value;
-
     if (val.startsWith(prefix)) {
       setDetailForm({ ...detailForm, code: val });
     } else {
@@ -382,10 +284,13 @@ export function RcaSettings() {
     }
   };
 
-  // Handle Detail Save/Update
+  // Save/Update Detail Item
   const handleSaveDetail = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedMasterId) return;
+    if (!detailFormParentId) {
+      setErrorMsg('Please select a parent category.');
+      return;
+    }
     if (!detailForm.code.trim() || !detailForm.description.trim()) {
       setErrorMsg('Code and Description are required.');
       return;
@@ -394,7 +299,7 @@ export function RcaSettings() {
     try {
       setErrorMsg(null);
       const payload = {
-        [currentConfig.foreignKey]: selectedMasterId,
+        [currentConfig.foreignKey]: detailFormParentId,
         code: detailForm.code.trim().toUpperCase(),
         description: detailForm.description.trim(),
         updated_at: new Date().toISOString()
@@ -405,60 +310,57 @@ export function RcaSettings() {
           .from(currentConfig.detailTable)
           .update(payload)
           .eq(currentConfig.detailPk, detailEditingId);
-
         if (error) throw error;
         setSuccessMsg('Detail item updated successfully.');
       } else {
         const { error } = await supabase
           .from(currentConfig.detailTable)
           .insert([payload]);
-
         if (error) throw error;
         setSuccessMsg('Detail item created successfully.');
       }
 
       setIsDetailModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 3000);
-      await fetchDetailList(selectedMasterId);
+      await fetchAllDetails();
     } catch (err: unknown) {
-      console.error('Error saving detail record:', err);
       const msg = err instanceof Error ? err.message : 'Failed to save detail item.';
       setErrorMsg(msg);
     }
   };
 
-  // Handle Detail Delete
+  // Delete Detail Item
   const handleDeleteDetail = async (id: string) => {
     if (!confirm('Are you sure you want to delete this detail item?')) return;
-
     try {
       setErrorMsg(null);
       const { error } = await supabase
         .from(currentConfig.detailTable)
         .delete()
         .eq(currentConfig.detailPk, id);
-
       if (error) throw error;
 
       setSuccessMsg('Detail item deleted successfully.');
       setTimeout(() => setSuccessMsg(null), 3000);
-      if (selectedMasterId) await fetchDetailList(selectedMasterId);
-    } catch (err: unknown) {
-      console.error('Error deleting detail record:', err);
+      await fetchAllDetails();
+    } catch {
       setErrorMsg('Failed to delete detail record.');
     }
   };
 
-  // Filtered lists
+  // Filtered Lists
   const filteredMasterList = masterList.filter(item => 
     item.code.toLowerCase().includes(masterSearch.toLowerCase()) ||
     item.description.toLowerCase().includes(masterSearch.toLowerCase())
   );
 
-  const filteredDetailList = detailList.filter(item => 
-    item.code.toLowerCase().includes(detailSearch.toLowerCase()) ||
-    item.description.toLowerCase().includes(detailSearch.toLowerCase())
-  );
+  const filteredDetailList = detailList.filter(item => {
+    const matchesSearch = 
+      item.code.toLowerCase().includes(detailSearch.toLowerCase()) ||
+      item.description.toLowerCase().includes(detailSearch.toLowerCase());
+    const matchesParent = !detailFilterParentId || item.parentId === detailFilterParentId;
+    return matchesSearch && matchesParent;
+  });
 
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
@@ -470,7 +372,7 @@ export function RcaSettings() {
           </div>
           <div>
             <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-100">Root Cause Analysis (RCA) Settings</h1>
-            <p className="text-xs text-slate-400">Configure master-detail taxonomies for RCA incident classification.</p>
+            <p className="text-xs text-slate-400">Configure master categories and detail breakdowns for incident classification.</p>
           </div>
         </div>
       </div>
@@ -490,10 +392,10 @@ export function RcaSettings() {
         </div>
       )}
 
-      {/* 4 Main Tabs */}
+      {/* Main Category Tabs */}
       <div className="shrink-0 flex gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
         <button
-          onClick={() => setActiveTab('conditions')}
+          onClick={() => { setActiveTab('conditions'); setActiveSubTab('categories'); }}
           className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'conditions'
               ? 'bg-blue-600 text-white shadow'
@@ -505,7 +407,7 @@ export function RcaSettings() {
         </button>
 
         <button
-          onClick={() => setActiveTab('acts')}
+          onClick={() => { setActiveTab('acts'); setActiveSubTab('categories'); }}
           className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'acts'
               ? 'bg-blue-600 text-white shadow'
@@ -517,7 +419,7 @@ export function RcaSettings() {
         </button>
 
         <button
-          onClick={() => setActiveTab('factors')}
+          onClick={() => { setActiveTab('factors'); setActiveSubTab('categories'); }}
           className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'factors'
               ? 'bg-blue-600 text-white shadow'
@@ -529,7 +431,7 @@ export function RcaSettings() {
         </button>
 
         <button
-          onClick={() => setActiveTab('causes')}
+          onClick={() => { setActiveTab('causes'); setActiveSubTab('categories'); }}
           className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'causes'
               ? 'bg-blue-600 text-white shadow'
@@ -541,32 +443,59 @@ export function RcaSettings() {
         </button>
       </div>
 
-      {/* Master-Detail Split Grid Container Body */}
+      {/* Main Container Body with Sub-Tabs */}
       <div className="flex flex-col flex-1 min-h-0 bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-0">
-          {/* Left Side: Master Table Panel */}
-          <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/40 border border-slate-800/80 rounded-lg p-3 space-y-2">
-            <div className="shrink-0 flex items-center justify-between border-b border-slate-800 pb-2">
-              <div className="flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-blue-400" />
-                <h2 className="text-xs font-bold text-slate-100">{currentConfig.label} (Categories)</h2>
-              </div>
-              <button
-                onClick={() => {
-                  setMasterEditingId(null);
-                  setMasterForm({ code: '', description: '' });
-                  setIsMasterModalOpen(true);
-                }}
-                className="bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow"
-              >
-                <Plus className="w-3 h-3" />
-                <span>Add Category</span>
-              </button>
-            </div>
+        {/* Sub-Tab Navigation Bar */}
+        <div className="shrink-0 flex items-center justify-between border-b border-slate-800 pb-2">
+          <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800 gap-1">
+            <button
+              onClick={() => setActiveSubTab('categories')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                activeSubTab === 'categories' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Database className="w-3.5 h-3.5" />
+              <span>Categories ({currentConfig.label})</span>
+            </button>
+            <button
+              onClick={() => setActiveSubTab('details')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                activeSubTab === 'details' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <ListTree className="w-3.5 h-3.5" />
+              <span>Detail Breakdowns ({detailList.length})</span>
+            </button>
+          </div>
 
-            {/* Master Search */}
+          {activeSubTab === 'categories' ? (
+            <button
+              onClick={() => {
+                setMasterEditingId(null);
+                setMasterForm({ code: '', description: '' });
+                setIsMasterModalOpen(true);
+              }}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Category</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleOpenAddDetail}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Detail Item</span>
+            </button>
+          )}
+        </div>
+
+        {/* SUB-TAB 1: CATEGORIES (MASTER TABLE) */}
+        {activeSubTab === 'categories' && (
+          <div className="flex flex-col flex-1 min-h-0 space-y-2">
             <div className="shrink-0 relative">
-              <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-slate-400" />
+              <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
               <input
                 type="text"
                 placeholder="Filter categories..."
@@ -576,7 +505,6 @@ export function RcaSettings() {
               />
             </div>
 
-            {/* Scrollable Master Table Container with Sticky Header */}
             <div className="flex-1 min-h-0 overflow-auto border border-slate-800/60 rounded-lg bg-slate-950">
               {loadingMaster ? (
                 <div className="h-full flex items-center justify-center text-slate-400 gap-2 text-xs">
@@ -591,48 +519,111 @@ export function RcaSettings() {
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="border-b border-slate-800 text-slate-400 uppercase bg-slate-950 sticky top-0 z-10">
-                      <th className="py-2 px-3 w-20">Code</th>
+                      <th className="py-2 px-3 w-28">Code</th>
                       <th className="py-2 px-3">Description</th>
-                      <th className="py-2 px-3 text-right w-20">Actions</th>
+                      <th className="py-2 px-3 text-right w-28">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60 text-slate-300">
-                    {filteredMasterList.map((item) => {
-                      const isSelected = item.id === selectedMasterId;
+                    {filteredMasterList.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-900/50 transition-colors">
+                        <td className="py-2 px-3 font-mono font-bold text-blue-400">{item.code}</td>
+                        <td className="py-2 px-3 text-slate-200">{item.description}</td>
+                        <td className="py-2 px-3 text-right space-x-2 shrink-0">
+                          <button
+                            onClick={() => {
+                              setMasterEditingId(item.id);
+                              setMasterForm({ code: item.code, description: item.description });
+                              setIsMasterModalOpen(true);
+                            }}
+                            className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <Edit2 className="w-3 h-3" /> Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMaster(item.id)}
+                            className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" /> Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* SUB-TAB 2: DETAIL BREAKDOWNS TABLE */}
+        {activeSubTab === 'details' && (
+          <div className="flex flex-col flex-1 min-h-0 space-y-2">
+            <div className="shrink-0 flex gap-2 flex-wrap sm:flex-nowrap">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Filter detail items..."
+                  value={detailSearch}
+                  onChange={(e) => setDetailSearch(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div className="w-full sm:w-64">
+                <select
+                  value={detailFilterParentId}
+                  onChange={(e) => setDetailFilterParentId(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">All Categories (Filter)</option>
+                  {masterList.map(m => (
+                    <option key={m.id} value={m.id}>{m.code} - {m.description}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-auto border border-slate-800/60 rounded-lg bg-slate-950">
+              {loadingDetail ? (
+                <div className="h-full flex items-center justify-center text-slate-400 gap-2 text-xs">
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                  <span>Loading detail items...</span>
+                </div>
+              ) : filteredDetailList.length === 0 ? (
+                <div className="h-full flex items-center justify-center p-4 text-center text-slate-500 text-xs">
+                  No detail items found. Click "Add Detail Item" above.
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-slate-400 uppercase bg-slate-950 sticky top-0 z-10">
+                      <th className="py-2 px-3 w-32">Detail Code</th>
+                      <th className="py-2 px-3">Parent Category</th>
+                      <th className="py-2 px-3">Detail Description</th>
+                      <th className="py-2 px-3 text-right w-28">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                    {filteredDetailList.map((item) => {
+                      const parentCat = masterList.find(m => m.id === item.parentId);
                       return (
-                        <tr
-                          key={item.id}
-                          onClick={() => setSelectedMasterId(item.id)}
-                          className={`cursor-pointer transition-colors ${
-                            isSelected
-                              ? 'bg-blue-950/60 text-blue-200 font-medium border-l-2 border-l-blue-500'
-                              : 'hover:bg-slate-900/50'
-                          }`}
-                        >
-                          <td className="py-2 px-3 font-mono font-bold text-blue-400">{item.code}</td>
+                        <tr key={item.id} className="hover:bg-slate-900/50 transition-colors">
+                          <td className="py-2 px-3 font-mono font-bold text-amber-400">{item.code}</td>
+                          <td className="py-2 px-3 text-slate-300 font-mono text-[11px]">{parentCat ? `${parentCat.code} - ${parentCat.description}` : '—'}</td>
                           <td className="py-2 px-3 text-slate-200">{item.description}</td>
-                          <td className="py-2 px-3 text-right space-x-1 shrink-0">
+                          <td className="py-2 px-3 text-right space-x-2 shrink-0">
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setMasterEditingId(item.id);
-                                setMasterForm({ code: item.code, description: item.description });
-                                setIsMasterModalOpen(true);
-                              }}
-                              className="text-blue-400 hover:text-blue-300 p-1 rounded hover:bg-slate-800 cursor-pointer"
-                              title="Edit Category"
+                              onClick={() => handleOpenEditDetail(item)}
+                              className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                             >
-                              <Edit2 className="w-3 h-3" />
+                              <Edit2 className="w-3 h-3" /> Edit
                             </button>
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteMaster(item.id);
-                              }}
-                              className="text-red-400 hover:text-red-300 p-1 rounded hover:bg-slate-800 cursor-pointer"
-                              title="Delete Category"
+                              onClick={() => handleDeleteDetail(item.id)}
+                              className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                             >
-                              <Trash2 className="w-3 h-3" />
+                              <Trash2 className="w-3 h-3" /> Delete
                             </button>
                           </td>
                         </tr>
@@ -643,99 +634,7 @@ export function RcaSettings() {
               )}
             </div>
           </div>
-
-          {/* Right Side: Detail Table Panel */}
-          <div className="lg:col-span-7 flex flex-col min-h-0 bg-slate-950/40 border border-slate-800/80 rounded-lg p-3 space-y-2">
-            <div className="shrink-0 flex items-center justify-between border-b border-slate-800 pb-2">
-              <div>
-                <h2 className="text-xs font-bold text-slate-100">
-                  Detail Breakdown
-                  {selectedMasterRecord && (
-                    <span className="text-blue-400 font-mono text-xs ml-2">
-                      ({selectedMasterRecord.code})
-                    </span>
-                  )}
-                </h2>
-                <p className="text-[11px] text-slate-400 truncate max-w-xs sm:max-w-md">
-                  {selectedMasterRecord ? selectedMasterRecord.description : 'Select a category from the left to view details.'}
-                </p>
-              </div>
-              <button
-                disabled={!selectedMasterId}
-                onClick={handleOpenAddDetail}
-                className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow"
-              >
-                <Plus className="w-3 h-3" />
-                <span>Add Detail</span>
-              </button>
-            </div>
-
-            {/* Detail Search */}
-            <div className="shrink-0 relative">
-              <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-slate-400" />
-              <input
-                type="text"
-                disabled={!selectedMasterId}
-                placeholder="Filter detail items..."
-                value={detailSearch}
-                onChange={(e) => setDetailSearch(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500 disabled:opacity-50"
-              />
-            </div>
-
-            {/* Scrollable Detail Table Container with Sticky Header */}
-            <div className="flex-1 min-h-0 overflow-auto border border-slate-800/60 rounded-lg bg-slate-950">
-              {loadingDetail ? (
-                <div className="h-full flex items-center justify-center text-slate-400 gap-2 text-xs">
-                  <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                  <span>Loading detail records...</span>
-                </div>
-              ) : !selectedMasterId ? (
-                <div className="h-full flex items-center justify-center p-4 text-center text-slate-500 text-xs">
-                  Select a category on the left to display its breakdown details.
-                </div>
-              ) : filteredDetailList.length === 0 ? (
-                <div className="h-full flex items-center justify-center p-4 text-center text-slate-500 text-xs">
-                  No detail items found for this category. Click "Add Detail" above.
-                </div>
-              ) : (
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 uppercase bg-slate-950 sticky top-0 z-10">
-                      <th className="py-2 px-3 w-28">Detail Code</th>
-                      <th className="py-2 px-3">Detail Description</th>
-                      <th className="py-2 px-3 text-right w-20">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
-                    {filteredDetailList.map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-900/50 transition-colors">
-                        <td className="py-2 px-3 font-mono font-bold text-amber-400">{item.code}</td>
-                        <td className="py-2 px-3 text-slate-200">{item.description}</td>
-                        <td className="py-2 px-3 text-right space-x-1 shrink-0">
-                          <button
-                            onClick={() => handleOpenEditDetail(item)}
-                            className="text-blue-400 hover:text-blue-300 p-1 rounded hover:bg-slate-800 cursor-pointer"
-                            title="Edit Detail"
-                          >
-                            <Edit2 className="w-3 h-3" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteDetail(item.id)}
-                            className="text-red-400 hover:text-red-300 p-1 rounded hover:bg-slate-800 cursor-pointer"
-                            title="Delete Detail"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* MASTER FORM MODAL */}
@@ -811,7 +710,7 @@ export function RcaSettings() {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl max-h-[92vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
               <h3 className="text-base font-bold text-slate-100">
-                {detailEditingId ? 'Edit Detail Item' : 'Add Detail Item'} ({selectedMasterRecord?.code})
+                {detailEditingId ? 'Edit Detail Item' : 'Add Detail Item'}
               </h3>
               <button
                 onClick={() => setIsDetailModalOpen(false)}
@@ -825,14 +724,25 @@ export function RcaSettings() {
               <div className="overflow-y-auto space-y-4 p-1 flex-1">
                 <div>
                   <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                    Parent Category Code
+                    Parent Category <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    readOnly
-                    value={selectedMasterRecord?.code || ''}
-                    className="w-full bg-slate-950/60 border border-slate-800/80 rounded-lg px-3 py-2 text-xs font-mono text-slate-400 cursor-not-allowed focus:outline-none"
-                  />
+                  <select
+                    required
+                    value={detailFormParentId}
+                    onChange={(e) => {
+                      const newParentId = e.target.value;
+                      setDetailFormParentId(newParentId);
+                      const parentRec = masterList.find(m => m.id === newParentId);
+                      const prefix = parentRec ? `${parentRec.code}-` : '';
+                      setDetailForm(prev => ({ ...prev, code: prefix }));
+                    }}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="">Select Parent Category...</option>
+                    {masterList.map(m => (
+                      <option key={m.id} value={m.id}>{m.code} - {m.description}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -842,7 +752,7 @@ export function RcaSettings() {
                   <input
                     type="text"
                     required
-                    placeholder={`e.g. ${selectedMasterRecord?.code || 'A1'}-001`}
+                    placeholder="e.g. A1-001"
                     value={detailForm.code}
                     onChange={handleDetailCodeChange}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"
@@ -888,7 +798,6 @@ export function RcaSettings() {
 }
 
 export default RcaSettings;
-
 
 
 
