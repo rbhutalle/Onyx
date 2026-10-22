@@ -1421,31 +1421,33 @@ export function FmeaSettings() {
                                 <td className="py-2 px-3 text-center">{item.occ_id ?? '—'}</td>
                                 <td className="py-2 px-3 text-center">{item.det_id ?? '—'}</td>
                                 <td className="py-2 px-3 font-mono font-bold text-blue-400 text-center">{computedRpn}</td>
-                                <td className="py-2 px-3 text-right space-x-2">
-                                  <button
-                                    onClick={() => {
-                                      setEditRecordId(item.conditionsfmea_id);
-                                      setEditConditionId(item.condition_id || '');
-                                      setEditDetailId(item.detail_id || '');
-                                      setEditPotentialEffectId(item.potentialeffects_id || '');
-                                      setEditCurrentControlId(item.currentcontrols_id || '');
-                                      setEditSevId(item.sev_id ? String(item.sev_id) : '');
-                                      setEditOccId(item.occ_id ? String(item.occ_id) : '');
-                                      setEditDetId(item.det_id ? String(item.det_id) : '');
-                                      setEditEffectQuery('');
-                                      setEditControlQuery('');
-                                      setIsEditConditionModalOpen(true);
-                                    }}
-                                    className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                                  >
-                                    <Edit2 className="w-3 h-3" /> Edit
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteConditionFmea(item.conditionsfmea_id)}
-                                    className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                                  >
-                                    <Trash2 className="w-3 h-3" /> Delete
-                                  </button>
+                                <td className="py-2 px-3 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setEditRecordId(item.conditionsfmea_id);
+                                        setEditConditionId(item.condition_id || '');
+                                        setEditDetailId(item.detail_id || '');
+                                        setEditPotentialEffectId(item.potentialeffects_id || '');
+                                        setEditCurrentControlId(item.currentcontrols_id || '');
+                                        setEditSevId(item.sev_id ? String(item.sev_id) : '');
+                                        setEditOccId(item.occ_id ? String(item.occ_id) : '');
+                                        setEditDetId(item.det_id ? String(item.det_id) : '');
+                                        setEditEffectQuery('');
+                                        setEditControlQuery('');
+                                        setIsEditConditionModalOpen(true);
+                                      }}
+                                      className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Edit2 className="w-3 h-3" /> Edit
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteConditionFmea(item.conditionsfmea_id)}
+                                      className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3 h-3" /> Delete
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -1517,31 +1519,33 @@ export function FmeaSettings() {
                                 <td className="py-2 px-3 text-center">{item.occ_id ?? '—'}</td>
                                 <td className="py-2 px-3 text-center">{item.det_id ?? '—'}</td>
                                 <td className="py-2 px-3 font-mono font-bold text-blue-400 text-center">{computedRpn}</td>
-                                <td className="py-2 px-3 text-right space-x-2">
-                                  <button
-                                    onClick={() => {
-                                      setActEditRecordId(item.actfmea_id);
-                                      setActEditActId(item.act_id || '');
-                                      setActEditDetailId(item.detail_id || '');
-                                      setActEditPotentialEffectId(item.potentialeffects_id || '');
-                                      setActEditCurrentControlId(item.currentcontrols_id || '');
-                                      setActEditSevId(item.sev_id ? String(item.sev_id) : '');
-                                      setActEditOccId(item.occ_id ? String(item.occ_id) : '');
-                                      setActEditDetId(item.det_id ? String(item.det_id) : '');
-                                      setActEditEffectQuery('');
-                                      setActEditControlQuery('');
-                                      setIsEditActModalOpen(true);
-                                    }}
-                                    className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                                  >
-                                    <Edit2 className="w-3 h-3" /> Edit
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteActFmea(item.actfmea_id)}
-                                    className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                                  >
-                                    <Trash2 className="w-3 h-3" /> Delete
-                                  </button>
+                                <td className="py-2 px-3 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setActEditRecordId(item.actfmea_id);
+                                        setActEditActId(item.act_id || '');
+                                        setActEditDetailId(item.detail_id || '');
+                                        setActEditPotentialEffectId(item.potentialeffects_id || '');
+                                        setActEditCurrentControlId(item.currentcontrols_id || '');
+                                        setActEditSevId(item.sev_id ? String(item.sev_id) : '');
+                                        setActEditOccId(item.occ_id ? String(item.occ_id) : '');
+                                        setActEditDetId(item.det_id ? String(item.det_id) : '');
+                                        setActEditEffectQuery('');
+                                        setActEditControlQuery('');
+                                        setIsEditActModalOpen(true);
+                                      }}
+                                      className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Edit2 className="w-3 h-3" /> Edit
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteActFmea(item.actfmea_id)}
+                                      className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3 h-3" /> Delete
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -1613,31 +1617,33 @@ export function FmeaSettings() {
                                 <td className="py-2 px-3 text-center">{item.occ_id ?? '—'}</td>
                                 <td className="py-2 px-3 text-center">{item.det_id ?? '—'}</td>
                                 <td className="py-2 px-3 font-mono font-bold text-blue-400 text-center">{computedRpn}</td>
-                                <td className="py-2 px-3 text-right space-x-2">
-                                  <button
-                                    onClick={() => {
-                                      setFactorEditRecordId(item.conditions_fmea_id);
-                                      setFactorEditFactorId(item.factor_id || '');
-                                      setFactorEditDetailId(item.detail_id || '');
-                                      setFactorEditPotentialEffectId(item.potentialeffects_id || '');
-                                      setFactorEditCurrentControlId(item.currentcontrols_id || '');
-                                      setFactorEditSevId(item.sev_id ? String(item.sev_id) : '');
-                                      setFactorEditOccId(item.occ_id ? String(item.occ_id) : '');
-                                      setFactorEditDetId(item.det_id ? String(item.det_id) : '');
-                                      setFactorEditEffectQuery('');
-                                      setFactorEditControlQuery('');
-                                      setIsEditFactorModalOpen(true);
-                                    }}
-                                    className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                                  >
-                                    <Edit2 className="w-3 h-3" /> Edit
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteFactorFmea(item.conditions_fmea_id)}
-                                    className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                                  >
-                                    <Trash2 className="w-3 h-3" /> Delete
-                                  </button>
+                                <td className="py-2 px-3 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setFactorEditRecordId(item.conditions_fmea_id);
+                                        setFactorEditFactorId(item.factor_id || '');
+                                        setFactorEditDetailId(item.detail_id || '');
+                                        setFactorEditPotentialEffectId(item.potentialeffects_id || '');
+                                        setFactorEditCurrentControlId(item.currentcontrols_id || '');
+                                        setFactorEditSevId(item.sev_id ? String(item.sev_id) : '');
+                                        setFactorEditOccId(item.occ_id ? String(item.occ_id) : '');
+                                        setFactorEditDetId(item.det_id ? String(item.det_id) : '');
+                                        setFactorEditEffectQuery('');
+                                        setFactorEditControlQuery('');
+                                        setIsEditFactorModalOpen(true);
+                                      }}
+                                      className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Edit2 className="w-3 h-3" /> Edit
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteFactorFmea(item.conditions_fmea_id)}
+                                      className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3 h-3" /> Delete
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -1709,31 +1715,33 @@ export function FmeaSettings() {
                                 <td className="py-2 px-3 text-center">{item.occ_id ?? '—'}</td>
                                 <td className="py-2 px-3 text-center">{item.det_id ?? '—'}</td>
                                 <td className="py-2 px-3 font-mono font-bold text-blue-400 text-center">{computedRpn}</td>
-                                <td className="py-2 px-3 text-right space-x-2">
-                                  <button
-                                    onClick={() => {
-                                      setCauseEditRecordId(item.cause_fmea_id);
-                                      setCauseEditCauseId(item.cause_id || '');
-                                      setCauseEditDetailId(item.detail_id || '');
-                                      setCauseEditPotentialEffectId(item.potentialeffects_id || '');
-                                      setCauseEditCurrentControlId(item.currentcontrols_id || '');
-                                      setCauseEditSevId(item.sev_id ? String(item.sev_id) : '');
-                                      setCauseEditOccId(item.occ_id ? String(item.occ_id) : '');
-                                      setCauseEditDetId(item.det_id ? String(item.det_id) : '');
-                                      setCauseEditEffectQuery('');
-                                      setCauseEditControlQuery('');
-                                      setIsEditCauseModalOpen(true);
-                                    }}
-                                    className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                                  >
-                                    <Edit2 className="w-3 h-3" /> Edit
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteCauseFmea(item.cause_fmea_id)}
-                                    className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                                  >
-                                    <Trash2 className="w-3 h-3" /> Delete
-                                  </button>
+                                <td className="py-2 px-3 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setCauseEditRecordId(item.cause_fmea_id);
+                                        setCauseEditCauseId(item.cause_id || '');
+                                        setCauseEditDetailId(item.detail_id || '');
+                                        setCauseEditPotentialEffectId(item.potentialeffects_id || '');
+                                        setCauseEditCurrentControlId(item.currentcontrols_id || '');
+                                        setCauseEditSevId(item.sev_id ? String(item.sev_id) : '');
+                                        setCauseEditOccId(item.occ_id ? String(item.occ_id) : '');
+                                        setCauseEditDetId(item.det_id ? String(item.det_id) : '');
+                                        setCauseEditEffectQuery('');
+                                        setCauseEditControlQuery('');
+                                        setIsEditCauseModalOpen(true);
+                                      }}
+                                      className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Edit2 className="w-3 h-3" /> Edit
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteCauseFmea(item.cause_fmea_id)}
+                                      className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3 h-3" /> Delete
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -1794,23 +1802,25 @@ export function FmeaSettings() {
                           <tr key={item.currentcontrols_id} className="hover:bg-slate-900/50 transition-colors">
                             <td className="py-2 px-3 text-slate-200">{item.currentcontrols_desc || '—'}</td>
                             <td className="py-2 px-3 font-mono text-slate-400">{new Date(item.created_at).toLocaleDateString()}</td>
-                            <td className="py-2 px-3 text-right space-x-2">
-                              <button
-                                onClick={() => {
-                                  setEditControlRecordId(item.currentcontrols_id);
-                                  setControlEditDesc(item.currentcontrols_desc || '');
-                                  setIsEditControlModalOpen(true);
-                                }}
-                                className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                              >
-                                <Edit2 className="w-3 h-3" /> Edit
-                              </button>
-                              <button
-                                onClick={() => handleDeleteControl(item.currentcontrols_id)}
-                                className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                              >
-                                <Trash2 className="w-3 h-3" /> Delete
-                              </button>
+                            <td className="py-2 px-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => {
+                                    setEditControlRecordId(item.currentcontrols_id);
+                                    setControlEditDesc(item.currentcontrols_desc || '');
+                                    setIsEditControlModalOpen(true);
+                                  }}
+                                  className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Edit2 className="w-3 h-3" /> Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteControl(item.currentcontrols_id)}
+                                  className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Trash2 className="w-3 h-3" /> Delete
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -1857,23 +1867,25 @@ export function FmeaSettings() {
                           <tr key={item.potentialeffects_id} className="hover:bg-slate-900/50 transition-colors">
                             <td className="py-2 px-3 text-slate-200">{item.potentialeffects_desc || '—'}</td>
                             <td className="py-2 px-3 font-mono text-slate-400">{new Date(item.created_at).toLocaleDateString()}</td>
-                            <td className="py-2 px-3 text-right space-x-2">
-                              <button
-                                onClick={() => {
-                                  setEditEffectRecordId(item.potentialeffects_id);
-                                  setEffectEditDesc(item.potentialeffects_desc || '');
-                                  setIsEditEffectModalOpen(true);
-                                }}
-                                className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                              >
-                                <Edit2 className="w-3 h-3" /> Edit
-                              </button>
-                              <button
-                                onClick={() => handleDeleteEffect(item.potentialeffects_id)}
-                                className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                              >
-                                <Trash2 className="w-3 h-3" /> Delete
-                              </button>
+                            <td className="py-2 px-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => {
+                                    setEditEffectRecordId(item.potentialeffects_id);
+                                    setEffectEditDesc(item.potentialeffects_desc || '');
+                                    setIsEditEffectModalOpen(true);
+                                  }}
+                                  className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Edit2 className="w-3 h-3" /> Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteEffect(item.potentialeffects_id)}
+                                  className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Trash2 className="w-3 h-3" /> Delete
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -1928,18 +1940,20 @@ export function FmeaSettings() {
                               ) : (item.sev_description || '—')}
                             </td>
                             <td className="py-2 px-3 font-mono text-slate-400">{new Date(item.created_at).toLocaleDateString()}</td>
-                            <td className="py-2 px-3 text-right space-x-2">
-                              {editingSevId === item.sev_id ? (
-                                <>
-                                  <button onClick={() => handleUpdateSeverity(item.sev_id)} className="text-emerald-400 hover:underline font-semibold cursor-pointer">Save</button>
-                                  <button onClick={() => { setEditingSevId(null); setEditingSevText(''); }} className="text-slate-400 hover:underline cursor-pointer">Cancel</button>
-                                </>
-                              ) : (
-                                <>
-                                  <button onClick={() => { setEditingSevId(item.sev_id); setEditingSevText(item.sev_description || ''); }} className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"><Edit2 className="w-3 h-3" /> Edit</button>
-                                  <button onClick={() => handleDeleteSeverity(item.sev_id)} className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"><Trash2 className="w-3 h-3" /> Delete</button>
-                                </>
-                              )}
+                            <td className="py-2 px-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {editingSevId === item.sev_id ? (
+                                  <>
+                                    <button onClick={() => handleUpdateSeverity(item.sev_id)} className="text-emerald-400 hover:underline font-semibold cursor-pointer">Save</button>
+                                    <button onClick={() => { setEditingSevId(null); setEditingSevText(''); }} className="text-slate-400 hover:underline cursor-pointer">Cancel</button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button onClick={() => { setEditingSevId(item.sev_id); setEditingSevText(item.sev_description || ''); }} className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"><Edit2 className="w-3 h-3" /> Edit</button>
+                                    <button onClick={() => handleDeleteSeverity(item.sev_id)} className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"><Trash2 className="w-3 h-3" /> Delete</button>
+                                  </>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -1981,18 +1995,20 @@ export function FmeaSettings() {
                               ) : (item.occ_description || '—')}
                             </td>
                             <td className="py-2 px-3 font-mono text-slate-400">{new Date(item.created_at).toLocaleDateString()}</td>
-                            <td className="py-2 px-3 text-right space-x-2">
-                              {editingOccId === item.occ_id ? (
-                                <>
-                                  <button onClick={() => handleUpdateOccurrence(item.occ_id)} className="text-emerald-400 hover:underline font-semibold cursor-pointer">Save</button>
-                                  <button onClick={() => { setEditingOccId(null); setEditingOccText(''); }} className="text-slate-400 hover:underline cursor-pointer">Cancel</button>
-                                </>
-                              ) : (
-                                <>
-                                  <button onClick={() => { setEditingOccId(item.occ_id); setEditingOccText(item.occ_description || ''); }} className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"><Edit2 className="w-3 h-3" /> Edit</button>
-                                  <button onClick={() => handleDeleteOccurrence(item.occ_id)} className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"><Trash2 className="w-3 h-3" /> Delete</button>
-                                </>
-                              )}
+                            <td className="py-2 px-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {editingOccId === item.occ_id ? (
+                                  <>
+                                    <button onClick={() => handleUpdateOccurrence(item.occ_id)} className="text-emerald-400 hover:underline font-semibold cursor-pointer">Save</button>
+                                    <button onClick={() => { setEditingOccId(null); setEditingOccText(''); }} className="text-slate-400 hover:underline cursor-pointer">Cancel</button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button onClick={() => { setEditingOccId(item.occ_id); setEditingOccText(item.occ_description || ''); }} className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"><Edit2 className="w-3 h-3" /> Edit</button>
+                                    <button onClick={() => handleDeleteOccurrence(item.occ_id)} className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"><Trash2 className="w-3 h-3" /> Delete</button>
+                                  </>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -2034,18 +2050,20 @@ export function FmeaSettings() {
                               ) : (item.det_description || '—')}
                             </td>
                             <td className="py-2 px-3 font-mono text-slate-400">{new Date(item.created_at).toLocaleDateString()}</td>
-                            <td className="py-2 px-3 text-right space-x-2">
-                              {editingDetId === item.det_id ? (
-                                <>
-                                  <button onClick={() => handleUpdateDetection(item.det_id)} className="text-emerald-400 hover:underline font-semibold cursor-pointer">Save</button>
-                                  <button onClick={() => { setEditingDetId(null); setEditingDetText(''); }} className="text-slate-400 hover:underline cursor-pointer">Cancel</button>
-                                </>
-                              ) : (
-                                <>
-                                  <button onClick={() => { setEditingDetId(item.det_id); setEditingDetText(item.det_description || ''); }} className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"><Edit2 className="w-3 h-3" /> Edit</button>
-                                  <button onClick={() => handleDeleteDetection(item.det_id)} className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"><Trash2 className="w-3 h-3" /> Delete</button>
-                                </>
-                              )}
+                            <td className="py-2 px-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {editingDetId === item.det_id ? (
+                                  <>
+                                    <button onClick={() => handleUpdateDetection(item.det_id)} className="text-emerald-400 hover:underline font-semibold cursor-pointer">Save</button>
+                                    <button onClick={() => { setEditingDetId(null); setEditingDetText(''); }} className="text-slate-400 hover:underline cursor-pointer">Cancel</button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button onClick={() => { setEditingDetId(item.det_id); setEditingDetText(item.det_description || ''); }} className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"><Edit2 className="w-3 h-3" /> Edit</button>
+                                    <button onClick={() => handleDeleteDetection(item.det_id)} className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"><Trash2 className="w-3 h-3" /> Delete</button>
+                                  </>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))

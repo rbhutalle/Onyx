@@ -504,7 +504,7 @@ export function RcaSettings() {
                 </div>
               ) : filteredMasterList.length === 0 ? (
                 <div className="h-full flex items-center justify-center p-4 text-center text-slate-500 text-xs">
-                  No categories found. Click "Add Category" above.
+                  No categories found. Click &quot;Add Category&quot; above.
                 </div>
               ) : (
                 <table className="w-full text-left border-collapse text-xs">
@@ -520,23 +520,25 @@ export function RcaSettings() {
                       <tr key={item.id} className="hover:bg-slate-900/50 transition-colors">
                         <td className="py-2 px-3 font-mono font-bold text-blue-400">{item.code}</td>
                         <td className="py-2 px-3 text-slate-200">{item.description}</td>
-                        <td className="py-2 px-3 text-right space-x-2 shrink-0">
-                          <button
-                            onClick={() => {
-                              setMasterEditingId(item.id);
-                              setMasterForm({ code: item.code, description: item.description });
-                              setIsMasterModalOpen(true);
-                            }}
-                            className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                          >
-                            <Edit2 className="w-3 h-3" /> Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteMaster(item.id)}
-                            className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                          >
-                            <Trash2 className="w-3 h-3" /> Delete
-                          </button>
+                        <td className="py-2 px-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                setMasterEditingId(item.id);
+                                setMasterForm({ code: item.code, description: item.description });
+                                setIsMasterModalOpen(true);
+                              }}
+                              className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Edit2 className="w-3 h-3" /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMaster(item.id)}
+                              className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Trash2 className="w-3 h-3" /> Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -590,7 +592,7 @@ export function RcaSettings() {
                 </div>
               ) : filteredDetailList.length === 0 ? (
                 <div className="h-full flex items-center justify-center p-4 text-center text-slate-500 text-xs">
-                  No detail items found. Click "Add Detail Item" above.
+                  No detail items found. Click &quot;Add Detail Item&quot; above.
                 </div>
               ) : (
                 <table className="w-full text-left border-collapse text-xs">
@@ -610,19 +612,21 @@ export function RcaSettings() {
                           <td className="py-2 px-3 font-mono font-bold text-amber-400">{item.code}</td>
                           <td className="py-2 px-3 text-slate-300 font-mono text-[11px]">{parentCat ? `${parentCat.code} - ${parentCat.description}` : '—'}</td>
                           <td className="py-2 px-3 text-slate-200">{item.description}</td>
-                          <td className="py-2 px-3 text-right space-x-2 shrink-0">
-                            <button
-                              onClick={() => handleOpenEditDetail(item)}
-                              className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Edit2 className="w-3 h-3" /> Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteDetail(item.id)}
-                              className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Trash2 className="w-3 h-3" /> Delete
-                            </button>
+                          <td className="py-2 px-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleOpenEditDetail(item)}
+                                className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Edit2 className="w-3 h-3" /> Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteDetail(item.id)}
+                                className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" /> Delete
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
