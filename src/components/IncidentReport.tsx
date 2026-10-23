@@ -1035,9 +1035,9 @@ export function IncidentReport() {
           </div>
         </div>
 
-        {/* Collapsible Body of Area 2 */}
+        {/* Collapsible Body of Area 2 with Internal Scrollable Accordion */}
         {isSecondAreaOpen && (
-          <>
+          <div className="max-h-[35vh] overflow-y-auto pr-1 space-y-3">
             {loadingIncidents ? (
               <div className="py-6 text-center text-slate-400 flex items-center justify-center gap-2 text-xs">
                 <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
@@ -1178,7 +1178,7 @@ export function IncidentReport() {
                 )}
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
 
