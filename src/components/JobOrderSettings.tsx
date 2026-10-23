@@ -9,7 +9,9 @@ import {
   Edit2,
   Trash2,
   CheckSquare,
-  Layers
+  Layers,
+  Save,
+  Loader2
 } from 'lucide-react';
 
 interface JobOrderTypeRecord {
@@ -45,6 +47,7 @@ export function JobOrderSettings() {
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState<boolean>(false);
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -86,6 +89,23 @@ export function JobOrderSettings() {
     };
   }, [activeTab]);
 
+  const refreshTabData = async () => {
+    try {
+      if (activeTab === 'types') {
+        const { data } = await supabase.from('joborder_type').select('*').order('type_desc');
+        if (data) setTypes(data);
+      } else if (activeTab === 'priorities') {
+        const { data } = await supabase.from('joborder_priority').select('*').order('priority_desc');
+        if (data) setPriorities(data);
+      } else if (activeTab === 'statuses') {
+        const { data } = await supabase.from('joborder_status').select('*').order('status_name');
+        if (data) setStatuses(data);
+      }
+    } catch (err) {
+      console.error('Error refreshing tab data:', err);
+    }
+  };
+
   const handleOpenAdd = () => {
     setEditingId(null);
     setTypeForm({ type_desc: '' });
@@ -120,7 +140,7 @@ export function JobOrderSettings() {
 
       setSuccessMsg('Record deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 3000);
-      window.location.reload();
+      refreshTabData();
     } catch (err: unknown) {
       console.error('Error deleting record:', err);
       setErrorMsg('Failed to delete record. Check foreign key constraints.');
@@ -129,6 +149,7 @@ export function JobOrderSettings() {
 
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     setErrorMsg(null);
 
     try {
@@ -166,48 +187,50 @@ export function JobOrderSettings() {
 
       setIsModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 4000);
-      window.location.reload();
+      refreshTabData();
     } catch (err: unknown) {
       console.error('Error saving record:', err);
       setErrorMsg('Failed to save record. Please check required fields or constraints.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="p-6 w-full max-w-6xl mx-auto space-y-6">
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-4">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
-        <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl">
+      <div className="shrink-0 flex items-center gap-3 border-b border-slate-300 dark:border-slate-800 pb-4">
+        <div className="p-2.5 bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl">
           <Wrench className="w-7 h-7" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-100">Job Order Configuration</h1>
-          <p className="text-sm text-slate-400">Configure job order types, priority levels, and workflow statuses.</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Job Order Configuration</h1>
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Configure job order types, priority levels, and workflow statuses.</p>
         </div>
       </div>
 
       {successMsg && (
-        <div className="bg-emerald-950/50 border border-emerald-800 text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
-          <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+        <div className="shrink-0 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
+          <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="bg-red-950/50 border border-red-800 text-red-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
-          <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+        <div className="shrink-0 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
+          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* Clean Tab Navigation */}
-      <div className="flex border-b border-slate-800 gap-2">
+      <div className="shrink-0 flex border-b border-slate-300 dark:border-slate-800 gap-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('types')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'types'
-              ? 'border-blue-500 text-blue-400 bg-blue-950/20'
-              : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900/50'
           }`}
         >
           <Wrench className="w-4 h-4" />
@@ -216,10 +239,10 @@ export function JobOrderSettings() {
 
         <button
           onClick={() => setActiveTab('priorities')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'priorities'
-              ? 'border-blue-500 text-blue-400 bg-blue-950/20'
-              : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900/50'
           }`}
         >
           <Layers className="w-4 h-4" />
@@ -228,10 +251,10 @@ export function JobOrderSettings() {
 
         <button
           onClick={() => setActiveTab('statuses')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'statuses'
-              ? 'border-blue-500 text-blue-400 bg-blue-950/20'
-              : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900/50'
           }`}
         >
           <CheckSquare className="w-4 h-4" />
@@ -240,8 +263,8 @@ export function JobOrderSettings() {
       </div>
 
       {/* Tab Content Container */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-        <div className="flex justify-end">
+      <div className="flex flex-col flex-1 min-h-0 bg-slate-50/90 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 shadow-xs rounded-xl p-6 space-y-4">
+        <div className="shrink-0 flex justify-end">
           <button
             onClick={handleOpenAdd}
             className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow"
@@ -251,35 +274,35 @@ export function JobOrderSettings() {
           </button>
         </div>
 
-        <div className="overflow-y-auto overflow-x-auto max-h-[calc(100vh-360px)] border border-slate-800/60 rounded-lg">
+        <div className="flex-1 min-h-0 overflow-auto border border-slate-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-950">
           {/* TAB 1: JOB ORDER TYPES */}
           {activeTab === 'types' && (
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
+                <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 shadow-xs">
                   <th className="p-3">Type Description</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {types.length === 0 ? (
                   <tr>
                     <td colSpan={2} className="p-8 text-center text-slate-500">No job order types found.</td>
                   </tr>
                 ) : (
                   types.map((item) => (
-                    <tr key={item.type_id} className="hover:bg-slate-950/40 transition-colors">
-                      <td className="p-3 font-semibold text-slate-100">{item.type_desc}</td>
+                    <tr key={item.type_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <td className="p-3 font-semibold text-slate-900 dark:text-slate-100">{item.type_desc}</td>
                       <td className="p-3 text-right space-x-3">
                         <button
                           onClick={() => handleOpenEdit(item)}
-                          className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                         >
                           <Edit2 className="w-3.5 h-3.5" /> Edit
                         </button>
                         <button
                           onClick={() => handleDelete(item.type_id, 'joborder_type', 'type_id')}
-                          className="text-xs text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Delete
                         </button>
@@ -295,30 +318,30 @@ export function JobOrderSettings() {
           {activeTab === 'priorities' && (
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
+                <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 shadow-xs">
                   <th className="p-3">Priority Description</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {priorities.length === 0 ? (
                   <tr>
                     <td colSpan={2} className="p-8 text-center text-slate-500">No job order priorities found.</td>
                   </tr>
                 ) : (
                   priorities.map((item) => (
-                    <tr key={item.priority_id} className="hover:bg-slate-950/40 transition-colors">
-                      <td className="p-3 font-semibold text-slate-100">{item.priority_desc}</td>
+                    <tr key={item.priority_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <td className="p-3 font-semibold text-slate-900 dark:text-slate-100">{item.priority_desc}</td>
                       <td className="p-3 text-right space-x-3">
                         <button
                           onClick={() => handleOpenEdit(item)}
-                          className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                         >
                           <Edit2 className="w-3.5 h-3.5" /> Edit
                         </button>
                         <button
                           onClick={() => handleDelete(item.priority_id, 'joborder_priority', 'priority_id')}
-                          className="text-xs text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Delete
                         </button>
@@ -334,30 +357,30 @@ export function JobOrderSettings() {
           {activeTab === 'statuses' && (
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
+                <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 shadow-xs">
                   <th className="p-3">Status Name</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {statuses.length === 0 ? (
                   <tr>
                     <td colSpan={2} className="p-8 text-center text-slate-500">No job order statuses found.</td>
                   </tr>
                 ) : (
                   statuses.map((item) => (
-                    <tr key={item.status_id} className="hover:bg-slate-950/40 transition-colors">
-                      <td className="p-3 font-semibold text-slate-100">{item.status_name}</td>
+                    <tr key={item.status_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <td className="p-3 font-semibold text-slate-900 dark:text-slate-100">{item.status_name}</td>
                       <td className="p-3 text-right space-x-3">
                         <button
                           onClick={() => handleOpenEdit(item)}
-                          className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                         >
                           <Edit2 className="w-3.5 h-3.5" /> Edit
                         </button>
                         <button
                           onClick={() => handleDelete(item.status_id, 'joborder_status', 'status_id')}
-                          className="text-xs text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Delete
                         </button>
@@ -374,75 +397,79 @@ export function JobOrderSettings() {
       {/* FORM MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <h3 className="text-lg font-bold text-slate-100">
+          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-800 pb-4 shrink-0">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                 {editingId ? 'Edit Record' : 'Add New Record'}
               </h3>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-100 cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitForm} className="space-y-4">
-              {activeTab === 'types' && (
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Type Description</label>
-                  <input
-                    type="text"
-                    required
-                    value={typeForm.type_desc}
-                    onChange={(e) => setTypeForm({ ...typeForm, type_desc: e.target.value })}
-                    placeholder="e.g. Corrective, Preventive"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              )}
+            <form onSubmit={handleSubmitForm} className="flex flex-col flex-1 overflow-hidden">
+              <div className="overflow-y-auto space-y-4 p-1 flex-1">
+                {activeTab === 'types' && (
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Type Description</label>
+                    <input
+                      type="text"
+                      required
+                      value={typeForm.type_desc}
+                      onChange={(e) => setTypeForm({ ...typeForm, type_desc: e.target.value })}
+                      placeholder="e.g. Corrective, Preventive"
+                      className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                )}
 
-              {activeTab === 'priorities' && (
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Priority Description</label>
-                  <input
-                    type="text"
-                    required
-                    value={priorityForm.priority_desc}
-                    onChange={(e) => setPriorityForm({ ...priorityForm, priority_desc: e.target.value })}
-                    placeholder="e.g. High, Medium, Low"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              )}
+                {activeTab === 'priorities' && (
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Priority Description</label>
+                    <input
+                      type="text"
+                      required
+                      value={priorityForm.priority_desc}
+                      onChange={(e) => setPriorityForm({ ...priorityForm, priority_desc: e.target.value })}
+                      placeholder="e.g. High, Medium, Low"
+                      className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                )}
 
-              {activeTab === 'statuses' && (
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Status Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={statusForm.status_name}
-                    onChange={(e) => setStatusForm({ ...statusForm, status_name: e.target.value })}
-                    placeholder="e.g. Open, In Progress, Closed"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              )}
+                {activeTab === 'statuses' && (
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Status Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={statusForm.status_name}
+                      onChange={(e) => setStatusForm({ ...statusForm, status_name: e.target.value })}
+                      placeholder="e.g. Open, In Progress, Closed"
+                      className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                )}
+              </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-300 dark:border-slate-800 shrink-0 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow"
+                  disabled={submitting}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow disabled:opacity-50"
                 >
-                  Save Changes
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Save Changes</span>
                 </button>
               </div>
             </form>

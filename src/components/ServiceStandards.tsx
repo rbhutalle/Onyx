@@ -87,9 +87,7 @@ export function ServiceStandards() {
         if (stdRes.error) throw stdRes.error;
         if (isMounted) setStandards(stdRes.data || []);
 
-        if (activeTab === 'standards') {
-          // already loaded
-        } else if (activeTab === 'intervals') {
+        if (activeTab === 'intervals') {
           const { data, error } = await supabase.from('service_intervals').select('*');
           if (error) throw error;
           if (isMounted) setIntervals(data || []);
@@ -110,6 +108,23 @@ export function ServiceStandards() {
       isMounted = false;
     };
   }, [activeTab]);
+
+  const refreshCurrentData = async () => {
+    try {
+      const stdRes = await supabase.from('service_standards').select('*');
+      if (stdRes.data) setStandards(stdRes.data);
+
+      if (activeTab === 'intervals') {
+        const { data } = await supabase.from('service_intervals').select('*');
+        if (data) setIntervals(data);
+      } else if (activeTab === 'thresholds') {
+        const { data } = await supabase.from('service_thresholds').select('*');
+        if (data) setThresholds(data);
+      }
+    } catch (err) {
+      console.error('Error refreshing data:', err);
+    }
+  };
 
   const handleOpenAdd = () => {
     setEditingId(null);
@@ -173,7 +188,7 @@ export function ServiceStandards() {
 
       setSuccessMsg('Record deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 3000);
-      window.location.reload();
+      refreshCurrentData();
     } catch (err: unknown) {
       console.error('Error deleting record:', err);
       setErrorMsg('Failed to delete record. Check foreign key constraints.');
@@ -231,7 +246,7 @@ export function ServiceStandards() {
 
       setIsModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 4000);
-      window.location.reload(); 
+      refreshCurrentData();
     } catch (err: unknown) {
       console.error('Error saving record:', err);
       setErrorMsg('Failed to save record. Please check required fields or constraints.');
@@ -240,46 +255,45 @@ export function ServiceStandards() {
     }
   };
 
-  // Filter intervals based on selected service standard
   const filteredIntervals = selectedStandardFilter === 'all'
     ? intervals
     : intervals.filter((item) => item.service_standard_id === selectedStandardFilter);
 
   return (
-    <div className="p-6 w-full max-w-6xl mx-auto space-y-6">
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-4">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
-        <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl">
+      <div className="shrink-0 flex items-center gap-3 border-b border-slate-300 dark:border-slate-800 pb-4">
+        <div className="p-2.5 bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl">
           <ShieldAlert className="w-7 h-7" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-100">Service Standards Management</h1>
-          <p className="text-sm text-slate-400">Configure preventive maintenance standards, intervals, and operational thresholds.</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Service Standards Management</h1>
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Configure preventive maintenance standards, intervals, and operational thresholds.</p>
         </div>
       </div>
 
       {successMsg && (
-        <div className="bg-emerald-950/50 border border-emerald-800 text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
-          <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+        <div className="shrink-0 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
+          <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="bg-red-950/50 border border-red-800 text-red-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
-          <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+        <div className="shrink-0 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
+          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* Clean Tab Navigation */}
-      <div className="flex border-b border-slate-800 gap-2">
+      <div className="shrink-0 flex border-b border-slate-300 dark:border-slate-800 gap-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('standards')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'standards'
-              ? 'border-blue-500 text-blue-400 bg-blue-950/20'
-              : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900/50'
           }`}
         >
           <ShieldAlert className="w-4 h-4" />
@@ -288,10 +302,10 @@ export function ServiceStandards() {
 
         <button
           onClick={() => setActiveTab('intervals')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'intervals'
-              ? 'border-blue-500 text-blue-400 bg-blue-950/20'
-              : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900/50'
           }`}
         >
           <Clock className="w-4 h-4" />
@@ -300,10 +314,10 @@ export function ServiceStandards() {
 
         <button
           onClick={() => setActiveTab('thresholds')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'thresholds'
-              ? 'border-blue-500 text-blue-400 bg-blue-950/20'
-              : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900/50'
           }`}
         >
           <Sliders className="w-4 h-4" />
@@ -312,17 +326,17 @@ export function ServiceStandards() {
       </div>
 
       {/* Tab Content Container */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
+      <div className="flex flex-col flex-1 min-h-0 bg-slate-50/90 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 shadow-xs rounded-xl p-6 space-y-4">
         {/* Toolbar / Actions */}
-        <div className="flex flex-wrap justify-between items-center gap-4">
+        <div className="shrink-0 flex flex-wrap justify-between items-center gap-4">
           <div>
             {activeTab === 'intervals' && (
               <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-slate-400" />
+                <Filter className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                 <select
                   value={selectedStandardFilter}
                   onChange={(e) => setSelectedStandardFilter(e.target.value)}
-                  className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer"
+                  className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 cursor-pointer"
                 >
                   <option value="all">All Standards (Filter by Code)</option>
                   {standards.map((std) => (
@@ -348,37 +362,37 @@ export function ServiceStandards() {
         </div>
 
         {/* Scrollable Container with Sticky Table Headers */}
-        <div className="overflow-y-auto overflow-x-auto max-h-[calc(100vh-360px)] border border-slate-800/60 rounded-lg">
+        <div className="flex-1 min-h-0 overflow-auto border border-slate-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-950">
           {/* TAB 1: STANDARDS */}
           {activeTab === 'standards' && (
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
+                <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 shadow-xs">
                   <th className="p-3">Code</th>
                   <th className="p-3">Description</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {standards.length === 0 ? (
                   <tr>
                     <td colSpan={3} className="p-8 text-center text-slate-500">No service standards found.</td>
                   </tr>
                 ) : (
                   standards.map((item) => (
-                    <tr key={item.service_standard_id} className="hover:bg-slate-950/40 transition-colors">
-                      <td className="p-3 font-semibold text-slate-100">{item.code}</td>
-                      <td className="p-3 text-slate-400">{item.description}</td>
+                    <tr key={item.service_standard_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <td className="p-3 font-semibold text-slate-900 dark:text-slate-100">{item.code}</td>
+                      <td className="p-3 text-slate-600 dark:text-slate-400">{item.description}</td>
                       <td className="p-3 text-right space-x-3">
                         <button
                           onClick={() => handleOpenEdit(item)}
-                          className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                         >
                           <Edit2 className="w-3.5 h-3.5" /> Edit
                         </button>
                         <button
                           onClick={() => handleDelete(item.service_standard_id, 'service_standards')}
-                          className="text-xs text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Delete
                         </button>
@@ -394,7 +408,7 @@ export function ServiceStandards() {
           {activeTab === 'intervals' && (
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
+                <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 shadow-xs">
                   <th className="p-3">Standard Code</th>
                   <th className="p-3">PM Code</th>
                   <th className="p-3">Interval</th>
@@ -403,7 +417,7 @@ export function ServiceStandards() {
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {filteredIntervals.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-slate-500">No service intervals found for this filter.</td>
@@ -412,26 +426,26 @@ export function ServiceStandards() {
                   filteredIntervals.map((item) => {
                     const matchedStandard = standards.find(s => s.service_standard_id === item.service_standard_id);
                     return (
-                      <tr key={item.service_interval_id} className="hover:bg-slate-950/40 transition-colors">
-                        <td className="p-3 font-semibold text-blue-400">{matchedStandard ? matchedStandard.code : '—'}</td>
-                        <td className="p-3 font-semibold text-emerald-400">{item.code}</td>
-                        <td className="p-3 font-semibold">{item.interval ?? 'N/A'}</td>
-                        <td className="p-3 text-slate-400">{item.description || '—'}</td>
+                      <tr key={item.service_interval_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                        <td className="p-3 font-semibold text-blue-600 dark:text-blue-400">{matchedStandard ? matchedStandard.code : '—'}</td>
+                        <td className="p-3 font-semibold text-emerald-600 dark:text-emerald-400">{item.code}</td>
+                        <td className="p-3 font-semibold text-slate-900 dark:text-slate-100">{item.interval ?? 'N/A'}</td>
+                        <td className="p-3 text-slate-600 dark:text-slate-400">{item.description || '—'}</td>
                         <td className="p-3">
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${item.is_active ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-slate-800 text-slate-400'}`}>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${item.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700'}`}>
                             {item.is_active ? 'Active' : 'Inactive'}
                           </span>
                         </td>
                         <td className="p-3 text-right space-x-3">
                           <button
                             onClick={() => handleOpenEdit(item)}
-                            className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                           >
                             <Edit2 className="w-3.5 h-3.5" /> Edit
                           </button>
                           <button
                             onClick={() => handleDelete(item.service_interval_id, 'service_intervals')}
-                            className="text-xs text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" /> Delete
                           </button>
@@ -448,7 +462,7 @@ export function ServiceStandards() {
           {activeTab === 'thresholds' && (
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
+                <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 shadow-xs">
                   <th className="p-3">PM Threshold</th>
                   <th className="p-3">PM Hrs Converter</th>
                   <th className="p-3">PM Calendar Converter</th>
@@ -457,25 +471,25 @@ export function ServiceStandards() {
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {thresholds.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-slate-500">No service thresholds found.</td>
                   </tr>
                 ) : (
                   thresholds.map((item) => (
-                    <tr key={item.thresholds_id} className="hover:bg-slate-950/40 transition-colors">
-                      <td className="p-3 font-semibold text-amber-400">{item.pm_threshold ?? '0'}</td>
-                      <td className="p-3 text-slate-300">{item.pm_hrs_converter ?? '—'}</td>
-                      <td className="p-3 text-slate-300">{item.pm_calendar_converter ?? '—'}</td>
-                      <td className="p-3 text-slate-300">{item.average_lookback ?? '—'}</td>
-                      <td className="p-3 font-mono text-xs text-slate-400">
+                    <tr key={item.thresholds_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <td className="p-3 font-semibold text-amber-600 dark:text-amber-400">{item.pm_threshold ?? '0'}</td>
+                      <td className="p-3 text-slate-700 dark:text-slate-300">{item.pm_hrs_converter ?? '—'}</td>
+                      <td className="p-3 text-slate-700 dark:text-slate-300">{item.pm_calendar_converter ?? '—'}</td>
+                      <td className="p-3 text-slate-700 dark:text-slate-300">{item.average_lookback ?? '—'}</td>
+                      <td className="p-3 font-mono text-xs text-slate-600 dark:text-slate-400">
                         {item.updated_at ? new Date(item.updated_at).toLocaleString() : '—'}
                       </td>
                       <td className="p-3 text-right">
                         <button
                           onClick={() => handleOpenEdit(item)}
-                          className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                         >
                           <Edit2 className="w-3.5 h-3.5" /> Edit
                         </button>
@@ -492,174 +506,176 @@ export function ServiceStandards() {
       {/* FORM MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <h3 className="text-lg font-bold text-slate-100">
+          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-800 pb-4 shrink-0">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                 {editingId ? 'Edit Record' : 'Add New Record'}
               </h3>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-100 cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitForm} className="space-y-4">
-              {activeTab === 'standards' && (
-                <>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Standard Code</label>
-                    <input
-                      type="text"
-                      required
-                      value={standardForm.code}
-                      onChange={(e) => setStandardForm({ ...standardForm, code: e.target.value })}
-                      placeholder="e.g. PM_STD_01"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Description</label>
-                    <textarea
-                      rows={3}
-                      required
-                      value={standardForm.description}
-                      onChange={(e) => setStandardForm({ ...standardForm, description: e.target.value })}
-                      placeholder="Describe maintenance standard..."
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                </>
-              )}
+            <form onSubmit={handleSubmitForm} className="flex flex-col flex-1 overflow-hidden">
+              <div className="overflow-y-auto space-y-4 p-1 flex-1">
+                {activeTab === 'standards' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Standard Code</label>
+                      <input
+                        type="text"
+                        required
+                        value={standardForm.code}
+                        onChange={(e) => setStandardForm({ ...standardForm, code: e.target.value })}
+                        placeholder="e.g. PM_STD_01"
+                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Description</label>
+                      <textarea
+                        rows={3}
+                        required
+                        value={standardForm.description}
+                        onChange={(e) => setStandardForm({ ...standardForm, description: e.target.value })}
+                        placeholder="Describe maintenance standard..."
+                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </>
+                )}
 
-              {activeTab === 'intervals' && (
-                <>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Service Standard Reference</label>
-                    <select
-                      required
-                      value={intervalForm.service_standard_id}
-                      onChange={(e) => setIntervalForm({ ...intervalForm, service_standard_id: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="">Select Service Standard</option>
-                      {standards.map((std) => (
-                        <option key={std.service_standard_id} value={std.service_standard_id}>
-                          {std.code} {std.description ? `- ${std.description.substring(0, 40)}` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Code (Fixed PM Value)</label>
-                    <select
-                      required
-                      value={intervalForm.code}
-                      onChange={(e) => setIntervalForm({ ...intervalForm, code: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                    >
-                      {PM_CODES.map((pmCode) => (
-                        <option key={pmCode} value={pmCode}>{pmCode}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Interval</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={intervalForm.interval}
-                      onChange={(e) => setIntervalForm({ ...intervalForm, interval: e.target.value })}
-                      placeholder="e.g. 5000"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Description</label>
-                    <input
-                      type="text"
-                      value={intervalForm.description || ''}
-                      onChange={(e) => setIntervalForm({ ...intervalForm, description: e.target.value })}
-                      placeholder="Optional details..."
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 pt-2">
-                    <input
-                      type="checkbox"
-                      id="is_active_chk"
-                      checked={intervalForm.is_active}
-                      onChange={(e) => setIntervalForm({ ...intervalForm, is_active: e.target.checked })}
-                      className="rounded bg-slate-950 border-slate-800 text-blue-600 focus:ring-0 w-4 h-4 cursor-pointer"
-                    />
-                    <label htmlFor="is_active_chk" className="text-xs font-semibold uppercase text-slate-400 cursor-pointer">Is Active</label>
-                  </div>
-                </>
-              )}
+                {activeTab === 'intervals' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Service Standard Reference</label>
+                      <select
+                        required
+                        value={intervalForm.service_standard_id}
+                        onChange={(e) => setIntervalForm({ ...intervalForm, service_standard_id: e.target.value })}
+                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="">Select Service Standard</option>
+                        {standards.map((std) => (
+                          <option key={std.service_standard_id} value={std.service_standard_id}>
+                            {std.code} {std.description ? `- ${std.description.substring(0, 40)}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Code (Fixed PM Value)</label>
+                      <select
+                        required
+                        value={intervalForm.code}
+                        onChange={(e) => setIntervalForm({ ...intervalForm, code: e.target.value })}
+                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                      >
+                        {PM_CODES.map((pmCode) => (
+                          <option key={pmCode} value={pmCode}>{pmCode}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Interval</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={intervalForm.interval}
+                        onChange={(e) => setIntervalForm({ ...intervalForm, interval: e.target.value })}
+                        placeholder="e.g. 5000"
+                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Description</label>
+                      <input
+                        type="text"
+                        value={intervalForm.description || ''}
+                        onChange={(e) => setIntervalForm({ ...intervalForm, description: e.target.value })}
+                        placeholder="Optional details..."
+                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 pt-2">
+                      <input
+                        type="checkbox"
+                        id="is_active_chk"
+                        checked={intervalForm.is_active}
+                        onChange={(e) => setIntervalForm({ ...intervalForm, is_active: e.target.checked })}
+                        className="rounded bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-0 w-4 h-4 cursor-pointer"
+                      />
+                      <label htmlFor="is_active_chk" className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 cursor-pointer">Is Active</label>
+                    </div>
+                  </>
+                )}
 
-              {activeTab === 'thresholds' && (
-                <>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">PM Threshold</label>
-                    <input
-                      type="number"
-                      step="any"
-                      required
-                      value={thresholdForm.pm_threshold}
-                      onChange={(e) => setThresholdForm({ ...thresholdForm, pm_threshold: e.target.value })}
-                      placeholder="e.g. 1000"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">PM Hrs Converter</label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={thresholdForm.pm_hrs_converter}
-                      onChange={(e) => setThresholdForm({ ...thresholdForm, pm_hrs_converter: e.target.value })}
-                      placeholder="e.g. 1.0"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">PM Calendar Converter</label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={thresholdForm.pm_calendar_converter}
-                      onChange={(e) => setThresholdForm({ ...thresholdForm, pm_calendar_converter: e.target.value })}
-                      placeholder="e.g. 30"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Average Lookback</label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={thresholdForm.average_lookback}
-                      onChange={(e) => setThresholdForm({ ...thresholdForm, average_lookback: e.target.value })}
-                      placeholder="e.g. 30"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                </>
-              )}
+                {activeTab === 'thresholds' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">PM Threshold</label>
+                      <input
+                        type="number"
+                        step="any"
+                        required
+                        value={thresholdForm.pm_threshold}
+                        onChange={(e) => setThresholdForm({ ...thresholdForm, pm_threshold: e.target.value })}
+                        placeholder="e.g. 1000"
+                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">PM Hrs Converter</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={thresholdForm.pm_hrs_converter}
+                        onChange={(e) => setThresholdForm({ ...thresholdForm, pm_hrs_converter: e.target.value })}
+                        placeholder="e.g. 1.0"
+                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">PM Calendar Converter</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={thresholdForm.pm_calendar_converter}
+                        onChange={(e) => setThresholdForm({ ...thresholdForm, pm_calendar_converter: e.target.value })}
+                        placeholder="e.g. 30"
+                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Average Lookback</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={thresholdForm.average_lookback}
+                        onChange={(e) => setThresholdForm({ ...thresholdForm, average_lookback: e.target.value })}
+                        placeholder="e.g. 30"
+                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-300 dark:border-slate-800 shrink-0 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   <span>{editingId ? 'Update Record' : 'Save Record'}</span>

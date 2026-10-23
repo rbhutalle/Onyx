@@ -1,0 +1,2091 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reliability-Centered MRO &amp; Solutions Manual</title>
+  <meta name="description" content="Step-by-step transaction flow user manual with real UI screenshots for Reliability-Centered MRO management system.">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  
+  <!-- Typography from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Mermaid.js for interactive sequence diagrams -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: '#090d16',
+        primaryColor: '#2563eb',
+        primaryTextColor: '#f8fafc',
+        primaryBorderColor: '#3b82f6',
+        lineColor: '#60a5fa',
+        secondaryColor: '#1e293b',
+        tertiaryColor: '#0f172a'
+      }
+    });
+  </script>
+
+  <style>
+    :root {
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      
+      --bg-main: #030712;
+      --bg-surface: #0b1329;
+      --bg-card: rgba(15, 23, 42, 0.75);
+      --bg-card-hover: rgba(30, 41, 59, 0.85);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(59, 130, 246, 0.3);
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --primary-light: rgba(59, 130, 246, 0.15);
+      
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --accent-purple: #a855f7;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-main);
+      background-image: 
+        radial-gradient(ellipse at 15% 0%, rgba(37, 99, 235, 0.15) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 15%, rgba(6, 182, 212, 0.10) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 100%, rgba(99, 102, 241, 0.07) 0%, transparent 60%);
+      background-attachment: fixed;
+      color: var(--text-main);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-main);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+
+    /* Top Reading Progress Bar */
+    .reading-progress-bar {
+      position: fixed;
+      top: 64px;
+      left: 0;
+      height: 3px;
+      width: 0%;
+      background: linear-gradient(90deg, #3b82f6, #06b6d4, #10b981);
+      z-index: 55;
+      transition: width 0.1s ease-out;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.7);
+    }
+
+    /* Top Fixed Header */
+    .top-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      background: rgba(3, 7, 18, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-color);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .brand-section:hover {
+      opacity: 0.9;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, #2563eb, #06b6d4);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 0 20px rgba(37, 99, 235, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .brand-name {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+
+    .brand-sub {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .search-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-input {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 8px 14px 8px 36px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-family: inherit;
+      width: 240px;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      width: 320px;
+      background: rgba(15, 23, 42, 0.95);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      width: 16px;
+      height: 16px;
+      color: var(--text-dim);
+      pointer-events: none;
+    }
+
+    .search-hotkey {
+      position: absolute;
+      right: 10px;
+      font-size: 0.7rem;
+      font-family: var(--font-mono);
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-dim);
+      padding: 2px 6px;
+      border-radius: 4px;
+      pointer-events: none;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .btn-header {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(15, 23, 42, 0.8);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+      padding: 8px 15px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .btn-header:hover {
+      background: rgba(30, 41, 59, 0.9);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary-header {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    }
+
+    .btn-primary-header:hover {
+      background: linear-gradient(135deg, #1d4ed8, #1e40af);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+      color: #fff;
+    }
+
+    /* Main Layout */
+    .app-container {
+      display: flex;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* Sidebar Navigation */
+    .sidebar {
+      width: 320px;
+      position: fixed;
+      top: 64px;
+      bottom: 0;
+      left: 0;
+      background: rgba(11, 19, 41, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid var(--border-color);
+      overflow-y: auto;
+      padding: 24px 16px;
+      z-index: 40;
+    }
+
+    .sidebar-section-title {
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin: 18px 8px 10px 8px;
+    }
+
+    .sidebar-nav {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.84rem;
+      font-weight: 600;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      border: 1px solid transparent;
+    }
+
+    .sidebar-link:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      transform: translateX(2px);
+    }
+
+    .sidebar-link.active {
+      background: linear-gradient(90deg, rgba(37, 99, 235, 0.18), rgba(6, 182, 212, 0.08));
+      color: #60a5fa;
+      border-color: rgba(59, 130, 246, 0.3);
+      box-shadow: 0 4px 12px -2px rgba(37, 99, 235, 0.2);
+    }
+
+    .stage-badge {
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 3px 7px;
+      border-radius: 5px;
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      letter-spacing: 0.04em;
+    }
+
+    /* Content Area */
+    .content-area {
+      margin-left: 320px;
+      margin-top: 64px;
+      padding: 40px 56px 140px 56px;
+      max-width: 1320px;
+      width: calc(100% - 320px);
+    }
+
+    /* Hero / Document Header */
+    .doc-hero {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.14) 0%, rgba(6, 182, 212, 0.08) 50%, rgba(168, 85, 247, 0.05) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 44px 48px;
+      margin-bottom: 40px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+    }
+
+    .doc-hero::before {
+      content: '';
+      position: absolute;
+      top: -120px;
+      right: -120px;
+      width: 360px;
+      height: 360px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 12px;
+      background: rgba(59, 130, 246, 0.18);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      color: #93c5fd;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 16px;
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+    }
+
+    .doc-hero h1 {
+      font-size: 2.6rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.18;
+      margin-bottom: 14px;
+      background: linear-gradient(135deg, #ffffff 40%, #cbd5e1 80%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .doc-hero p {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      max-width: 860px;
+      margin-bottom: 24px;
+      line-height: 1.7;
+    }
+
+    /* Transaction Flow Map (Stepper) */
+    .flow-stepper {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+      gap: 10px;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 48px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+
+    .step-node {
+      background: rgba(2, 6, 23, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px 12px;
+      text-align: center;
+      text-decoration: none;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      position: relative;
+    }
+
+    .step-node:hover {
+      background: rgba(30, 41, 59, 0.8);
+      border-color: var(--primary);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px -4px rgba(37, 99, 235, 0.35);
+    }
+
+    .step-number {
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: #60a5fa;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .step-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.3;
+    }
+
+    /* Transaction Stage Container */
+    .transaction-stage {
+      margin-bottom: 72px;
+      padding-top: 32px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .stage-header {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 28px;
+    }
+
+    .stage-tag {
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--primary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .stage-tag::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 8px var(--primary);
+    }
+
+    .stage-title {
+      font-size: 1.95rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      color: #fff;
+    }
+
+    .stage-desc {
+      font-size: 0.98rem;
+      color: var(--text-muted);
+      max-width: 920px;
+      line-height: 1.7;
+    }
+
+    /* Transaction Meta Info Box */
+    .transaction-meta-box {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 18px 24px;
+      margin-bottom: 28px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .meta-label {
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+
+    .meta-value {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+
+    /* macOS Window Screenshot Showcase Frame */
+    .screenshot-card {
+      background: #090d16;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      overflow: hidden;
+      margin: 28px 0 36px 0;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .screenshot-card:hover {
+      border-color: rgba(59, 130, 246, 0.5);
+      transform: translateY(-2px);
+      box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.85), 0 0 25px rgba(37, 99, 235, 0.2);
+    }
+
+    .window-header {
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+      padding: 12px 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .window-dots {
+      display: flex;
+      gap: 7px;
+    }
+
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 0, 0, 0.2);
+    }
+    .dot-red { background: #ff5f56; }
+    .dot-amber { background: #ffbd2e; }
+    .dot-green { background: #27c93f; }
+
+    .window-title {
+      font-size: 0.76rem;
+      font-family: var(--font-mono);
+      color: #94a3b8;
+      background: rgba(2, 6, 23, 0.75);
+      padding: 4px 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .screenshot-img-container {
+      position: relative;
+      background: #020617;
+      cursor: zoom-in;
+      overflow: hidden;
+    }
+
+    .screenshot-img {
+      width: 100%;
+      height: auto;
+      display: block;
+      transition: transform 0.3s ease, filter 0.3s ease;
+    }
+
+    .screenshot-img-container:hover .screenshot-img {
+      transform: scale(1.008);
+    }
+
+    .zoom-hint-badge {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      background: rgba(2, 6, 23, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 8px;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      pointer-events: none;
+    }
+
+    .screenshot-img-container:hover .zoom-hint-badge {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .screenshot-caption {
+      padding: 14px 22px;
+      background: #090d16;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+      font-size: 0.86rem;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .screenshot-caption strong {
+      color: #e2e8f0;
+    }
+
+    /* Connected Action Steps Timeline */
+    .steps-container {
+      margin: 28px 0;
+      position: relative;
+    }
+
+    .action-step {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 24px;
+      position: relative;
+    }
+
+    .step-badge-wrapper {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .step-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+      z-index: 2;
+    }
+
+    .step-timeline-connector {
+      position: absolute;
+      top: 38px;
+      bottom: -24px;
+      width: 2px;
+      background: linear-gradient(180deg, rgba(59, 130, 246, 0.5), rgba(59, 130, 246, 0.08));
+      z-index: 1;
+    }
+
+    .action-step:last-child .step-timeline-connector {
+      display: none;
+    }
+
+    .step-content {
+      flex: 1;
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 16px 20px;
+      transition: all 0.2s ease;
+    }
+
+    .step-content:hover {
+      background: rgba(30, 41, 59, 0.6);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .step-instruction {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 6px;
+    }
+
+    .step-detail {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* Callouts & Formulas */
+    .callout {
+      border-radius: 12px;
+      padding: 18px 22px;
+      margin: 22px 0;
+      border-left: 4px solid;
+      background: rgba(15, 23, 42, 0.8);
+      font-size: 0.92rem;
+      line-height: 1.65;
+    }
+
+    .callout-info {
+      border-left-color: var(--primary);
+      background: rgba(59, 130, 246, 0.08);
+      color: #bfdbfe;
+    }
+
+    .callout-warning {
+      border-left-color: var(--accent-amber);
+      background: rgba(245, 158, 11, 0.08);
+      color: #fde68a;
+    }
+
+    .callout-success {
+      border-left-color: var(--accent-emerald);
+      background: rgba(16, 185, 129, 0.08);
+      color: #a7f3d0;
+    }
+
+    .callout-title {
+      font-weight: 800;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+    }
+
+    .formula-box {
+      background: rgba(15, 23, 42, 0.85);
+      border-left: 4px solid #06b6d4;
+      border-top: 1px solid rgba(6, 182, 212, 0.2);
+      border-right: 1px solid rgba(6, 182, 212, 0.2);
+      border-bottom: 1px solid rgba(6, 182, 212, 0.2);
+      border-radius: 10px;
+      padding: 14px 20px;
+      margin: 16px 0;
+      font-family: var(--font-mono);
+      color: #38bdf8;
+      font-size: 0.92rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    /* Data Tables */
+    .table-container {
+      overflow-x: auto;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      margin: 24px 0;
+      background: rgba(15, 23, 42, 0.6);
+      box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.4);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.88rem;
+    }
+
+    th {
+      background: #090d16;
+      color: var(--text-muted);
+      font-weight: 700;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-color);
+      text-transform: uppercase;
+      font-size: 0.74rem;
+      letter-spacing: 0.07em;
+    }
+
+    td {
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+      color: #fff;
+    }
+
+    /* Lightbox Modal for Zooming Screenshots */
+    .lightbox-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(2, 6, 23, 0.94);
+      backdrop-filter: blur(12px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      cursor: zoom-out;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .lightbox-modal.active {
+      display: flex;
+    }
+
+    .lightbox-img {
+      max-width: 95%;
+      max-height: 92vh;
+      border-radius: 12px;
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    }
+
+    /* Floating Back-to-Top Button */
+    .btn-back-to-top {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(37, 99, 235, 0.5);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.25s ease;
+      z-index: 40;
+    }
+
+    .btn-back-to-top.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .btn-back-to-top:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 14px 30px rgba(37, 99, 235, 0.65);
+    }
+
+    /* Print Styles */
+    @media print {
+      .top-header, .sidebar, .btn-back-to-top, .search-input-wrapper, .reading-progress-bar {
+        display: none !important;
+      }
+      .content-area {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      body {
+        background: #fff !important;
+        color: #000 !important;
+      }
+      .screenshot-card, .transaction-meta-box, .table-container, .doc-hero {
+        border-color: #ccc !important;
+        background: #fff !important;
+        color: #000 !important;
+      }
+      h1, h2, h3, h4, strong {
+        color: #000 !important;
+        -webkit-text-fill-color: #000 !important;
+      }
+      p, td {
+        color: #333 !important;
+      }
+      .screenshot-img {
+        max-width: 100% !important;
+        page-break-inside: avoid;
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+      .content-area {
+        margin-left: 0;
+        width: 100%;
+        padding: 24px 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Reading Progress Bar -->
+  <div id="readingProgress" class="reading-progress-bar"></div>
+
+  <!-- Top Fixed Header -->
+  <header class="top-header">
+    <a href="/" class="brand-section" title="Return to Dashboard">
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/>
+          <circle cx="7" cy="17" r="2"/>
+          <path d="M9 17h6"/>
+          <circle cx="17" cy="17" r="2"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">Reliability-Centered MRO</div>
+        <div class="brand-sub">Solutions Manual</div>
+      </div>
+    </a>
+
+    <div class="header-actions">
+      <div class="search-input-wrapper">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="manualSearchInput" class="search-input" placeholder="Search manual steps..." autocomplete="off">
+        <span class="search-hotkey" title="Press / to search">/</span>
+      </div>
+
+      <button onclick="window.print()" class="btn-header" title="Print manual or save as PDF">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 6 2 18 2 18 9"></polyline>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+          <rect x="6" y="14" width="12" height="8"></rect>
+        </svg>
+        Print / PDF
+      </button>
+
+      <a href="/" class="btn-header btn-primary-header" title="Open RC-MRO Web App">
+        Launch App
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="7" y1="17" x2="17" y2="7"></line>
+          <polyline points="7 7 17 7 17 17"></polyline>
+        </svg>
+      </a>
+    </div>
+  </header>
+
+  <div class="app-container">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-section-title">End-to-End Transaction Flow</div>
+      <ul class="sidebar-nav">
+        <li>
+          <a href="#stage-1" class="sidebar-link active">
+            <span class="stage-badge">STAGE 1</span>
+            <span>Asset &amp; Staff Onboarding</span>
+          </a>
+        </li>
+        <li>
+          <a href="#stage-2" class="sidebar-link">
+            <span class="stage-badge">STAGE 2</span>
+            <span>Daily Telemetry Capture</span>
+          </a>
+        </li>
+        <li>
+          <a href="#stage-3" class="sidebar-link">
+            <span class="stage-badge">STAGE 3</span>
+            <span>Preventive Maintenance PM2–7</span>
+          </a>
+        </li>
+        <li>
+          <a href="#stage-4" class="sidebar-link">
+            <span class="stage-badge">STAGE 4</span>
+            <span>12-Month Predictive Forecast</span>
+          </a>
+        </li>
+        <li>
+          <a href="#stage-5" class="sidebar-link">
+            <span class="stage-badge">STAGE 5</span>
+            <span>Job Order &amp; Cost Rollup</span>
+          </a>
+        </li>
+        <li>
+          <a href="#stage-6" class="sidebar-link">
+            <span class="stage-badge">STAGE 6</span>
+            <span>Component Provenance &amp; Scrap</span>
+          </a>
+        </li>
+        <li>
+          <a href="#stage-7" class="sidebar-link">
+            <span class="stage-badge">STAGE 7</span>
+            <span>Incident Management &amp; 4-Pillar RCA</span>
+          </a>
+        </li>
+        <li>
+          <a href="#stage-8" class="sidebar-link">
+            <span class="stage-badge">STAGE 8</span>
+            <span>Standards &amp; Governance</span>
+          </a>
+        </li>
+        <li>
+          <a href="#how-to-operationalize-fmea" class="sidebar-link">
+            <span class="stage-badge" style="background: rgba(37, 99, 235, 0.25); color: #60a5fa; border: 1px solid rgba(37,99,235,0.4);">GUIDE</span>
+            <span>Operationalizing FMEA</span>
+          </a>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content-area">
+
+      <!-- Document Hero -->
+      <section class="doc-hero">
+        <div class="badge-pill">Operations Manual • Visual Transaction Workflow</div>
+        <h1>End-to-End MRO Transaction Guide</h1>
+        <p>This manual follows the exact operational sequence of fleet maintenance, repair, and overhaul in RC-MRO. Each section includes live application screenshots, input specifications, calculation rules, and database procedure mechanics.</p>
+      </section>
+
+      <!-- Visual Transaction Stepper -->
+      <nav class="flow-stepper" aria-label="Transaction Stages">
+        <a href="#stage-1" class="step-node">
+          <span class="step-number">Stage 1</span>
+          <span class="step-title">Asset &amp; Staff Setup</span>
+        </a>
+        <a href="#stage-2" class="step-node">
+          <span class="step-number">Stage 2</span>
+          <span class="step-title">Daily Telemetry</span>
+        </a>
+        <a href="#stage-3" class="step-node">
+          <span class="step-number">Stage 3</span>
+          <span class="step-title">PM Monitoring</span>
+        </a>
+        <a href="#stage-4" class="step-node">
+          <span class="step-number">Stage 4</span>
+          <span class="step-title">Predictive Plan</span>
+        </a>
+        <a href="#stage-5" class="step-node">
+          <span class="step-number">Stage 5</span>
+          <span class="step-title">Job Order Costing</span>
+        </a>
+        <a href="#stage-6" class="step-node">
+          <span class="step-number">Stage 6</span>
+          <span class="step-title">Component Cycle</span>
+        </a>
+        <a href="#stage-7" class="step-node">
+          <span class="step-number">Stage 7</span>
+          <span class="step-title">Safety &amp; RCA</span>
+        </a>
+      </nav>
+
+      <!-- ========================================================================= -->
+      <!-- STAGE 1: Asset & Staff Onboarding -->
+      <!-- ========================================================================= -->
+      <section id="stage-1" class="transaction-stage">
+        <div class="stage-header">
+          <span class="stage-tag">Stage 1: Foundation Setup</span>
+          <h2 class="stage-title">Asset Onboarding, Staff Registration &amp; Service Standards</h2>
+          <p class="stage-desc">Before conducting maintenance operations, fleet units, technicians with standardized wage rates, and PM interval rules must be established in the master registries.</p>
+        </div>
+
+        <div class="transaction-meta-box">
+          <div class="meta-item">
+            <span class="meta-label">Primary Roles</span>
+            <span class="meta-value">Fleet Manager, System Administrator</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Source Navigation</span>
+            <span class="meta-value">App Registry &gt; Equipment Registry &amp; Employee Registry</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Primary Database Tables</span>
+            <span class="meta-value"><code>vehicles</code>, <code>employees</code>, <code>service_standards</code></span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Transaction Output</span>
+            <span class="meta-value">Active Asset IDs, Verified Wage Rates, Baseline PM Counters</span>
+          </div>
+        </div>
+
+        <!-- Step 1.1: Vehicle Registry -->
+        <h3 style="color: #60a5fa; margin-top: 24px;">Step 1.1: Registering Fleet Equipment &amp; Initializing PM Baselines</h3>
+        <p>Navigate to <code>/global-settings/vehicle-registry</code>. Register each machine or transport asset.</p>
+
+        <div class="screenshot-card">
+          <div class="window-header">
+            <div class="window-dots">
+              <span class="dot dot-red"></span>
+              <span class="dot dot-amber"></span>
+              <span class="dot dot-green"></span>
+            </div>
+            <div class="window-title">RC-MRO — /global-settings/vehicle-registry</div>
+            <div></div>
+          </div>
+          <div class="screenshot-img-container" onclick="openLightbox('/screenshots/flow_01_vehicle_registry.png')">
+            <img src="/screenshots/flow_01_vehicle_registry.png" alt="Equipment Registry Screenshot" class="screenshot-img">
+          </div>
+          <div class="screenshot-caption">
+            <span><strong>Figure 1.1:</strong> Equipment Registry displaying plate numbers, model details, service standards, and initial baseline mileage setup.</span>
+            <span style="font-size: 0.75rem; color: #60a5fa;">Click to expand</span>
+          </div>
+        </div>
+
+        <!-- How Properly Initialize Preventive Maintenance of an Equipment -->
+        <div id="how-to-initialize-pm" class="callout callout-success" style="border-left-width: 6px; padding: 24px; margin: 28px 0; background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(6, 182, 212, 0.08) 100%); border-radius: 14px;">
+          <div class="callout-title" style="font-size: 1.05rem; color: #34d399; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            1. How to Properly Initialize Preventive Maintenance of an Equipment
+          </div>
+          <p style="color: #e2e8f0; font-size: 0.92rem; margin-bottom: 20px; line-height: 1.6;">
+            Follow this mandatory end-to-end initialization workflow to properly calibrate equipment baseline meters and configure customized PM schedules before logging daily operations:
+          </p>
+
+          <div class="steps-container" style="margin: 0;">
+            <!-- Step 1.1 -->
+            <div class="action-step">
+              <div class="step-badge-wrapper">
+                <div class="step-badge" style="background: linear-gradient(135deg, #059669, #10b981);">1.1</div>
+                <div class="step-timeline-connector"></div>
+              </div>
+              <div class="step-content">
+                <div class="step-instruction" style="color: #34d399;">1.1 Go to Equipment Registry &amp; Operations</div>
+                <div class="step-detail">
+                  Navigate to <strong>App Registry &gt; Equipment Registry &amp; Operations</strong> (route: <code>/global-settings/vehicle-registry</code>). This is your central command center for fleet asset onboarding, baseline odometer configuration, and PM schedule calibration.
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 1.2 -->
+            <div class="action-step">
+              <div class="step-badge-wrapper">
+                <div class="step-badge" style="background: linear-gradient(135deg, #059669, #10b981);">1.2</div>
+                <div class="step-timeline-connector"></div>
+              </div>
+              <div class="step-content">
+                <div class="step-instruction" style="color: #34d399;">1.2 Search to Edit or Add Equipment</div>
+                <div class="step-detail">
+                  Depending on your asset onboarding status:
+                  <ul style="margin-top: 6px; margin-left: 20px; line-height: 1.6;">
+                    <li><strong>To Edit Existing Equipment:</strong> Use the search filter bar to find the target Plate Number / Unit ID, then click the <strong>Edit</strong> button (<svg style="display:inline;vertical-align:middle;width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>) in the table actions.</li>
+                    <li><strong>To Register New Equipment:</strong> Click the <strong>"+ Add Equipment"</strong> button to open the asset enrollment form. Fill in the Plate Number, Conduction Sticker Number, Make, Model, and assign the appropriate <strong>Service Standard</strong> (e.g. <code>STD-HEAVY</code>).</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 1.3 -->
+            <div class="action-step">
+              <div class="step-badge-wrapper">
+                <div class="step-badge" style="background: linear-gradient(135deg, #059669, #10b981);">1.3</div>
+                <div class="step-timeline-connector"></div>
+              </div>
+              <div class="step-content">
+                <div class="step-instruction" style="color: #34d399;">1.3 Input Initial Service Reading and Save</div>
+                <div class="step-detail">
+                  In the <strong>Service Reading</strong> field, input the starting meter reading (e.g. Engine Runtime Operating Hours for heavy machinery, loaders, and prime movers, or Odometer Kilometers for highway haulers). Toggle <strong>Active Status</strong> to <code>Active</code> and click <strong>Save</strong>.
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 1.4 -->
+            <div class="action-step">
+              <div class="step-badge-wrapper">
+                <div class="step-badge" style="background: linear-gradient(135deg, #d97706, #f59e0b);">1.4</div>
+                <div class="step-timeline-connector"></div>
+              </div>
+              <div class="step-content">
+                <div class="step-instruction" style="color: #fbbf24;">1.4 If Odometer Did Not Start at 0 (Not Brand New) → Update PM Schedule</div>
+                <div class="step-detail">
+                  If the equipment did not start at 0 (i.e. existing asset with prior operating history):
+                  <ol style="margin-top: 6px; margin-left: 20px; line-height: 1.6;">
+                    <li>Click on the equipment in the master table to select it.</li>
+                    <li>Switch to the <strong>"Equipment PM Status"</strong> tab at the top.</li>
+                    <li>Click the blue <strong>"Update PM Schedule"</strong> button (<svg style="display:inline;vertical-align:middle;width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>).</li>
+                    <li>Input the customized PM schedule values based on your physical maintenance logs:
+                      <ul style="margin-top: 4px; margin-left: 18px;">
+                        <li><strong>Previous Reading:</strong> Reading when that PM tier was physically executed last.</li>
+                        <li><strong>Date Completed:</strong> Historical completion date of that service.</li>
+                        <li><strong>Current Target Reading:</strong> Exact meter threshold when the next tier is due.</li>
+                        <li><strong>Next Target Reading:</strong> Subsequent service threshold.</li>
+                      </ul>
+                    </li>
+                    <li>Click <strong>Save</strong> to store the customized schedule.</li>
+                  </ol>
+                  <div style="margin-top: 8px; font-size: 0.82rem; color: #94a3b8; background: rgba(15, 23, 42, 0.6); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                    💡 <em>Note: If the equipment is brand new starting at 0, standard interval increments (e.g. 250h / 5,000km steps) apply automatically without needing historical calibration.</em>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 1.5 -->
+            <div class="action-step">
+              <div class="step-badge-wrapper">
+                <div class="step-badge" style="background: linear-gradient(135deg, #2563eb, #3b82f6);">1.5</div>
+                <div class="step-timeline-connector"></div>
+              </div>
+              <div class="step-content">
+                <div class="step-instruction" style="color: #60a5fa;">1.5 You Can Now Start Using Daily Inspection &amp; Telemetry</div>
+                <div class="step-detail">
+                  Your equipment's preventive maintenance engine is now fully initialized and synchronized! You can now start using <a href="#stage-2" style="color: #60a5fa; text-decoration: underline; font-weight: 600;">Daily Inspection &amp; Telemetry</a> (route: <code>/daily-inspection</code>) to capture daily end-of-shift readings, track automatic PM intervals, and flag defects.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 1.2: Employee Registry -->
+        <h3 style="color: #60a5fa; margin-top: 36px;">Step 1.2: Enrolling Technicians &amp; Wage Costing Rates</h3>
+        <p>Navigate to <code>/global-settings/employee-registry</code>. Register mechanics, electricians, and supervisors with their financial costing rates.</p>
+
+        <div class="screenshot-card">
+          <div class="window-header">
+            <div class="window-dots">
+              <span class="dot dot-red"></span>
+              <span class="dot dot-amber"></span>
+              <span class="dot dot-green"></span>
+            </div>
+            <div class="window-title">RC-MRO — /global-settings/employee-registry</div>
+            <div></div>
+          </div>
+          <div class="screenshot-img-container" onclick="openLightbox('/screenshots/flow_02_employee_registry.png')">
+            <img src="/screenshots/flow_02_employee_registry.png" alt="Employee Registry Screenshot" class="screenshot-img">
+          </div>
+          <div class="screenshot-caption">
+            <span><strong>Figure 1.2:</strong> Employee Registry showing Employee Code, Full Name, Internal Hourly Rate, Sell Rate, and Supervisor flags.</span>
+            <span style="font-size: 0.75rem; color: #60a5fa;">Click to expand</span>
+          </div>
+        </div>
+
+        <div class="callout callout-info">
+          <div class="callout-title">Cost Accounting Rule</div>
+          The <strong>Rate Per Hour</strong> represents the technician's internal wage cost to the company (used for internal Job Order cost accounting). The <strong>Sell Rate Per Hour</strong> is the billing rate charged when work is billed to external clients or dedicated cost centers.
+        </div>
+
+        <!-- Step 1.3: Service Standards -->
+        <h3 style="color: #60a5fa; margin-top: 36px;">Step 1.3: Configuring PM Intervals &amp; Advance Thresholds</h3>
+        <p>Navigate to <code>/settings/service-standards</code>. Define the interval increments between PM tiers.</p>
+
+        <div class="screenshot-card">
+          <div class="window-header">
+            <div class="window-dots">
+              <span class="dot dot-red"></span>
+              <span class="dot dot-amber"></span>
+              <span class="dot dot-green"></span>
+            </div>
+            <div class="window-title">RC-MRO — /settings/service-standards</div>
+            <div></div>
+          </div>
+          <div class="screenshot-img-container" onclick="openLightbox('/screenshots/flow_03_service_standards.png')">
+            <img src="/screenshots/flow_03_service_standards.png" alt="Service Standards Screenshot" class="screenshot-img">
+          </div>
+          <div class="screenshot-caption">
+            <span><strong>Figure 1.3:</strong> Service Standards &amp; Intervals defining kilometer increments for PM2 through PM7.</span>
+            <span style="font-size: 0.75rem; color: #60a5fa;">Click to expand</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================================= -->
+      <!-- STAGE 2: Daily Telemetry Capture -->
+      <!-- ========================================================================= -->
+      <section id="stage-2" class="transaction-stage">
+        <div class="stage-header">
+          <span class="stage-tag">Stage 2: Shift Operations</span>
+          <h2 class="stage-title">Daily Inspection &amp; Telemetry Capture</h2>
+          <p class="stage-desc">The daily heartbeat of the maintenance system. At the end of every operating shift, inspectors record odometer readings and link any observed defects to FMEA condition risk codes.</p>
+        </div>
+
+        <div class="callout callout-info" style="margin-bottom: 24px;">
+          <div class="callout-title" style="display: flex; align-items: center; gap: 8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            Operational Prerequisite
+          </div>
+          Before logging daily shift telemetry for a newly acquired or newly registered asset, ensure it has been properly initialized via <a href="#how-to-initialize-pm" style="color: #60a5fa; text-decoration: underline; font-weight: 600;">How to Properly Initialize Preventive Maintenance of an Equipment (Steps 1.1–1.5)</a>.
+        </div>
+
+        <div class="transaction-meta-box">
+          <div class="meta-item">
+            <span class="meta-label">Primary Roles</span>
+            <span class="meta-value">Yard Inspector, Shift Driver, Shop Clerk</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Source Navigation</span>
+            <span class="meta-value">Maintenance Plan &gt; Daily Inspection</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Primary Database Tables</span>
+            <span class="meta-value"><code>vehicle_daily_logs</code>, <code>log_risks</code></span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">System Trigger</span>
+            <span class="meta-value">Recalculates PM Due Thresholds &amp; Updates Master Reading</span>
+          </div>
+        </div>
+
+        <div class="screenshot-card">
+          <div class="window-header">
+            <div class="window-dots">
+              <span class="dot dot-red"></span>
+              <span class="dot dot-amber"></span>
+              <span class="dot dot-green"></span>
+            </div>
+            <div class="window-title">RC-MRO — /daily-inspection</div>
+            <div></div>
+          </div>
+          <div class="screenshot-img-container" onclick="openLightbox('/screenshots/flow_04_daily_inspection.png')">
+            <img src="/screenshots/flow_04_daily_inspection.png" alt="Daily Inspection Screenshot" class="screenshot-img">
+          </div>
+          <div class="screenshot-caption">
+            <span><strong>Figure 2.1:</strong> Daily Inspection Form showing equipment selector, previous reading, current reading input, daily increment, and operator remarks.</span>
+            <span style="font-size: 0.75rem; color: #60a5fa;">Click to expand</span>
+          </div>
+        </div>
+
+        <div class="steps-container">
+          <div class="action-step">
+            <div class="step-badge">1</div>
+            <div class="step-content">
+              <div class="step-instruction">Select Equipment via Vehicle Picker</div>
+              <div class="step-detail">Click the search icon to open the Vehicle Picker modal. Filter by plate number. RC-MRO automatically fetches and displays the asset's recorded <strong>Previous Reading</strong>.</div>
+            </div>
+          </div>
+          <div class="action-step">
+            <div class="step-badge">2</div>
+            <div class="step-content">
+              <div class="step-instruction">Enter Current Service Reading</div>
+              <div class="step-detail">Input the vehicle's odometer or engine hour meter at shift end. RC-MRO dynamically calculates:
+                <div class="formula-box">Daily Increment = Current Reading − Previous Reading</div>
+              </div>
+            </div>
+          </div>
+          <div class="action-step">
+            <div class="step-badge">3</div>
+            <div class="step-content">
+              <div class="step-instruction">Record Remarks &amp; Submit Log</div>
+              <div class="step-detail">Input any field observations (e.g., <em>"Unusual air compressor cycling noticed during hill climb"</em>) and click <strong>Submit Daily Log</strong>. The vehicle's master mileage is updated instantly.</div>
+            </div>
+          </div>
+          <div class="action-step">
+            <div class="step-badge">4</div>
+            <div class="step-content">
+              <div class="step-instruction">Step 3.1 &amp; 3.2: Operationalize FMEA in Daily Inspection &amp; Telemetry</div>
+              <div class="step-detail">
+                After saving the daily inspection log, initiate FMEA risk tracking:
+                <ul style="margin-top: 8px; margin-left: 20px; line-height: 1.7;">
+                  <li><strong>3.1 – Inspect the Equipment and Input Daily Inspection Form and Save:</strong> Complete the inspection checklist, enter the current service reading, add field remarks, and click <strong>Submit Daily Log</strong>. The asset master reading updates instantly.</li>
+                  <li><strong>3.2 – Move to Inspection Flags, Search for the Equipment/Vehicle and Select Flags:</strong> Switch to the <strong>Inspection Flags</strong> tab. Search for the equipment by plate number. Select one or more condition flags drawn from the <strong>Master FMEA List</strong> (Unsafe Conditions, Unsafe Acts, Personal Factors, or Work-Related Causes). Attach mitigation notes and save the flag record.
+                    <div style="margin-top: 8px; font-size: 0.82rem; color: #94a3b8; background: rgba(15, 23, 42, 0.6); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                      💡 <em>Prerequisite: FMEA Master Lists must be configured first. See <a href="#how-to-operationalize-fmea" style="color: #60a5fa; font-weight: 600; text-decoration: underline;">Operationalizing FMEA (Stage 7)</a> for the full setup workflow.</em>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================================= -->
+      <!-- STAGE 3: Preventive Maintenance Monitoring & Execution -->
+      <!-- ========================================================================= -->
+      <section id="stage-3" class="transaction-stage">
+        <div class="stage-header">
+          <span class="stage-tag">Stage 3: Preventative Control</span>
+          <h2 class="stage-title">Equipment PM Details &amp; One-Click Completion</h2>
+          <p class="stage-desc">Tracks PM tiers (PM2 through PM7). When accumulated service readings exceed target thresholds, red alert flags highlight the due service. Shop supervisors execute one-click completion upon physical service sign-off.</p>
+        </div>
+
+        <div class="transaction-meta-box">
+          <div class="meta-item">
+            <span class="meta-label">Primary Roles</span>
+            <span class="meta-value">Maintenance Supervisor, Shop Foreman</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Source Navigation</span>
+            <span class="meta-value">Maintenance Plan &gt; Equipment PM Details</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Database Stored Procedure</span>
+            <span class="meta-value"><code>rpc('completed_vehicle_pm', { p_pm_level, p_vehicle_id })</code></span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Transaction Output</span>
+            <span class="meta-value">Advances Target Counter, Records Completed Timestamp, Clears Flag</span>
+          </div>
+        </div>
+
+        <div class="screenshot-card">
+          <div class="window-header">
+            <div class="window-dots">
+              <span class="dot dot-red"></span>
+              <span class="dot dot-amber"></span>
+              <span class="dot dot-green"></span>
+            </div>
+            <div class="window-title">RC-MRO — /vehicles</div>
+            <div></div>
+          </div>
+          <div class="screenshot-img-container" onclick="openLightbox('/screenshots/flow_05_pm_equipment_details.png')">
+            <img src="/screenshots/flow_05_pm_equipment_details.png" alt="Equipment PM Details Screenshot" class="screenshot-img">
+          </div>
+          <div class="screenshot-caption">
+            <span><strong>Figure 3.1:</strong> Equipment PM Details screen showing fleet list, current service readings, and PM schedule breakdown.</span>
+            <span style="font-size: 0.75rem; color: #60a5fa;">Click to expand</span>
+          </div>
+        </div>
+
+        <div class="steps-container">
+          <div class="action-step">
+            <div class="step-badge">1</div>
+            <div class="step-content">
+              <div class="step-instruction">Open Equipment PM Details Modal</div>
+              <div class="step-detail">Search by plate number and click <strong>View Details</strong> to open the PM Schedule Breakdown.</div>
+            </div>
+          </div>
+          <div class="action-step">
+            <div class="step-badge">2</div>
+            <div class="step-content">
+              <div class="step-instruction">Review PM Schedule Grid</div>
+              <div class="step-detail">Examine the row for each tier (PM2 to PM7). If <code>Current Reading &gt;= Current PM Target</code>, the row turns red and displays an active green <strong>Completed</strong> button.</div>
+            </div>
+          </div>
+          <div class="action-step">
+            <div class="step-badge">3</div>
+            <div class="step-content">
+              <div class="step-instruction">Execute Completion Procedure</div>
+              <div class="step-detail">When physical maintenance is verified, click the <strong>Completed</strong> button. RC-MRO invokes the <code>completed_vehicle_pm</code> RPC procedure:
+                <ul>
+                  <li>Sets <code>pmX_previous = current_service_rdg</code></li>
+                  <li>Records <code>pmX_datecompleted = NOW()</code></li>
+                  <li>Advances <code>pmX_current = pmX_next</code></li>
+                  <li>Recalculates <code>pmX_next = pmX_current + standard_interval</code></li>
+                  <li>Clears the overdue red flag immediately.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================================= -->
+      <!-- STAGE 4: Predictive Forecast & Capacity Planning -->
+      <!-- ========================================================================= -->
+      <section id="stage-4" class="transaction-stage">
+        <div class="stage-header">
+          <span class="stage-tag">Stage 4: Forward Planning</span>
+          <h2 class="stage-title">12-Month Predictive Maintenance Forecast</h2>
+          <p class="stage-desc">Forecasts PM triggers across a rolling 12-month horizon based on historical average daily usage, enabling bay capacity planning and proactive parts requisitions.</p>
+        </div>
+
+        <div class="transaction-meta-box">
+          <div class="meta-item">
+            <span class="meta-label">Primary Roles</span>
+            <span class="meta-value">Fleet Manager, Parts Planner, Maintenance Superintendent</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Source Navigation</span>
+            <span class="meta-value">Maintenance Plan &gt; Maintenance Forecast</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Data View Source</span>
+            <span class="meta-value"><code>vw_12monthpredictive_maintenance_details</code></span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Transaction Output</span>
+            <span class="meta-value">Monthly bay load schedules, pre-allocated inventory requisitions</span>
+          </div>
+        </div>
+
+        <div class="screenshot-card">
+          <div class="window-header">
+            <div class="window-dots">
+              <span class="dot dot-red"></span>
+              <span class="dot dot-amber"></span>
+              <span class="dot dot-green"></span>
+            </div>
+            <div class="window-title">RC-MRO — /maintenance-forecast</div>
+            <div></div>
+          </div>
+          <div class="screenshot-img-container" onclick="openLightbox('/screenshots/flow_06_maintenance_forecast.png')">
+            <img src="/screenshots/flow_06_maintenance_forecast.png" alt="Maintenance Forecast Screenshot" class="screenshot-img">
+          </div>
+          <div class="screenshot-caption">
+            <span><strong>Figure 4.1:</strong> 12-Month Predictive Maintenance Forecast with horizon slider, PM tier filter, and monthly equipment schedule matrix.</span>
+            <span style="font-size: 0.75rem; color: #60a5fa;">Click to expand</span>
+          </div>
+        </div>
+
+        <div class="steps-container">
+          <div class="action-step">
+            <div class="step-badge">1</div>
+            <div class="step-content">
+              <div class="step-instruction">Adjust Forward Horizon Slider</div>
+              <div class="step-detail">Drag the slider from 1 to 12 months to customize your forward-looking planning window (e.g., set to 3 months for quarterly workshop planning).</div>
+            </div>
+          </div>
+          <div class="action-step">
+            <div class="step-badge">2</div>
+            <div class="step-content">
+              <div class="step-instruction">Filter by PM Tier &amp; Asset Code</div>
+              <div class="step-detail">Filter by <code>PM4</code> or <code>PM6</code> to isolate major services requiring extended bay occupancy.</div>
+            </div>
+          </div>
+          <div class="action-step">
+            <div class="step-badge">3</div>
+            <div class="step-content">
+              <div class="step-instruction">Export Schedule for Parts Procurement</div>
+              <div class="step-detail">Cross-reference upcoming PM volumes with store inventory to ensure filters, synthetic oils, and brake linings are pre-ordered prior to vehicle shop intake.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================================= -->
+      <!-- STAGE 5: Job Order (Work Order) Execution & Costing -->
+      <!-- ========================================================================= -->
+      <section id="stage-5" class="transaction-stage">
+        <div class="stage-header">
+          <span class="stage-tag">Stage 5: Work Order Management</span>
+          <h2 class="stage-title">Job Order Execution, Labor Tracking &amp; Cost Rollup</h2>
+          <p class="stage-desc">The primary operational and financial workhorse of RC-MRO. Creates work orders, assigns benchmarked task standards, issues bill of materials (BOM), records technician labor hours, logs external machining contracts, and rolls up total maintenance costs.</p>
+        </div>
+
+        <div class="transaction-meta-box">
+          <div class="meta-item">
+            <span class="meta-label">Primary Roles</span>
+            <span class="meta-value">Shop Supervisor, Assigned Technicians, Cost Accountant</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Source Navigation</span>
+            <span class="meta-value">Job Order System &gt; Job Order &amp; Dashboard</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Primary Database Tables</span>
+            <span class="meta-value"><code>job_orders</code>, <code>job_order_tasks</code>, <code>job_order_materials</code>, <code>job_order_resources</code></span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Financial Formula</span>
+            <span class="meta-value"><code>Total Cost = Labor Cost + Materials Cost + Contract Cost</code></span>
+          </div>
+        </div>
+
+        <!-- Dashboard -->
+        <h3 style="color: #60a5fa; margin-top: 24px;">Step 5.1: Job Order Dashboard &amp; Backlog Triage</h3>
+        <p>Navigate to <code>/job-orders/dashboard</code> to review workshop backlog, open work orders, and priority distribution.</p>
+
+        <div class="screenshot-card">
+          <div class="window-header">
+            <div class="window-dots">
+              <span class="dot dot-red"></span>
+              <span class="dot dot-amber"></span>
+              <span class="dot dot-green"></span>
+            </div>
+            <div class="window-title">RC-MRO — /job-orders/dashboard</div>
+            <div></div>
+          </div>
+          <div class="screenshot-img-container" onclick="openLightbox('/screenshots/flow_08_job_order_dashboard.png')">
+            <img src="/screenshots/flow_08_job_order_dashboard.png" alt="Job Order Dashboard Screenshot" class="screenshot-img">
+          </div>
+          <div class="screenshot-caption">
+            <span><strong>Figure 5.1:</strong> Job Order Dashboard displaying work order throughput metrics and status summaries.</span>
+            <span style="font-size: 0.75rem; color: #60a5fa;">Click to expand</span>
+          </div>
+        </div>
+
+        <!-- Job Order Management -->
+        <h3 style="color: #60a5fa; margin-top: 36px;">Step 5.2: Work Order Creation &amp; Multi-Tier Costing</h3>
+        <p>Navigate to <code>/job-orders</code> to execute the complete work order transaction lifecycle.</p>
+
+        <div class="screenshot-card">
+          <div class="window-header">
+            <div class="window-dots">
+              <span class="dot dot-red"></span>
+              <span class="dot dot-amber"></span>
+              <span class="dot dot-green"></span>
+            </div>
+            <div class="window-title">RC-MRO — /job-orders</div>
+            <div></div>
+          </div>
+          <div class="screenshot-img-container" onclick="openLightbox('/screenshots/flow_07_job_orders.png')">
+            <img src="/screenshots/flow_07_job_orders.png" alt="Job Order Management Screenshot" class="screenshot-img">
+          </div>
+          <div class="screenshot-caption">
+            <span><strong>Figure 5.2:</strong> Job Order Management interface showing work order list, cost rollups, and multi-tab detail editor.</span>
+            <span style="font-size: 0.75rem; color: #60a5fa;">Click to expand</span>
+          </div>
+        </div>
+
+        <div class="steps-container">
+          <div class="action-step">
+            <div class="step-badge">1</div>
+            <div class="step-content">
+              <div class="step-instruction">Create Work Order Header</div>
+              <div class="step-detail">Select Equipment, check-in Odometer Reading, Priority (<code>Urgent</code>, <code>High</code>, <code>Normal</code>, <code>Low</code>), Expected Completion Date, and Assigned Supervisor. Initial status is <code>Open</code>.</div>
+            </div>
+          </div>
+          <div class="action-step">
+            <div class="step-badge">2</div>
+            <div class="step-content">
+              <div class="step-instruction">Assign Task Standards</div>
+              <div class="step-detail">Under the <strong>Tasks</strong> tab, pick from the Task Standards library (e.g., <em>"Brake Caliper Overhaul"</em>). The system automatically loads preconfigured benchmark labor hours (e.g., <code>3.5 hrs</code>).</div>
+            </div>
+          </div>
+          <div class="action-step">
+            <div class="step-badge">3</div>
+            <div class="step-content">
+              <div class="step-instruction">Issue Bill of Materials (Parts)</div>
+              <div class="step-detail">Under the <strong>Materials</strong> tab, add stock codes, OEM part numbers, quantity, and unit price. Line totals calculate automatically and sum into the <strong>Materials Cost</strong>.</div>
+            </div>
+          </div>
+          <div class="action-step">
+            <div class="step-badge">4</div>
+            <div class="step-content">
+              <div class="step-instruction">Assign Labor Resources &amp; Log Hours</div>
+              <div class="step-detail">Under the <strong>Resources</strong> tab, select technicians from the Employee Registry and record actual charged hours. RC-MRO computes:
+                <div class="formula-box">Labor Line Total = Charged Hours × Technician Hourly Wage Rate</div>
+                All labor lines sum dynamically into the <strong>Labor Cost</strong>.
+              </div>
+            </div>
+          </div>
+          <div class="action-step">
+            <div class="step-badge">5</div>
+            <div class="step-content">
+              <div class="step-instruction">Record Subcontracted Contracts</div>
+              <div class="step-detail">Under <strong>Outside Contracts</strong>, log third-party repairs (e.g., crankshaft grinding). Line totals sum into <strong>Contract Cost</strong>.</div>
+            </div>
+          </div>
+          <div class="action-step">
+            <div class="step-badge">6</div>
+            <div class="step-content">
+              <div class="step-instruction">Review Grand Total &amp; Close Work Order</div>
+              <div class="step-detail">RC-MRO aggregates:
+                <div class="formula-box">Total Job Order Cost = Labor Cost + Materials Cost + Contract Cost</div>
+                When quality inspection is passed, set <strong>Date Completed</strong> and update status to <code>Completed</code> or <code>Closed</code>.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================================= -->
+      <!-- STAGE 6: Component Provenance & Scrap Lifecycle -->
+      <!-- ========================================================================= -->
+      <section id="stage-6" class="transaction-stage">
+        <div class="stage-header">
+          <span class="stage-tag">Stage 6: Asset Lifecycle</span>
+          <h2 class="stage-title">Component History, Teardown &amp; Scrap Governance</h2>
+          <p class="stage-desc">Maintains serialized traceability for critical assemblies (engines, transmissions, differential carriers, hydraulic pumps). Tracks installation, removal, accumulated runtime, and marks condemned parts as scrapped.</p>
+        </div>
+
+        <div class="transaction-meta-box">
+          <div class="meta-item">
+            <span class="meta-label">Primary Roles</span>
+            <span class="meta-value">Component Rebuild Specialist, Workshop Supervisor</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Source Navigation</span>
+            <span class="meta-value">Maintenance Plan &gt; Component History</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Primary Database Tables</span>
+            <span class="meta-value"><code>equipment_components</code>, <code>equipment_component_history</code></span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Transaction Output</span>
+            <span class="meta-value">Net component run-hours, scrap audit status (<code>is_scrapped</code>)</span>
+          </div>
+        </div>
+
+        <div class="screenshot-card">
+          <div class="window-header">
+            <div class="window-dots">
+              <span class="dot dot-red"></span>
+              <span class="dot dot-amber"></span>
+              <span class="dot dot-green"></span>
+            </div>
+            <div class="window-title">RC-MRO — /component-history</div>
+            <div></div>
+          </div>
+          <div class="screenshot-img-container" onclick="openLightbox('/screenshots/flow_09_component_history.png')">
+            <img src="/screenshots/flow_09_component_history.png" alt="Component History Screenshot" class="screenshot-img">
+          </div>
+          <div class="screenshot-caption">
+            <span><strong>Figure 6.1:</strong> Component History screen showing serialized units, vehicle installations, accumulated mileage, and scrap status.</span>
+            <span style="font-size: 0.75rem; color: #60a5fa;">Click to expand</span>
+          </div>
+        </div>
+
+        <div class="steps-container">
+          <div class="action-step">
+            <div class="step-badge">1</div>
+            <div class="step-content">
+              <div class="step-instruction">Teardown &amp; Component Removal</div>
+              <div class="step-detail">When an assembly fails or is scheduled for overhaul, locate the unit in Component History and click <strong>Remove Component</strong>. Record the vehicle reading at removal and teardown notes. RC-MRO computes the net running hours accumulated on that asset.</div>
+            </div>
+          </div>
+          <div class="action-step">
+            <div class="step-badge">2</div>
+            <div class="step-content">
+              <div class="step-instruction">Scrap Evaluation (Condemnation)</div>
+              <div class="step-detail">If structural casing cracks or catastrophic damage prevents rebuild, flag the component as <code>is_scrapped = TRUE</code>. This prevents the unit from ever being remounted on any vehicle.</div>
+            </div>
+          </div>
+          <div class="action-step">
+            <div class="step-badge">3</div>
+            <div class="step-content">
+              <div class="step-instruction">Installation of Rebuilt / New Unit</div>
+              <div class="step-detail">Select the target vehicle and the new/rebuilt component serial number. Click <strong>Install Component</strong>, input current vehicle mileage and installation date. Status updates to <code>Installed = TRUE</code>.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================================= -->
+      <!-- STAGE 7: Incident Management & Root Cause Analysis (RCA) -->
+      <!-- ========================================================================= -->
+      <section id="stage-7" class="transaction-stage">
+        <div class="stage-header">
+          <span class="stage-tag">Stage 7: Reliability &amp; Safety</span>
+          <h2 class="stage-title">Incident Investigation &amp; 4-Pillar Root Cause Analysis</h2>
+          <p class="stage-desc">Closes the reliability loop when field breakdowns or safety incidents occur. Captures financial loss estimates and systematically breaks down causes across Conditions, Acts, Personal Factors, and Work-Related Causes.</p>
+        </div>
+
+        <div class="transaction-meta-box">
+          <div class="meta-item">
+            <span class="meta-label">Primary Roles</span>
+            <span class="meta-value">Safety Officer, Reliability Engineer, Quality Auditor</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Source Navigation</span>
+            <span class="meta-value">Incident Mgmt &gt; Incident Report</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Taxonomy Framework</span>
+            <span class="meta-value">4-Pillar RCA (Conditions, Acts, Factors, Causes) + FMEA RPN</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Transaction Output</span>
+            <span class="meta-value">Corrective Actions, Incident Loss Tracking, Preventive Rule Adjustments</span>
+          </div>
+        </div>
+
+        <div class="screenshot-card">
+          <div class="window-header">
+            <div class="window-dots">
+              <span class="dot dot-red"></span>
+              <span class="dot dot-amber"></span>
+              <span class="dot dot-green"></span>
+            </div>
+            <div class="window-title">RC-MRO — /incident-management/incident-report</div>
+            <div></div>
+          </div>
+          <div class="screenshot-img-container" onclick="openLightbox('/screenshots/flow_10_incident_report.png')">
+            <img src="/screenshots/flow_10_incident_report.png" alt="Incident Report Screenshot" class="screenshot-img">
+          </div>
+          <div class="screenshot-caption">
+            <span><strong>Figure 7.1:</strong> Incident Report management screen showing incident master records, severity badges, and 4-pillar RCA tabs.</span>
+            <span style="font-size: 0.75rem; color: #60a5fa;">Click to expand</span>
+          </div>
+        </div>
+
+        <div class="steps-container">
+          <div class="action-step">
+            <div class="step-badge">1</div>
+            <div class="step-content">
+              <div class="step-instruction">Log Incident Master Record</div>
+              <div class="step-detail">Record Incident Reference Number, Vehicle ID, Incident Date/Time, Severity (<code>Low</code>, <code>Medium</code>, <code>High</code>, <code>Critical</code>), Reported By, and Estimated Financial Loss.</div>
+            </div>
+          </div>
+          <div class="action-step">
+            <div class="step-badge">2</div>
+            <div class="step-content">
+              <div class="step-instruction">Conduct 4-Pillar Root Cause Analysis</div>
+              <div class="step-detail">Select the incident and populate findings across all 4 analysis pillars:
+                <ol style="margin-top: 8px;">
+                  <li><strong>Substandard Conditions:</strong> Mechanical failure (e.g., brake line puncture, fatigue crack).</li>
+                  <li><strong>Substandard Acts:</strong> Operator behavior (e.g., driving with low air pressure warning).</li>
+                  <li><strong>Personal Factors:</strong> Human factors (e.g., operator fatigue, inadequate shift handover).</li>
+                  <li><strong>Work-Related Causes:</strong> Systemic causes (e.g., inadequate PM inspection checklist interval).</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+          <div class="action-step">
+            <div class="step-badge">3</div>
+            <div class="step-content">
+              <div class="step-instruction">Close Loop with Preventive Actions</div>
+              <div class="step-detail">Use RCA findings to update PM intervals in Service Standards or adjust FMEA detection protocols in App Settings to ensure permanent mitigation.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Operationalizing FMEA -->
+        <div id="how-to-operationalize-fmea" class="callout callout-info" style="border-left-width: 6px; padding: 24px; margin: 32px 0; background: linear-gradient(135deg, rgba(37, 99, 235, 0.12) 0%, rgba(6, 182, 212, 0.08) 100%); border-radius: 14px;">
+          <div class="callout-title" style="font-size: 1.05rem; color: #60a5fa; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            Operationalizing FMEA — End-to-End Setup &amp; Daily Use
+          </div>
+          <p style="color: #e2e8f0; font-size: 0.92rem; margin-bottom: 20px; line-height: 1.6;">
+            Before FMEA risk flags can be used in daily inspections, System Administrators must configure the RCA taxonomy, validate FMEA settings, and populate the Master FMEA list. Follow these three sequential phases:
+          </p>
+
+          <div class="steps-container" style="margin: 0;">
+
+            <!-- Phase 1: RCA Settings -->
+            <div class="action-step">
+              <div class="step-badge-wrapper">
+                <div class="step-badge" style="background: linear-gradient(135deg, #1d4ed8, #3b82f6); font-size: 0.75rem;">1</div>
+                <div class="step-timeline-connector"></div>
+              </div>
+              <div class="step-content">
+                <div class="step-instruction" style="color: #60a5fa;">Phase 1: Fill-Up Root Cause Analysis (RCA) Settings</div>
+                <div class="step-detail">
+                  Navigate to <code>/settings/rca</code>. Populate the four taxonomy pillars used to classify all incident causes:
+                  <ul style="margin-top: 8px; margin-left: 20px; line-height: 1.7;">
+                    <li><strong>1.1 Unsafe Conditions</strong> — Physical or environmental hazards (e.g., wet floor, defective equipment part, poor lighting).</li>
+                    <li><strong>1.1 Unsafe Acts</strong> — Operator behavior deviations (e.g., operating without PPE, bypassing safety checklist).</li>
+                    <li><strong>1.1 Personal Factors</strong> — Human-side causes (e.g., fatigue, inadequate training, health limitations).</li>
+                    <li><strong>1.1 Work-Related Causes</strong> — Systemic root causes (e.g., inadequate PM schedule, missing standard operating procedure).</li>
+                  </ul>
+                  <div style="margin-top: 8px; font-size: 0.82rem; color: #94a3b8; background: rgba(15, 23, 42, 0.6); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                    💡 <em>These four pillars map directly to the 4-Pillar RCA framework used in Incident Reports.</em>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Phase 2: FMEA Settings -->
+            <div class="action-step">
+              <div class="step-badge-wrapper">
+                <div class="step-badge" style="background: linear-gradient(135deg, #1d4ed8, #3b82f6); font-size: 0.75rem;">2</div>
+                <div class="step-timeline-connector"></div>
+              </div>
+              <div class="step-content">
+                <div class="step-instruction" style="color: #60a5fa;">Phase 2: Fill-Up and Validate FMEA Settings</div>
+                <div class="step-detail">
+                  Navigate to <code>/settings/fmea</code>. Complete the following three sub-tasks:
+                  <ol style="margin-top: 8px; margin-left: 20px; line-height: 1.7;">
+                    <li>
+                      <strong>2.1 – Review and Validate RPN Values:</strong> RPN (Risk Priority Number) is calculated as <strong>Severity × Occurrence × Detection</strong>. Review each FMEA entry's RPN score. Flag any entries with high RPN values for immediate corrective action priority.
+                      <div class="formula-box" style="margin: 6px 0;">RPN = Severity × Occurrence × Detection</div>
+                    </li>
+                    <li><strong>2.2 – Populate FMEA Constants (Control and Effects):</strong> Define the detection control methods and failure effects for each failure mode. Controls describe how the failure is currently being detected (e.g., visual inspection, scheduled monitoring). Effects describe what happens to the system when the failure occurs (e.g., loss of braking, engine shutdown).</li>
+                    <li><strong>2.3 – Populate Master FMEA (Unsafe Conditions, Unsafe Acts, Personal Factors and Work-Related Causes):</strong> Map each FMEA failure mode to one of the four RCA taxonomy categories established in Phase 1. This creates the selectable <strong>Master FMEA List</strong> that operators will use when tagging daily inspection flags.</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+
+            <!-- Phase 3: Daily Inspection FMEA Use -->
+            <div class="action-step">
+              <div class="step-badge-wrapper">
+                <div class="step-badge" style="background: linear-gradient(135deg, #059669, #10b981); font-size: 0.75rem;">3</div>
+                <div class="step-timeline-connector"></div>
+              </div>
+              <div class="step-content">
+                <div class="step-instruction" style="color: #34d399;">Phase 3: Operationalize FMEA in Daily Inspection &amp; Telemetry</div>
+                <div class="step-detail">
+                  With RCA taxonomy and Master FMEA populated, inspectors can now link field observations directly to FMEA risk codes during daily operations:
+                  <ol style="margin-top: 8px; margin-left: 20px; line-height: 1.7;">
+                    <li><strong>3.1 – Inspect the Equipment and Input Daily Inspection Form and Save:</strong> Navigate to <code>/daily-inspection</code>. Select the equipment via the Vehicle Picker, enter the current service reading, record remarks on any observed defects or anomalies, and click <strong>Submit Daily Log</strong>.</li>
+                    <li><strong>3.2 – Move to Inspection Flags, Search for the Equipment/Vehicle and Select Flags:</strong> Switch to the <strong>Inspection Flags</strong> tab. Search for the equipment by plate number or unit ID. Select one or more flags from the <strong>Master FMEA List</strong> — flags are pre-classified into Unsafe Conditions, Unsafe Acts, Personal Factors, and Work-Related Causes. Save the flag to formally record the risk against the inspection entry.
+                      <div style="margin-top: 8px; font-size: 0.82rem; color: #fbbf24; background: rgba(30, 20, 0, 0.5); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(251,191,36,0.2);">
+                        ⚠️ <em>Note: Flags are sourced exclusively from the Master FMEA List. Ensure Phases 1 and 2 are completed and the Master FMEA is populated before using Inspection Flags in daily operations.</em>
+                      </div>
+                    </li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Supporting RCA & FMEA Governance Settings -->
+        <h3 style="color: #60a5fa; margin-top: 36px;">Taxonomy &amp; FMEA Governance Settings</h3>
+        <p>System Administrators configure the master taxonomy libraries in <code>/settings/rca</code> and <code>/settings/fmea</code>.</p>
+
+        <div class="grid-2">
+          <div class="screenshot-card">
+            <div class="window-header">
+              <div class="window-dots"><span class="dot dot-red"></span><span class="dot dot-amber"></span><span class="dot dot-green"></span></div>
+              <div class="window-title">/settings/rca</div>
+              <div></div>
+            </div>
+            <div class="screenshot-img-container" onclick="openLightbox('/screenshots/flow_11_rca_settings.png')">
+              <img src="/screenshots/flow_11_rca_settings.png" alt="RCA Settings Screenshot" class="screenshot-img">
+            </div>
+            <div class="screenshot-caption"><strong>Figure 7.2:</strong> RCA Taxonomy Settings.</div>
+          </div>
+
+          <div class="screenshot-card">
+            <div class="window-header">
+              <div class="window-dots"><span class="dot dot-red"></span><span class="dot dot-amber"></span><span class="dot dot-green"></span></div>
+              <div class="window-title">/settings/fmea</div>
+              <div></div>
+            </div>
+            <div class="screenshot-img-container" onclick="openLightbox('/screenshots/flow_12_fmea_settings.png')">
+              <img src="/screenshots/flow_12_fmea_settings.png" alt="FMEA Settings Screenshot" class="screenshot-img">
+            </div>
+            <div class="screenshot-caption"><strong>Figure 7.3:</strong> FMEA RPN Definitions &amp; Controls.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================================= -->
+      <!-- STAGE 8: Complete Lifecycle Sequence Diagram -->
+      <!-- ========================================================================= -->
+      <section id="stage-8" class="transaction-stage">
+        <div class="stage-header">
+          <span class="stage-tag">Stage 8: Visual Process Sequence</span>
+          <h2 class="stage-title">End-to-End Operational Lifecycle Sequence</h2>
+          <p class="stage-desc">Comprehensive sequence diagram tracing an asset from shift inspection to work order closing and preventive procedure sign-off.</p>
+        </div>
+
+        <div style="background: #090d16; border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; margin: 24px 0; overflow-x: auto;">
+          <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Driver as Equipment Operator
+    actor Insp as Shift Inspector
+    actor Sys as RC-MRO System
+    actor Sup as Shop Supervisor
+    actor Tech as Mechanic
+
+    Driver->>Insp: Shift End: Reports odometer & vehicle status
+    Insp->>Sys: 1. Submits Daily Inspection (Current Reading, Remarks)
+    Sys->>Sys: Calculates Daily Increment, updates master service reading
+    Note over Sys: PM3 Target Threshold Exceeded!
+    Sys->>Sys: Triggers PM3 Overdue Flag (Red Badge)
+    Sys-->>Sup: Equipment PM Details reflects PM3 Due
+    Sup->>Sys: 2. Creates Job Order (Priority: High, Target Completion)
+    Sup->>Sys: 3. Adds Task Standard ("Oil & Filter Replacement", 2.5 hrs)
+    Sup->>Sys: 4. Issues Bill of Materials (Filters, Engine Oil, Gaskets)
+    Sup->>Tech: Assigns Job Order to Technician
+    Tech->>Tech: Executes physical maintenance & safety checks
+    Tech->>Sys: 5. Logs actual charged labor hours
+    Sup->>Sys: 6. Closes Job Order (Calculates Total Cost = Labor + Parts + Contracts)
+    Sup->>Sys: 7. In Equipment PM Details: Clicks "Completed" on PM3
+    Sys->>Sys: Runs completed_vehicle_pm() RPC
+    Note over Sys: PM3 Target advances to next cycle. Overdue flag cleared!
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Lightbox Modal for Fullscreen Image Preview -->
+  <div id="lightboxModal" class="lightbox-modal" onclick="closeLightbox()">
+    <img id="lightboxImg" src="" alt="Enlarged screenshot" class="lightbox-img">
+  </div>
+
+  <!-- Back to Top Button -->
+  <button id="btnBackToTop" class="btn-back-to-top" title="Back to top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="18 15 12 9 6 15"></polyline>
+    </svg>
+  </button>
+
+  <!-- Interactive JavaScript -->
+  <script>
+    // 1. Reading Progress Bar
+    const progressBar = document.getElementById('readingProgress');
+    window.addEventListener('scroll', () => {
+      const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = height > 0 ? (winScroll / height) * 100 : 0;
+      if (progressBar) progressBar.style.width = scrolled + '%';
+    });
+
+    // 2. Lightbox Image Viewer
+    function openLightbox(src) {
+      const modal = document.getElementById('lightboxModal');
+      const img = document.getElementById('lightboxImg');
+      img.src = src;
+      modal.classList.add('active');
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightboxModal').classList.remove('active');
+    }
+
+    // 3. Back to Top Button Visibility
+    const btnBackToTop = document.getElementById('btnBackToTop');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 400) {
+        btnBackToTop.classList.add('visible');
+      } else {
+        btnBackToTop.classList.remove('visible');
+      }
+    });
+
+    // 4. Scrollspy for Active Navigation Link
+    const stages = document.querySelectorAll('.transaction-stage');
+    const navLinks = document.querySelectorAll('.sidebar-link');
+
+    window.addEventListener('scroll', () => {
+      let currentStageId = '';
+      stages.forEach(stage => {
+        const stageTop = stage.offsetTop - 120;
+        if (window.scrollY >= stageTop) {
+          currentStageId = stage.getAttribute('id');
+        }
+      });
+
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === `#${currentStageId}`) {
+          link.classList.add('active');
+        }
+      });
+    });
+
+    // 5. Live Search Filter & Hotkey
+    const searchInput = document.getElementById('manualSearchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase().trim();
+        const actionSteps = document.querySelectorAll('.action-step, .screenshot-card, .transaction-stage');
+
+        if (!term) {
+          actionSteps.forEach(el => el.style.opacity = '1');
+          return;
+        }
+
+        actionSteps.forEach(el => {
+          const text = el.innerText.toLowerCase();
+          if (text.includes(term)) {
+            el.style.opacity = '1';
+          } else {
+            el.style.opacity = '0.25';
+          }
+        });
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === '/' && document.activeElement !== searchInput) {
+          e.preventDefault();
+          searchInput.focus();
+          searchInput.select();
+        } else if (e.key === 'Escape') {
+          if (document.activeElement === searchInput) {
+            searchInput.blur();
+          }
+          closeLightbox();
+        }
+      });
+    }
+  </script>
+</body>
+</html>
