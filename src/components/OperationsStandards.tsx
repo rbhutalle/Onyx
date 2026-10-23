@@ -36,7 +36,6 @@ export function OperationsStandards() {
     description: '' 
   });
 
-  // Fetch statuses cleanly inside useEffect to prevent cascading render warnings
   useEffect(() => {
     let isMounted = true;
 
@@ -67,7 +66,6 @@ export function OperationsStandards() {
     };
   }, []);
 
-  // Reusable fetch for post-mutation updates without full page reloads
   const refreshStatuses = async () => {
     try {
       const { data, error } = await supabase
@@ -164,38 +162,38 @@ export function OperationsStandards() {
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-4">
       {/* Header */}
-      <div className="shrink-0 flex items-center gap-3 border-b border-slate-800 pb-4">
-        <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl">
+      <div className="shrink-0 flex items-center gap-3 border-b border-slate-300 dark:border-slate-800 pb-4">
+        <div className="p-2.5 bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl">
           <Activity className="w-7 h-7" />
         </div>
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-100">Operations Standards</h1>
-          <p className="text-xs sm:text-sm text-slate-400">Configure status definitions and descriptions for daily inspections.</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Operations Standards</h1>
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Configure status definitions and descriptions for daily inspections.</p>
         </div>
       </div>
 
       {successMsg && (
-        <div className="shrink-0 bg-emerald-950/50 border border-emerald-800 text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
-          <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+        <div className="shrink-0 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
+          <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="shrink-0 bg-red-950/50 border border-red-800 text-red-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
-          <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+        <div className="shrink-0 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
+          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* Clean Tab Navigation */}
-      <div className="shrink-0 flex border-b border-slate-800 gap-2 overflow-x-auto">
+      <div className="shrink-0 flex border-b border-slate-300 dark:border-slate-800 gap-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('statuses')}
           className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'statuses'
-              ? 'border-blue-500 text-blue-400 bg-blue-950/20'
-              : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900/50'
           }`}
         >
           <Activity className="w-4 h-4" />
@@ -204,7 +202,7 @@ export function OperationsStandards() {
       </div>
 
       {/* Tab Content Container */}
-      <div className="flex flex-col flex-1 min-h-0 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
+      <div className="flex flex-col flex-1 min-h-0 bg-slate-50/90 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 shadow-xs rounded-xl p-6 space-y-4">
         {/* Toolbar / Actions */}
         <div className="shrink-0 flex justify-end items-center gap-4">
           <button
@@ -217,39 +215,39 @@ export function OperationsStandards() {
         </div>
 
         {/* Scrollable Container with Sticky Table Headers */}
-        <div className="flex-1 min-h-0 overflow-auto border border-slate-800/60 rounded-lg bg-slate-950">
+        <div className="flex-1 min-h-0 overflow-auto border border-slate-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-950">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
+              <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 shadow-xs">
                 <th className="p-3">Status Name</th>
                 <th className="p-3">Description</th>
                 <th className="p-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {statuses.length === 0 ? (
                 <tr>
                   <td colSpan={3} className="p-8 text-center text-slate-500">No operations standards found.</td>
                 </tr>
               ) : (
                 statuses.map((item) => (
-                  <tr key={item.operations_id} className="hover:bg-slate-950/40 transition-colors">
-                    <td className="p-3 font-semibold text-slate-100">
-                      <span className="inline-block px-2.5 py-1 bg-blue-950 text-blue-300 border border-blue-800/50 rounded-lg text-xs font-semibold">
+                  <tr key={item.operations_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                    <td className="p-3 font-semibold text-slate-900 dark:text-slate-100">
+                      <span className="inline-block px-2.5 py-1 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50 rounded-lg text-xs font-semibold">
                         {item.status_name || 'N/A'}
                       </span>
                     </td>
-                    <td className="p-3 text-slate-400">{item.description || '—'}</td>
+                    <td className="p-3 text-slate-600 dark:text-slate-400">{item.description || '—'}</td>
                     <td className="p-3 text-right space-x-3">
                       <button
                         onClick={() => handleOpenEdit(item)}
-                        className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                       >
                         <Edit2 className="w-3.5 h-3.5" /> Edit
                       </button>
                       <button
                         onClick={() => handleDelete(item.operations_id)}
-                        className="text-xs text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                        className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" /> Delete
                       </button>
@@ -265,14 +263,14 @@ export function OperationsStandards() {
       {/* FORM MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 max-h-[92vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4 shrink-0">
-              <h3 className="text-lg font-bold text-slate-100">
+          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-800 pb-4 shrink-0">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                 {editingId ? 'Edit Operations Standard' : 'Add Operations Standard'}
               </h3>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-100 cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -281,40 +279,40 @@ export function OperationsStandards() {
             <form onSubmit={handleSubmitForm} className="flex flex-col flex-1 overflow-hidden">
               <div className="overflow-y-auto space-y-4 p-1 flex-1">
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Status Name <span className="text-red-500">*</span></label>
+                  <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Status Name <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     required
                     value={statusForm.status_name}
                     onChange={(e) => setStatusForm({ ...statusForm, status_name: e.target.value })}
                     placeholder="e.g. Active, Standby, Maintenance..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                    className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Description</label>
+                  <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Description</label>
                   <textarea
                     rows={3}
                     value={statusForm.description}
                     onChange={(e) => setStatusForm({ ...statusForm, description: e.target.value })}
                     placeholder="Optional details or operational context..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                    className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800 shrink-0 mt-4">
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-300 dark:border-slate-800 shrink-0 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   <span>{editingId ? 'Update Standard' : 'Save Standard'}</span>

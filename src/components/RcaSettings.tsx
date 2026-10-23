@@ -365,41 +365,41 @@ export function RcaSettings() {
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
       {/* Page Header */}
-      <div className="shrink-0 flex items-center justify-between border-b border-slate-800 pb-3">
+      <div className="shrink-0 flex items-center justify-between border-b border-slate-300 dark:border-slate-800 pb-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-600/20 text-blue-400 rounded-xl">
+          <div className="p-2 bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl">
             <GitFork className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-100">Root Cause Analysis (RCA) Settings</h1>
-            <p className="text-xs text-slate-400">Configure master categories and detail breakdowns for incident classification.</p>
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Root Cause Analysis (RCA) Settings</h1>
+            <p className="text-xs text-slate-600 dark:text-slate-400">Configure master categories and detail breakdowns for incident classification.</p>
           </div>
         </div>
       </div>
 
       {/* Messages */}
       {successMsg && (
-        <div className="shrink-0 bg-emerald-950/50 border border-emerald-800 text-emerald-200 px-3 py-2 rounded-lg flex items-center gap-2.5 text-xs">
-          <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="shrink-0 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-3 py-2 rounded-lg flex items-center gap-2.5 text-xs">
+          <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="shrink-0 bg-red-950/50 border border-red-800 text-red-200 px-3 py-2 rounded-lg flex items-center gap-2.5 text-xs">
-          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+        <div className="shrink-0 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-3 py-2 rounded-lg flex items-center gap-2.5 text-xs">
+          <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* Main Category Tabs */}
-      <div className="shrink-0 flex gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
+      <div className="shrink-0 flex gap-2 border-b border-slate-300 dark:border-slate-800 pb-2 overflow-x-auto">
         <button
           onClick={() => { setActiveTab('conditions'); setActiveSubTab('categories'); }}
           className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'conditions'
               ? 'bg-blue-600 text-white shadow'
-              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-300 dark:border-slate-800'
           }`}
         >
           <AlertTriangle className="w-3.5 h-3.5" />
@@ -411,7 +411,7 @@ export function RcaSettings() {
           className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'acts'
               ? 'bg-blue-600 text-white shadow'
-              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-300 dark:border-slate-800'
           }`}
         >
           <ShieldAlert className="w-3.5 h-3.5" />
@@ -423,7 +423,7 @@ export function RcaSettings() {
           className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'factors'
               ? 'bg-blue-600 text-white shadow'
-              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-300 dark:border-slate-800'
           }`}
         >
           <UserCheck className="w-3.5 h-3.5" />
@@ -435,7 +435,7 @@ export function RcaSettings() {
           className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'causes'
               ? 'bg-blue-600 text-white shadow'
-              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-300 dark:border-slate-800'
           }`}
         >
           <Briefcase className="w-3.5 h-3.5" />
@@ -444,14 +444,14 @@ export function RcaSettings() {
       </div>
 
       {/* Main Container Body with Sub-Tabs */}
-      <div className="flex flex-col flex-1 min-h-0 bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
+      <div className="flex flex-col flex-1 min-h-0 bg-slate-50/90 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 shadow-xs rounded-xl p-4 overflow-hidden space-y-3">
         {/* Sub-Tab Navigation Bar */}
-        <div className="shrink-0 flex items-center justify-between border-b border-slate-800 pb-2">
-          <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800 gap-1">
+        <div className="shrink-0 flex items-center justify-between border-b border-slate-300 dark:border-slate-800 pb-2">
+          <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-lg border border-slate-300 dark:border-slate-800 gap-1">
             <button
               onClick={() => setActiveSubTab('categories')}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-                activeSubTab === 'categories' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+                activeSubTab === 'categories' ? 'bg-blue-600 text-white shadow' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               <Database className="w-3.5 h-3.5" />
@@ -460,7 +460,7 @@ export function RcaSettings() {
             <button
               onClick={() => setActiveSubTab('details')}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-                activeSubTab === 'details' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+                activeSubTab === 'details' ? 'bg-blue-600 text-white shadow' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               <ListTree className="w-3.5 h-3.5" />
@@ -480,7 +480,7 @@ export function RcaSettings() {
                   placeholder="Filter categories..."
                   value={masterSearch}
                   onChange={(e) => setMasterSearch(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
                 />
               </div>
               <button
@@ -496,9 +496,9 @@ export function RcaSettings() {
               </button>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-auto border border-slate-800/60 rounded-lg bg-slate-950">
+            <div className="flex-1 min-h-0 overflow-auto border border-slate-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-950">
               {loadingMaster ? (
-                <div className="h-full flex items-center justify-center text-slate-400 gap-2 text-xs">
+                <div className="h-full flex items-center justify-center text-slate-500 dark:text-slate-400 gap-2 text-xs">
                   <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
                   <span>Loading categories...</span>
                 </div>
@@ -509,17 +509,17 @@ export function RcaSettings() {
               ) : (
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 uppercase bg-slate-950 sticky top-0 z-10">
+                    <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10">
                       <th className="py-2 px-3 w-28">Code</th>
                       <th className="py-2 px-3">Description</th>
                       <th className="py-2 px-3 text-right w-28">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                     {filteredMasterList.map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-900/50 transition-colors">
-                        <td className="py-2 px-3 font-mono font-bold text-blue-400">{item.code}</td>
-                        <td className="py-2 px-3 text-slate-200">{item.description}</td>
+                      <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                        <td className="py-2 px-3 font-mono font-bold text-blue-600 dark:text-blue-400">{item.code}</td>
+                        <td className="py-2 px-3 text-slate-900 dark:text-slate-100">{item.description}</td>
                         <td className="py-2 px-3 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button
@@ -528,13 +528,13 @@ export function RcaSettings() {
                                 setMasterForm({ code: item.code, description: item.description });
                                 setIsMasterModalOpen(true);
                               }}
-                              className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                             >
                               <Edit2 className="w-3 h-3" /> Edit
                             </button>
                             <button
                               onClick={() => handleDeleteMaster(item.id)}
-                              className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                             >
                               <Trash2 className="w-3 h-3" /> Delete
                             </button>
@@ -560,14 +560,14 @@ export function RcaSettings() {
                   placeholder="Filter detail items..."
                   value={detailSearch}
                   onChange={(e) => setDetailSearch(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
                 />
               </div>
               <div className="w-full sm:w-64">
                 <select
                   value={detailFilterParentId}
                   onChange={(e) => setDetailFilterParentId(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500"
                 >
                   <option value="">All Categories (Filter)</option>
                   {masterList.map(m => (
@@ -584,9 +584,9 @@ export function RcaSettings() {
               </button>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-auto border border-slate-800/60 rounded-lg bg-slate-950">
+            <div className="flex-1 min-h-0 overflow-auto border border-slate-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-950">
               {loadingDetail ? (
-                <div className="h-full flex items-center justify-center text-slate-400 gap-2 text-xs">
+                <div className="h-full flex items-center justify-center text-slate-500 dark:text-slate-400 gap-2 text-xs">
                   <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
                   <span>Loading detail items...</span>
                 </div>
@@ -597,32 +597,32 @@ export function RcaSettings() {
               ) : (
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 uppercase bg-slate-950 sticky top-0 z-10">
+                    <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10">
                       <th className="py-2 px-3 w-32">Detail Code</th>
                       <th className="py-2 px-3">Parent Category</th>
                       <th className="py-2 px-3">Detail Description</th>
                       <th className="py-2 px-3 text-right w-28">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                     {filteredDetailList.map((item) => {
                       const parentCat = masterList.find(m => m.id === item.parentId);
                       return (
-                        <tr key={item.id} className="hover:bg-slate-900/50 transition-colors">
-                          <td className="py-2 px-3 font-mono font-bold text-amber-400">{item.code}</td>
-                          <td className="py-2 px-3 text-slate-300 font-mono text-[11px]">{parentCat ? `${parentCat.code} - ${parentCat.description}` : '—'}</td>
-                          <td className="py-2 px-3 text-slate-200">{item.description}</td>
+                        <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                          <td className="py-2 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">{item.code}</td>
+                          <td className="py-2 px-3 text-slate-600 dark:text-slate-400 font-mono text-[11px]">{parentCat ? `${parentCat.code} - ${parentCat.description}` : '—'}</td>
+                          <td className="py-2 px-3 text-slate-900 dark:text-slate-100">{item.description}</td>
                           <td className="py-2 px-3 text-right">
                             <div className="flex items-center justify-end gap-2">
                               <button
                                 onClick={() => handleOpenEditDetail(item)}
-                                className="text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                               >
                                 <Edit2 className="w-3 h-3" /> Edit
                               </button>
                               <button
                                 onClick={() => handleDeleteDetail(item.id)}
-                                className="text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                               >
                                 <Trash2 className="w-3 h-3" /> Delete
                               </button>
@@ -642,14 +642,14 @@ export function RcaSettings() {
       {/* MASTER FORM MODAL */}
       {isMasterModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl max-h-[92vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
-              <h3 className="text-base font-bold text-slate-100">
+          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-800 pb-3 shrink-0">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 {masterEditingId ? 'Edit Category' : 'Add Category'} ({currentConfig.label})
               </h3>
               <button
                 onClick={() => setIsMasterModalOpen(false)}
-                className="text-slate-400 hover:text-slate-100 cursor-pointer p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-100 cursor-pointer p-1"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -658,7 +658,7 @@ export function RcaSettings() {
             <form onSubmit={handleSaveMaster} className="flex flex-col flex-1 overflow-hidden mt-4">
               <div className="overflow-y-auto space-y-4 p-1 flex-1">
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
                     Code <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -667,12 +667,12 @@ export function RcaSettings() {
                     placeholder="e.g. A1 or COND-01"
                     value={masterForm.code}
                     onChange={(e) => setMasterForm({ ...masterForm, code: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
                     Description <span className="text-red-500">*</span>
                   </label>
                   <textarea
@@ -681,16 +681,16 @@ export function RcaSettings() {
                     placeholder="Enter category description..."
                     value={masterForm.description}
                     onChange={(e) => setMasterForm({ ...masterForm, description: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800 shrink-0 mt-4">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-300 dark:border-slate-800 shrink-0 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsMasterModalOpen(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
+                  className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -709,14 +709,14 @@ export function RcaSettings() {
       {/* DETAIL FORM MODAL */}
       {isDetailModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl max-h-[92vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
-              <h3 className="text-base font-bold text-slate-100">
+          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-800 pb-3 shrink-0">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 {detailEditingId ? 'Edit Detail Item' : 'Add Detail Item'}
               </h3>
               <button
                 onClick={() => setIsDetailModalOpen(false)}
-                className="text-slate-400 hover:text-slate-100 cursor-pointer p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-100 cursor-pointer p-1"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -725,7 +725,7 @@ export function RcaSettings() {
             <form onSubmit={handleSaveDetail} className="flex flex-col flex-1 overflow-hidden mt-4">
               <div className="overflow-y-auto space-y-4 p-1 flex-1">
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
                     Parent Category <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -738,7 +738,7 @@ export function RcaSettings() {
                       const prefix = parentRec ? `${parentRec.code}-` : '';
                       setDetailForm(prev => ({ ...prev, code: prefix }));
                     }}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500"
                   >
                     <option value="">Select Parent Category...</option>
                     {masterList.map(m => (
@@ -748,7 +748,7 @@ export function RcaSettings() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
                     Detail Code <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -757,12 +757,12 @@ export function RcaSettings() {
                     placeholder="e.g. A1-001"
                     value={detailForm.code}
                     onChange={handleDetailCodeChange}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
                     Detail Description <span className="text-red-500">*</span>
                   </label>
                   <textarea
@@ -771,16 +771,16 @@ export function RcaSettings() {
                     placeholder="Enter specific breakdown description..."
                     value={detailForm.description}
                     onChange={(e) => setDetailForm({ ...detailForm, description: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800 shrink-0 mt-4">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-300 dark:border-slate-800 shrink-0 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsDetailModalOpen(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
+                  className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -800,6 +800,10 @@ export function RcaSettings() {
 }
 
 export default RcaSettings;
+
+
+
+
 
 
 

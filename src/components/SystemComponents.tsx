@@ -57,7 +57,6 @@ export function SystemComponents() {
     component_desc: '' 
   });
 
-  // Define loadData cleanly inside useEffect or as a self-contained handler
   useEffect(() => {
     let isMounted = true;
 
@@ -85,7 +84,6 @@ export function SystemComponents() {
     };
   }, [activeTab]);
 
-  // Reusable refresh handler for mutations
   const refreshData = async () => {
     try {
       const systemsRes = await supabase.from('equipment_system').select('*').order('system_code');
@@ -198,38 +196,38 @@ export function SystemComponents() {
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-4">
       {/* Header */}
-      <div className="shrink-0 flex items-center gap-3 border-b border-slate-800 pb-4">
-        <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl">
+      <div className="shrink-0 flex items-center gap-3 border-b border-slate-300 dark:border-slate-800 pb-4">
+        <div className="p-2.5 bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl">
           <Cpu className="w-7 h-7" />
         </div>
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-100">System & Components Management</h1>
-          <p className="text-xs sm:text-sm text-slate-400">Configure equipment systems and their associated sub-components.</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">System & Components Management</h1>
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Configure equipment systems and their associated sub-components.</p>
         </div>
       </div>
 
       {successMsg && (
-        <div className="shrink-0 bg-emerald-950/50 border border-emerald-800 text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
-          <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+        <div className="shrink-0 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
+          <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="shrink-0 bg-red-950/50 border border-red-800 text-red-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
-          <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+        <div className="shrink-0 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
+          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* Clean Tab Navigation */}
-      <div className="shrink-0 flex border-b border-slate-800 gap-2 overflow-x-auto">
+      <div className="shrink-0 flex border-b border-slate-300 dark:border-slate-800 gap-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('systems')}
           className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'systems'
-              ? 'border-blue-500 text-blue-400 bg-blue-950/20'
-              : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900/50'
           }`}
         >
           <Cpu className="w-4 h-4" />
@@ -240,8 +238,8 @@ export function SystemComponents() {
           onClick={() => setActiveTab('components')}
           className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'components'
-              ? 'border-blue-500 text-blue-400 bg-blue-950/20'
-              : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900/50'
           }`}
         >
           <Layers className="w-4 h-4" />
@@ -250,16 +248,16 @@ export function SystemComponents() {
       </div>
 
       {/* Tab Content Container */}
-      <div className="flex flex-col flex-1 min-h-0 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
+      <div className="flex flex-col flex-1 min-h-0 bg-slate-50/90 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 shadow-xs rounded-xl p-6 space-y-4">
         <div className="shrink-0 flex flex-wrap justify-between items-center gap-4">
           <div>
             {activeTab === 'components' && (
               <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-slate-400" />
+                <Filter className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                 <select
                   value={selectedSystemFilter}
                   onChange={(e) => setSelectedSystemFilter(e.target.value)}
-                  className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer"
+                  className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 cursor-pointer"
                 >
                   <option value="all">All Systems (Filter by System)</option>
                   {systems.map((sys) => (
@@ -282,37 +280,37 @@ export function SystemComponents() {
         </div>
 
         {/* Scrollable Container with Sticky Table Headers */}
-        <div className="flex-1 min-h-0 overflow-auto border border-slate-800/60 rounded-lg bg-slate-950">
+        <div className="flex-1 min-h-0 overflow-auto border border-slate-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-950">
           {/* TAB 1: EQUIPMENT SYSTEMS */}
           {activeTab === 'systems' && (
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
+                <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 shadow-xs">
                   <th className="p-3">System Code</th>
                   <th className="p-3">System Description</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {systems.length === 0 ? (
                   <tr>
                     <td colSpan={3} className="p-8 text-center text-slate-500">No equipment systems found.</td>
                   </tr>
                 ) : (
                   systems.map((item) => (
-                    <tr key={item.system_id} className="hover:bg-slate-950/40 transition-colors">
-                      <td className="p-3 font-semibold text-slate-100">{item.system_code}</td>
-                      <td className="p-3 text-slate-400">{item.system_desc}</td>
+                    <tr key={item.system_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <td className="p-3 font-semibold text-slate-900 dark:text-slate-100">{item.system_code}</td>
+                      <td className="p-3 text-slate-600 dark:text-slate-400">{item.system_desc}</td>
                       <td className="p-3 text-right space-x-3">
                         <button
                           onClick={() => handleOpenEdit(item)}
-                          className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                         >
                           <Edit2 className="w-3.5 h-3.5" /> Edit
                         </button>
                         <button
                           onClick={() => handleDelete(item.system_id, 'equipment_system', 'system_id')}
-                          className="text-xs text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Delete
                         </button>
@@ -328,14 +326,14 @@ export function SystemComponents() {
           {activeTab === 'components' && (
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
+                <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 shadow-xs">
                   <th className="p-3">Component Code</th>
                   <th className="p-3">Component Description</th>
                   <th className="p-3">System Reference</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {filteredComponents.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="p-8 text-center text-slate-500">No equipment components found.</td>
@@ -344,22 +342,22 @@ export function SystemComponents() {
                   filteredComponents.map((item) => {
                     const matchedSystem = systems.find((s) => s.system_id === item.system_id);
                     return (
-                      <tr key={item.component_id} className="hover:bg-slate-950/40 transition-colors">
-                        <td className="p-3 font-semibold text-slate-100">{item.component_code}</td>
-                        <td className="p-3 text-slate-400">{item.component_desc}</td>
-                        <td className="p-3 text-blue-400 font-medium">
+                      <tr key={item.component_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                        <td className="p-3 font-semibold text-slate-900 dark:text-slate-100">{item.component_code}</td>
+                        <td className="p-3 text-slate-600 dark:text-slate-400">{item.component_desc}</td>
+                        <td className="p-3 text-blue-600 dark:text-blue-400 font-medium">
                           {matchedSystem ? `${matchedSystem.system_code} - ${matchedSystem.system_desc}` : '—'}
                         </td>
                         <td className="p-3 text-right space-x-3">
                           <button
                             onClick={() => handleOpenEdit(item)}
-                            className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                           >
                             <Edit2 className="w-3.5 h-3.5" /> Edit
                           </button>
                           <button
                             onClick={() => handleDelete(item.component_id, 'equipment_component', 'component_id')}
-                            className="text-xs text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" /> Delete
                           </button>
@@ -377,14 +375,14 @@ export function SystemComponents() {
       {/* FORM MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 max-h-[92vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4 shrink-0">
-              <h3 className="text-lg font-bold text-slate-100">
+          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-800 pb-4 shrink-0">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                 {editingId ? 'Edit Record' : 'Add New Record'}
               </h3>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-100 cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -395,25 +393,25 @@ export function SystemComponents() {
                 {activeTab === 'systems' && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">System Code</label>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">System Code</label>
                       <input
                         type="text"
                         required
                         value={systemForm.system_code}
                         onChange={(e) => setSystemForm({ ...systemForm, system_code: e.target.value })}
                         placeholder="e.g. ENG, HYD"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">System Description</label>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">System Description</label>
                       <textarea
                         rows={3}
                         required
                         value={systemForm.system_desc}
                         onChange={(e) => setSystemForm({ ...systemForm, system_desc: e.target.value })}
                         placeholder="Describe equipment system..."
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
                       />
                     </div>
                   </>
@@ -422,12 +420,12 @@ export function SystemComponents() {
                 {activeTab === 'components' && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Equipment System</label>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Equipment System</label>
                       <select
                         required
                         value={componentForm.system_id}
                         onChange={(e) => setComponentForm({ ...componentForm, system_id: e.target.value })}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
                       >
                         <option value="">Select Equipment System</option>
                         {systems.map((sys) => (
@@ -438,36 +436,36 @@ export function SystemComponents() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Component Code</label>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Component Code</label>
                       <input
                         type="text"
                         required
                         value={componentForm.component_code}
                         onChange={(e) => setComponentForm({ ...componentForm, component_code: e.target.value })}
                         placeholder="e.g. ENG_TURBO"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Component Description</label>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Component Description</label>
                       <textarea
                         rows={3}
                         required
                         value={componentForm.component_desc}
                         onChange={(e) => setComponentForm({ ...componentForm, component_desc: e.target.value })}
                         placeholder="Describe component details..."
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
                       />
                     </div>
                   </>
                 )}
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800 shrink-0 mt-4">
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-300 dark:border-slate-800 shrink-0 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
