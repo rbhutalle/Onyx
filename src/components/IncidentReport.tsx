@@ -955,9 +955,9 @@ export function IncidentReport() {
   const isLockedRecord = selectedIncidentRecord?.status_name === 'Completed' || selectedIncidentRecord?.status_name === 'Cancelled';
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
+    <div className="flex flex-col h-full max-h-[calc(100vh-100px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-2.5 overflow-hidden">
       {/* Main Header */}
-      <div className="shrink-0 flex items-center justify-between border-b border-slate-800 pb-3">
+      <div className="shrink-0 flex items-center justify-between border-b border-slate-800 pb-2.5">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-red-600/20 text-red-400 rounded-xl">
             <AlertTriangle className="w-6 h-6 sm:w-7 sm:h-7" />
@@ -971,22 +971,22 @@ export function IncidentReport() {
 
       {/* Messages */}
       {successMsg && (
-        <div className="shrink-0 bg-emerald-950/50 border border-emerald-800 text-emerald-200 px-3.5 py-2.5 rounded-lg flex items-center gap-3 text-xs shadow-inner">
+        <div className="shrink-0 bg-emerald-950/50 border border-emerald-800 text-emerald-200 px-3.5 py-2 rounded-lg flex items-center gap-3 text-xs shadow-inner">
           <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="shrink-0 bg-red-950/50 border border-red-800 text-red-200 px-3.5 py-2.5 rounded-lg flex items-center gap-3 text-xs shadow-inner">
+        <div className="shrink-0 bg-red-950/50 border border-red-800 text-red-200 px-3.5 py-2 rounded-lg flex items-center gap-3 text-xs shadow-inner">
           <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* AREA 2: COLLAPSIBLE SINGLE INCIDENT RECORD DISPLAY */}
-      <div className="shrink-0 bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+      <div className="shrink-0 bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-xl space-y-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-2.5">
           <div className="flex items-center gap-3">
             {/* Dynamic Incident Ref Number & Severity */}
             <div className="text-xs font-semibold whitespace-nowrap">
@@ -1035,17 +1035,17 @@ export function IncidentReport() {
           </div>
         </div>
 
-        {/* Collapsible Body of Area 2 with Optimized Tablet Height (max-h-[28vh]) */}
+        {/* Collapsible Body of Area 2 with Optimized Tablet Height (max-h-[25vh]) */}
         {isSecondAreaOpen && (
-          <div className="max-h-[28vh] overflow-y-auto pr-1 space-y-3">
+          <div className="max-h-[25vh] overflow-y-auto pr-1 space-y-2.5">
             {loadingIncidents ? (
               <div className="py-4 text-center text-slate-400 flex items-center justify-center gap-2 text-xs">
                 <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
                 <span>Loading incident report details...</span>
               </div>
             ) : !selectedIncidentRecord ? (
-              <div className="py-4 text-center text-slate-400 space-y-1.5">
-                <FolderSearch className="w-7 h-7 text-slate-600 mx-auto" />
+              <div className="py-3 text-center text-slate-400 space-y-1">
+                <FolderSearch className="w-6 h-6 text-slate-600 mx-auto" />
                 <p className="text-xs">No Incident Report selected.</p>
                 <p className="text-[11px] text-slate-500 max-w-md mx-auto">
                   Use the search button above to load an incident record or click &quot;New Incident Report&quot; to create a record.
@@ -1062,7 +1062,7 @@ export function IncidentReport() {
                 </button>
               </div>
             ) : (
-              <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2.5">
+              <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
                   <div>
                     <span className="text-[10px] uppercase font-semibold text-slate-500 block">Incident Ref #</span>
@@ -1182,16 +1182,16 @@ export function IncidentReport() {
         )}
       </div>
 
-      {/* Child Analysis Tabs Section with Expanded Height (`p-3.5`) */}
-      <div className="flex flex-col flex-1 min-h-0 bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-xl overflow-hidden space-y-2.5">
-        <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-2.5">
+      {/* Child Analysis Tabs Section with Robust Flex Fill & Scrolling (`flex-1 min-h-0`) */}
+      <div className="flex flex-col flex-1 min-h-0 bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-xl overflow-hidden space-y-2">
+        <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-2">
           <div>
             <h2 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
               <Layers className="w-4 h-4 text-blue-400" />
               Incident Cause Breakdown & Analysis
               {selectedIncidentRecord && (
                 <span className="text-xs text-blue-400 font-mono">
-                  ({selectedIncidentRecord.incident_refno} - {selectedIncidentRecord.vehicle_plate})
+                  ({selectedIncidentRecord.incident_refno})
                 </span>
               )}
             </h2>
@@ -2005,7 +2005,7 @@ export function IncidentReport() {
         </div>
       )}
 
-      {/* CHILD ANALYSIS FORM MODAL - Optimized for Landscape Tablet Heights (`max-h-[85vh]`, compact `p-4`, list `max-h-32`) */}
+      {/* CHILD ANALYSIS FORM MODAL */}
       {isChildModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
