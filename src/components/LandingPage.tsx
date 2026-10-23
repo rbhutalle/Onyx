@@ -12,7 +12,6 @@ import {
   BarChart3 
 } from 'lucide-react';
 
-// Assets imported directly from src/assets/
 import explainerImg from '@/assets/RC_MRO_Explainer.png';
 import overviewImg from '@/assets/RC_MRO_Overview.png';
 import rcmroVideo from '@/assets/RCMRO.mp4';
@@ -20,6 +19,12 @@ import rcmroVideo from '@/assets/RCMRO.mp4';
 export function LandingPage() {
   const navigate = useNavigate();
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
+
+  // 1. Create a function to set session access and navigate
+  const handleLaunchApp = () => {
+    sessionStorage.setItem('rcmro-access', 'granted');
+    navigate('/dashboard');
+  };
 
   return (
     <div className="w-full h-screen overflow-y-auto snap-y snap-mandatory bg-(--bg-main) text-(--text-main) flex flex-col selection:bg-blue-600 selection:text-white scroll-smooth">
@@ -33,8 +38,9 @@ export function LandingPage() {
           <span className="font-bold text-(--text-heading) text-base tracking-tight">RBMMS Portal</span>
         </div>
         <div className="flex items-center gap-4">
+          {/* 2. Apply handler */}
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={handleLaunchApp}
             className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-md transition-all cursor-pointer"
           >
             Launch RC-MRO App
@@ -56,8 +62,9 @@ export function LandingPage() {
                 Empower your operations team with real-time equipment tracking, automated daily inspections, and predictive maintenance forecasting built for high-performance fleets.
               </p>
               <div className="flex flex-wrap gap-4 pt-2">
+                {/* 3. Apply handler */}
                 <button
-                  onClick={() => navigate('/dashboard')}
+                  onClick={handleLaunchApp}
                   className="flex items-center gap-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
                 >
                   <span>Launch RC-MRO App</span>
@@ -205,8 +212,9 @@ export function LandingPage() {
               <p className="text-blue-100 text-base sm:text-lg max-w-2xl mx-auto">
                 Log in to the management portal now to access your job orders, equipment registries, and predictive maintenance schedules.
               </p>
+              {/* 4. Apply handler */}
               <button
-                onClick={() => navigate('/dashboard')}
+                onClick={handleLaunchApp}
                 className="px-8 py-4 bg-white text-blue-600 hover:bg-blue-50 font-bold rounded-xl shadow-xl transition-transform hover:scale-105 cursor-pointer"
               >
                 Launch RC-MRO App
@@ -214,7 +222,6 @@ export function LandingPage() {
             </div>
           </div>
 
-          {/* Footer (Dashboard link removed) */}
           <footer className="pt-6 border-t border-(--border-color) bg-(--bg-surface) text-xs text-(--text-dim) rounded-t-2xl px-6">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
               <p>&copy; {new Date().getFullYear()} Reliability-Centered MRO Portal. All rights reserved.</p>
