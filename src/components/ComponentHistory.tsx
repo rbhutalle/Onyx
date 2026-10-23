@@ -262,14 +262,14 @@ export function ComponentHistory() {
 
     if (isBoolTrue) {
       return (
-        <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800/60">
+        <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800/60 inline-flex items-center gap-1">
           Installed
         </span>
       );
     }
     if (isBoolFalse) {
       return (
-        <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-400 border border-amber-300 dark:border-amber-800/60">
+        <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-400 border border-amber-300 dark:border-amber-800/60 inline-flex items-center gap-1">
           Removed
         </span>
       );
@@ -619,14 +619,14 @@ export function ComponentHistory() {
   const displayedHistory = historyRecords.slice(startIndex, endIndex);
 
   return (
-    <div className="h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 flex flex-col overflow-hidden">
+    <div className="w-full max-w-6xl mx-auto px-3 sm:px-6 space-y-3 flex flex-col min-h-full sm:h-[calc(100vh-120px)] overflow-y-auto">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-slate-300 dark:border-slate-800 pb-3 shrink-0">
         <div className="p-2.5 bg-blue-100 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
           <History className="w-6 h-6" />
         </div>
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Component History & Lifecycle</h1>
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Component History & Lifecycle</h1>
           <p className="text-xs text-slate-600 dark:text-slate-400">Track equipment component installation, removal metrics, SRV Run, and service readings.</p>
         </div>
       </div>
@@ -653,40 +653,40 @@ export function ComponentHistory() {
         </label>
         
         {selectedComponent ? (
-          <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 border border-blue-300 dark:border-blue-900/60 p-3 rounded-xl shadow-xs">
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3 w-full text-xs">
+          <div className="flex items-start justify-between bg-slate-50 dark:bg-slate-900 border border-blue-300 dark:border-blue-900/60 p-3 rounded-xl shadow-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 w-full text-xs">
               <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Component Code</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase block">Component Code</span>
                 <div className="font-bold text-blue-600 dark:text-blue-400 text-xs">{selectedComponent.equipment_component_code}</div>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Serial No.</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase block">Serial No.</span>
                 <div className="font-mono text-slate-800 dark:text-slate-200">{selectedComponent.serial_no || '—'}</div>
               </div>
-              <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Description</span>
+              <div className="col-span-2 sm:col-span-1">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase block">Description</span>
                 <div className="font-semibold text-slate-800 dark:text-slate-200 truncate" title={selectedComponent.equipment_component_desc || '—'}>
                   {selectedComponent.equipment_component_desc || '—'}
                 </div>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">System / Component</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase block">System / Component</span>
                 <div className="font-semibold text-slate-800 dark:text-slate-200">
                   {getSystemDisplay(selectedComponent)} / {getComponentDisplay(selectedComponent)}
                 </div>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Make / Model</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase block">Make / Model</span>
                 <div className="font-semibold text-slate-800 dark:text-slate-200">
                   {getMakeModelDisplay(selectedComponent)}
                 </div>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Cost</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase block">Cost</span>
                 <div className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">₱{Number(selectedComponent.cost ?? 0).toLocaleString()}</div>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Service Rdg</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase block">Service Rdg</span>
                 <div className="font-mono text-slate-700 dark:text-slate-300">{selectedComponent.srv_rdg ?? 0}</div>
               </div>
             </div>
@@ -708,26 +708,28 @@ export function ComponentHistory() {
             onClick={() => setShowPicker(true)}
             className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 hover:border-blue-500 text-slate-700 dark:text-slate-300 px-4 py-2.5 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer"
           >
-            <span className="flex items-center gap-2">
-              <Search className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              {componentList.length > 0 ? `Click here to select an active component (${componentList.length} loaded)...` : 'Click here to search and select a component...'}
+            <span className="flex items-center gap-2 truncate">
+              <Search className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+              <span className="truncate">
+                {componentList.length > 0 ? `Click here to select an active component (${componentList.length} loaded)...` : 'Click here to search and select a component...'}
+              </span>
             </span>
-            <span className="bg-blue-100 dark:bg-blue-600/20 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded text-xs font-semibold">Browse</span>
+            <span className="bg-blue-100 dark:bg-blue-600/20 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded text-xs font-semibold shrink-0 ml-2">Browse</span>
           </button>
         )}
       </div>
 
       {/* Main Content Body Container */}
-      <div className="bg-slate-50/90 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl p-4 shadow-xl overflow-hidden space-y-3 flex flex-col flex-1 min-h-0">
+      <div className="bg-slate-50/90 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl p-3 sm:p-4 shadow-xl space-y-3 flex flex-col flex-1 min-h-0">
         
         {/* Action Controls Bar */}
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center border-b border-slate-300 dark:border-slate-800 pb-3 gap-3 shrink-0">
+        <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center border-b border-slate-300 dark:border-slate-800 pb-3 gap-3 shrink-0">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-slate-100">
-            <Layers className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <Layers className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
             <span>Installed Components & Telemetry Performance</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {!selectedComponent && (
               <button
                 type="button"
@@ -743,7 +745,7 @@ export function ComponentHistory() {
               onClick={handleOpenAdd}
               disabled={isInstallDisabled}
               title={isInstallDisabled ? 'Component is currently installed or not selected.' : 'Record a new installation'}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 justify-center disabled:opacity-50 disabled:cursor-not-allowed flex-1 sm:flex-initial"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Record Installation</span>
@@ -753,7 +755,7 @@ export function ComponentHistory() {
               onClick={handleOpenRemoval}
               disabled={isRemovalDisabled}
               title={isRemovalDisabled ? 'Component is not currently installed.' : 'Record component removal'}
-              className="bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 justify-center disabled:opacity-50 disabled:cursor-not-allowed flex-1 sm:flex-initial"
             >
               <MinusCircle className="w-3.5 h-3.5" />
               <span>Record Removal</span>
@@ -761,20 +763,95 @@ export function ComponentHistory() {
           </div>
         </div>
 
-        {/* Sub-tab content panel & Scrollable Table Wrapper */}
+        {/* Responsive Content Display */}
         <div className="flex flex-col flex-1 min-h-0 space-y-2">
-          <div className="flex-1 min-h-0 overflow-auto border border-slate-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-950">
-            <table className="w-full text-left border-collapse text-xs">
+          
+          {/* TABLET & MOBILE CARD VIEW (< md breakpoint) */}
+          <div className="block md:hidden flex-1 overflow-y-auto space-y-2.5">
+            {loadingHistory ? (
+              <div className="py-8 px-3 text-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-950 rounded-lg border border-slate-300 dark:border-slate-800">
+                <div className="flex items-center justify-center gap-2 text-xs">
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                  <span>Loading telemetry records...</span>
+                </div>
+              </div>
+            ) : !selectedComponent ? (
+              <div className="py-8 px-3 text-center text-slate-500 dark:text-slate-400 text-xs italic bg-white dark:bg-slate-950 rounded-lg border border-slate-300 dark:border-slate-800">
+                Please select an active component above to view its installation lifecycle history.
+              </div>
+            ) : displayedHistory.length === 0 ? (
+              <div className="py-8 px-3 text-center text-slate-500 dark:text-slate-400 text-xs italic bg-white dark:bg-slate-950 rounded-lg border border-slate-300 dark:border-slate-800">
+                No installation history records found for this component.
+              </div>
+            ) : (
+              displayedHistory.map((item) => (
+                <div 
+                  key={item.equipment_component_child_id} 
+                  className="p-3.5 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl space-y-2.5 shadow-xs"
+                >
+                  <div className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-2">
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase font-semibold block">Vehicle Target</span>
+                      <div className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                        {getVehicleDisplay(item.vehicle_id)}
+                      </div>
+                    </div>
+                    <div>{renderStatusBadge(item.installed_status)}</div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div>
+                      <span className="text-slate-500 dark:text-slate-400 block font-mono">Install Date</span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">{item.install_date || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 dark:text-slate-400 block font-mono">Install Service Rdg</span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">{item.install_srv_rdg ?? 0}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 dark:text-slate-400 block font-mono">Remove Date</span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">{item.remove_date || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 dark:text-slate-400 block font-mono">Remove Service Rdg</span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">
+                        {item.remove_srv_rdg !== null && item.remove_srv_rdg !== undefined ? item.remove_srv_rdg : '—'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                    <div>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-mono">SRV Run: </span>
+                      <span className="font-bold text-blue-600 dark:text-blue-400 font-mono text-xs">
+                        {item.srv_run !== null && item.srv_run !== undefined ? item.srv_run : '—'}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleDelete(item.equipment_component_child_id)}
+                      className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-semibold"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* DESKTOP & TABLET LANDSCAPE TABLE VIEW (>= md breakpoint) */}
+          <div className="hidden md:block flex-1 min-h-0 overflow-x-auto overflow-y-auto touch-pan-x border border-slate-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-950">
+            <table className="w-full text-left border-collapse text-xs min-w-175">
               <thead>
                 <tr className="border-b border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider font-semibold sticky top-0 z-10 shadow-xs">
-                  <th className="py-2 px-3">Vehicle</th>
-                  <th className="py-2 px-3">Status</th>
-                  <th className="py-2 px-3 font-mono">Install Date</th>
-                  <th className="py-2 px-3 font-mono">Install Service Rdg</th>
-                  <th className="py-2 px-3 font-mono">Remove Date</th>
-                  <th className="py-2 px-3 font-mono">Remove Service Rdg</th>
-                  <th className="py-2 px-3 font-mono">SRV Run</th>
-                  <th className="py-2 px-3 text-right">Actions</th>
+                  <th className="py-2.5 px-3">Vehicle</th>
+                  <th className="py-2.5 px-3">Status</th>
+                  <th className="py-2.5 px-3 font-mono">Install Date</th>
+                  <th className="py-2.5 px-3 font-mono">Install Service Rdg</th>
+                  <th className="py-2.5 px-3 font-mono">Remove Date</th>
+                  <th className="py-2.5 px-3 font-mono">Remove Service Rdg</th>
+                  <th className="py-2.5 px-3 font-mono">SRV Run</th>
+                  <th className="py-2.5 px-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
@@ -802,28 +879,28 @@ export function ComponentHistory() {
                 ) : (
                   displayedHistory.map((item) => (
                     <tr key={item.equipment_component_child_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                      <td className="py-2 px-3 font-medium text-slate-900 dark:text-slate-100">
+                      <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-slate-100 max-w-50 truncate" title={getVehicleDisplay(item.vehicle_id)}>
                         {getVehicleDisplay(item.vehicle_id)}
                       </td>
-                      <td className="py-2 px-3">
+                      <td className="py-2.5 px-3">
                         {renderStatusBadge(item.installed_status)}
                       </td>
-                      <td className="py-2 px-3 font-mono text-slate-700 dark:text-slate-300">
+                      <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-slate-300">
                         {item.install_date || '—'}
                       </td>
-                      <td className="py-2 px-3 font-mono text-slate-700 dark:text-slate-300">
+                      <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-slate-300">
                         {item.install_srv_rdg ?? 0}
                       </td>
-                      <td className="py-2 px-3 font-mono text-slate-700 dark:text-slate-300">
+                      <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-slate-300">
                         {item.remove_date || '—'}
                       </td>
-                      <td className="py-2 px-3 font-mono text-slate-700 dark:text-slate-300">
+                      <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-slate-300">
                         {item.remove_srv_rdg !== null && item.remove_srv_rdg !== undefined ? item.remove_srv_rdg : '—'}
                       </td>
-                      <td className="py-2 px-3 font-mono text-blue-600 dark:text-blue-400 font-semibold">
+                      <td className="py-2.5 px-3 font-mono text-blue-600 dark:text-blue-400 font-semibold">
                         {item.srv_run !== null && item.srv_run !== undefined ? item.srv_run : '—'}
                       </td>
-                      <td className="py-2 px-3 text-right">
+                      <td className="py-2.5 px-3 text-right whitespace-nowrap">
                         <button
                           onClick={() => handleDelete(item.equipment_component_child_id)}
                           className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
@@ -841,7 +918,7 @@ export function ComponentHistory() {
           {/* Pagination Toolbar */}
           {selectedComponent && totalItems > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 shrink-0">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
                 <span>
                   Showing <strong className="text-slate-900 dark:text-slate-200">{startIndex + 1}</strong> to{' '}
                   <strong className="text-slate-900 dark:text-slate-200">{endIndex}</strong> of{' '}
@@ -856,7 +933,7 @@ export function ComponentHistory() {
                       setPageSize(Number(e.target.value));
                       setCurrentPage(1);
                     }}
-                    className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-slate-200 rounded px-2 py-1 focus:outline-none focus:border-blue-500 cursor-pointer"
+                    className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-slate-200 rounded px-2 py-1 focus:outline-none focus:border-blue-500 cursor-pointer text-xs"
                   >
                     <option value={5}>5</option>
                     <option value={10}>10</option>
@@ -898,10 +975,10 @@ export function ComponentHistory() {
 
       {/* COMPONENT SEARCH PICKER MODAL */}
       {showPicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 shrink-0">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs p-3 sm:p-4">
+          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex justify-between items-center px-4 sm:px-6 py-3.5 border-b border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 shrink-0">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <Cpu className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Search & Select Component
               </h3>
               <button
@@ -914,7 +991,7 @@ export function ComponentHistory() {
             </div>
 
             {/* Modal Filter Form Controls */}
-            <div className="p-4 border-b border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-2.5 shrink-0 text-xs">
+            <div className="p-3 sm:p-4 border-b border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-2.5 shrink-0 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
                   <label className="text-[11px] font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
@@ -984,7 +1061,7 @@ export function ComponentHistory() {
               </form>
             </div>
 
-            <div className="p-4 overflow-y-auto space-y-2 flex-1 min-h-0">
+            <div className="p-3 sm:p-4 overflow-y-auto space-y-2 flex-1 min-h-0">
               {loadingComponents ? (
                 <div className="py-12 text-center text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2 text-xs">
                   <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
@@ -1032,10 +1109,10 @@ export function ComponentHistory() {
 
       {/* RECORD INSTALLATION / REMOVAL MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 shrink-0">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs p-3 sm:p-4">
+          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex justify-between items-center px-4 sm:px-6 py-3.5 border-b border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 shrink-0">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">
                 {editingId ? 'Record Component Removal' : 'Record Component Installation'}
               </h3>
               <button 
@@ -1191,7 +1268,7 @@ export function ComponentHistory() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-300 dark:border-slate-800 shrink-0 bg-slate-100 dark:bg-slate-900">
+              <div className="flex justify-end gap-3 px-4 sm:px-6 py-3.5 border-t border-slate-300 dark:border-slate-800 shrink-0 bg-slate-100 dark:bg-slate-900">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
