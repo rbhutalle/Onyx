@@ -1197,7 +1197,7 @@ export function IncidentReport() {
             </h2>
             <p className="text-xs text-slate-400">
               {selectedIncidentRecord 
-                ? `Manage environmental conditions, unsafe acts, personal factors, and work-related causes.`
+                ? `List down incident causes.`
                 : 'Select an incident report using search above to view and assign root cause items.'}
             </p>
           </div>
