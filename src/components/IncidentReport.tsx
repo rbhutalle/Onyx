@@ -1035,17 +1035,17 @@ export function IncidentReport() {
           </div>
         </div>
 
-        {/* Collapsible Body of Area 2 with Internal Scrollable Accordion */}
+        {/* Collapsible Body of Area 2 with Optimized Tablet Height (max-h-[28vh]) */}
         {isSecondAreaOpen && (
-          <div className="max-h-[35vh] overflow-y-auto pr-1 space-y-3">
+          <div className="max-h-[28vh] overflow-y-auto pr-1 space-y-3">
             {loadingIncidents ? (
-              <div className="py-6 text-center text-slate-400 flex items-center justify-center gap-2 text-xs">
+              <div className="py-4 text-center text-slate-400 flex items-center justify-center gap-2 text-xs">
                 <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
                 <span>Loading incident report details...</span>
               </div>
             ) : !selectedIncidentRecord ? (
-              <div className="py-6 text-center text-slate-400 space-y-2">
-                <FolderSearch className="w-8 h-8 text-slate-600 mx-auto" />
+              <div className="py-4 text-center text-slate-400 space-y-1.5">
+                <FolderSearch className="w-7 h-7 text-slate-600 mx-auto" />
                 <p className="text-xs">No Incident Report selected.</p>
                 <p className="text-[11px] text-slate-500 max-w-md mx-auto">
                   Use the search button above to load an incident record or click &quot;New Incident Report&quot; to create a record.
@@ -1062,8 +1062,8 @@ export function IncidentReport() {
                 </button>
               </div>
             ) : (
-              <div className="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-2.5">
+              <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
                   <div>
                     <span className="text-[10px] uppercase font-semibold text-slate-500 block">Incident Ref #</span>
                     <div className="text-sm font-bold text-blue-400 font-mono flex items-center gap-2">
@@ -1149,7 +1149,7 @@ export function IncidentReport() {
 
                 {/* Separate Reported By and Validated By Below Description */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-800/60">
-                  <div className="bg-slate-900/40 p-2.5 rounded-lg border border-slate-800/80 flex items-center gap-2.5">
+                  <div className="bg-slate-900/40 p-2 rounded-lg border border-slate-800/80 flex items-center gap-2.5">
                     <div className="p-1.5 bg-blue-950/60 text-blue-400 rounded-lg shrink-0">
                       <User className="w-3.5 h-3.5" />
                     </div>
@@ -1159,7 +1159,7 @@ export function IncidentReport() {
                     </div>
                   </div>
 
-                  <div className="bg-slate-900/40 p-2.5 rounded-lg border border-slate-800/80 flex items-center gap-2.5">
+                  <div className="bg-slate-900/40 p-2 rounded-lg border border-slate-800/80 flex items-center gap-2.5">
                     <div className="p-1.5 bg-emerald-950/60 text-emerald-400 rounded-lg shrink-0">
                       <UserCheck2 className="w-3.5 h-3.5" />
                     </div>
@@ -1182,9 +1182,9 @@ export function IncidentReport() {
         )}
       </div>
 
-      {/* Child Analysis Tabs Section */}
-      <div className="flex flex-col flex-1 min-h-0 bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
-        <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+      {/* Child Analysis Tabs Section with Expanded Height (`p-3.5`) */}
+      <div className="flex flex-col flex-1 min-h-0 bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-xl overflow-hidden space-y-2.5">
+        <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-2.5">
           <div>
             <h2 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
               <Layers className="w-4 h-4 text-blue-400" />
@@ -1268,7 +1268,7 @@ export function IncidentReport() {
           </button>
         </div>
 
-        {/* Scrollable Container for Child Tabs with Fixed Flex Scrolling */}
+        {/* Scrollable Container for Child Tabs with Fully Functional Flex Scrolling */}
         <div className="flex-1 min-h-0 overflow-y-auto border border-slate-800/60 rounded-lg bg-slate-950">
           {loadingChild ? (
             <div className="p-8 text-center text-slate-400 flex items-center justify-center gap-2 text-xs">
@@ -2005,12 +2005,12 @@ export function IncidentReport() {
         </div>
       )}
 
-      {/* CHILD ANALYSIS FORM MODAL */}
+      {/* CHILD ANALYSIS FORM MODAL - Optimized for Landscape Tablet Heights (`max-h-[85vh]`, compact `p-4`, list `max-h-32`) */}
       {isChildModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-950 shrink-0">
-              <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wide">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 z-50">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-800 px-5 py-3 bg-slate-950 shrink-0">
+              <h3 className="text-xs sm:text-sm font-bold text-slate-100 uppercase tracking-wide">
                 {childEditingId ? 'Edit' : 'Add'} {
                   activeAnalysisTab === 'conditions' ? 'Unsafe Condition' :
                   activeAnalysisTab === 'acts' ? 'Unsafe Act' :
@@ -2023,16 +2023,16 @@ export function IncidentReport() {
             </div>
 
             <form onSubmit={handleSubmitChild} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-6 overflow-y-auto flex-1 space-y-4">
+              <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                  <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">
                     Incident Ref
                   </label>
                   <input
                     type="text"
                     readOnly
                     value={`${selectedIncidentRecord?.incident_refno} (${selectedIncidentRecord?.vehicle_plate})`}
-                    className="w-full bg-slate-950/60 border border-slate-800/80 rounded-lg px-3.5 py-2 text-xs text-slate-400 cursor-not-allowed focus:outline-none"
+                    className="w-full bg-slate-950/60 border border-slate-800/80 rounded-lg px-3 py-1.5 text-xs text-slate-400 cursor-not-allowed focus:outline-none"
                   />
                 </div>
 
@@ -2040,7 +2040,7 @@ export function IncidentReport() {
                 {activeAnalysisTab === 'conditions' && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                      <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">
                         Unsafe Condition Category <span className="text-red-500">*</span>
                       </label>
                       <select
@@ -2055,7 +2055,7 @@ export function IncidentReport() {
                             selectedDetailId: matchingDetails[0]?.detail_id || ''
                           }));
                         }}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
                       >
                         <option value="">Select Condition Category...</option>
                         {conditionOptions.map(opt => (
@@ -2064,12 +2064,12 @@ export function IncidentReport() {
                       </select>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">
                         Search Condition Detail (<span className="text-blue-400 font-mono">condition_details</span>)
                       </label>
                       <div className="relative">
-                        <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                        <Search className="absolute left-3 top-2 w-3.5 h-3.5 text-slate-400" />
                         <input
                           type="text"
                           placeholder="Search detail code or description..."
@@ -2079,9 +2079,9 @@ export function IncidentReport() {
                         />
                       </div>
 
-                      <div className="border border-slate-800 rounded-xl max-h-40 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
+                      <div className="border border-slate-800 rounded-xl max-h-32 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
                         {filteredConditionDetails.length === 0 ? (
-                          <div className="p-3 text-center text-slate-500 text-xs">
+                          <div className="p-2.5 text-center text-slate-500 text-xs">
                             No matching condition details found.
                           </div>
                         ) : (
@@ -2097,7 +2097,7 @@ export function IncidentReport() {
                                     selectedOptionId: det.condition_id
                                   }));
                                 }}
-                                className={`p-2.5 cursor-pointer text-xs transition-colors flex items-center justify-between ${
+                                className={`p-2 cursor-pointer text-xs transition-colors flex items-center justify-between ${
                                   isSelected ? 'bg-blue-950/80 border-l-2 border-blue-500 text-blue-200' : 'hover:bg-slate-900 text-slate-300'
                                 }`}
                               >
@@ -2119,7 +2119,7 @@ export function IncidentReport() {
                 {activeAnalysisTab === 'acts' && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                      <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">
                         Unsafe Act Category <span className="text-red-500">*</span>
                       </label>
                       <select
@@ -2134,7 +2134,7 @@ export function IncidentReport() {
                             selectedDetailId: matchingDetails[0]?.detail_id || ''
                           }));
                         }}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
                       >
                         <option value="">Select Unsafe Act Category...</option>
                         {actOptions.map(opt => (
@@ -2143,12 +2143,12 @@ export function IncidentReport() {
                       </select>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">
                         Search Act Detail (<span className="text-blue-400 font-mono">act_details</span>)
                       </label>
                       <div className="relative">
-                        <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                        <Search className="absolute left-3 top-2 w-3.5 h-3.5 text-slate-400" />
                         <input
                           type="text"
                           placeholder="Search detail code or description..."
@@ -2158,9 +2158,9 @@ export function IncidentReport() {
                         />
                       </div>
 
-                      <div className="border border-slate-800 rounded-xl max-h-40 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
+                      <div className="border border-slate-800 rounded-xl max-h-32 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
                         {filteredActDetails.length === 0 ? (
-                          <div className="p-3 text-center text-slate-500 text-xs">
+                          <div className="p-2.5 text-center text-slate-500 text-xs">
                             No matching act details found.
                           </div>
                         ) : (
@@ -2176,7 +2176,7 @@ export function IncidentReport() {
                                     selectedOptionId: det.act_id
                                   }));
                                 }}
-                                className={`p-2.5 cursor-pointer text-xs transition-colors flex items-center justify-between ${
+                                className={`p-2 cursor-pointer text-xs transition-colors flex items-center justify-between ${
                                   isSelected ? 'bg-blue-950/80 border-l-2 border-blue-500 text-blue-200' : 'hover:bg-slate-900 text-slate-300'
                                 }`}
                               >
@@ -2198,7 +2198,7 @@ export function IncidentReport() {
                 {activeAnalysisTab === 'personal' && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                      <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">
                         Personal Factor Category <span className="text-red-500">*</span>
                       </label>
                       <select
@@ -2213,7 +2213,7 @@ export function IncidentReport() {
                             selectedDetailId: matchingDetails[0]?.detail_id || ''
                           }));
                         }}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
                       >
                         <option value="">Select Personal Factor Category...</option>
                         {factorOptions.map(opt => (
@@ -2222,12 +2222,12 @@ export function IncidentReport() {
                       </select>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">
                         Search Factor Detail (<span className="text-blue-400 font-mono">factor_details</span>)
                       </label>
                       <div className="relative">
-                        <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                        <Search className="absolute left-3 top-2 w-3.5 h-3.5 text-slate-400" />
                         <input
                           type="text"
                           placeholder="Search detail code or description..."
@@ -2237,9 +2237,9 @@ export function IncidentReport() {
                         />
                       </div>
 
-                      <div className="border border-slate-800 rounded-xl max-h-40 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
+                      <div className="border border-slate-800 rounded-xl max-h-32 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
                         {filteredFactorDetails.length === 0 ? (
-                          <div className="p-3 text-center text-slate-500 text-xs">
+                          <div className="p-2.5 text-center text-slate-500 text-xs">
                             No matching factor details found.
                           </div>
                         ) : (
@@ -2255,7 +2255,7 @@ export function IncidentReport() {
                                     selectedOptionId: det.factor_id
                                   }));
                                 }}
-                                className={`p-2.5 cursor-pointer text-xs transition-colors flex items-center justify-between ${
+                                className={`p-2 cursor-pointer text-xs transition-colors flex items-center justify-between ${
                                   isSelected ? 'bg-blue-950/80 border-l-2 border-blue-500 text-blue-200' : 'hover:bg-slate-900 text-slate-300'
                                 }`}
                               >
@@ -2277,7 +2277,7 @@ export function IncidentReport() {
                 {activeAnalysisTab === 'workrelated' && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                      <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">
                         Work Related Cause Category <span className="text-red-500">*</span>
                       </label>
                       <select
@@ -2292,7 +2292,7 @@ export function IncidentReport() {
                             selectedDetailId: matchingDetails[0]?.detail_id || ''
                           }));
                         }}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
                       >
                         <option value="">Select Work Cause Category...</option>
                         {causeOptions.map(opt => (
@@ -2301,12 +2301,12 @@ export function IncidentReport() {
                       </select>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">
                         Search Cause Detail (<span className="text-blue-400 font-mono">cause_details</span>)
                       </label>
                       <div className="relative">
-                        <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                        <Search className="absolute left-3 top-2 w-3.5 h-3.5 text-slate-400" />
                         <input
                           type="text"
                           placeholder="Search detail code or description..."
@@ -2316,9 +2316,9 @@ export function IncidentReport() {
                         />
                       </div>
 
-                      <div className="border border-slate-800 rounded-xl max-h-40 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
+                      <div className="border border-slate-800 rounded-xl max-h-32 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
                         {filteredCauseDetails.length === 0 ? (
-                          <div className="p-3 text-center text-slate-500 text-xs">
+                          <div className="p-2.5 text-center text-slate-500 text-xs">
                             No matching cause details found.
                           </div>
                         ) : (
@@ -2334,7 +2334,7 @@ export function IncidentReport() {
                                     selectedOptionId: det.cause_id
                                   }));
                                 }}
-                                className={`p-2.5 cursor-pointer text-xs transition-colors flex items-center justify-between ${
+                                className={`p-2 cursor-pointer text-xs transition-colors flex items-center justify-between ${
                                   isSelected ? 'bg-blue-950/80 border-l-2 border-blue-500 text-blue-200' : 'hover:bg-slate-900 text-slate-300'
                                 }`}
                               >
@@ -2353,30 +2353,30 @@ export function IncidentReport() {
                 )}
 
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                  <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">
                     Investigation Remarks
                   </label>
                   <textarea
-                    rows={3}
+                    rows={2}
                     value={childForm.remarks}
                     onChange={(e) => setChildForm({ ...childForm, remarks: e.target.value })}
                     placeholder="Enter specific investigation notes or observations..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-800 shrink-0 bg-slate-950">
+              <div className="flex justify-end gap-3 px-5 py-3 border-t border-slate-800 shrink-0 bg-slate-950">
                 <button
                   type="button"
                   onClick={() => setIsChildModalOpen(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
+                  className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow"
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow"
                 >
                   Save Item
                 </button>
