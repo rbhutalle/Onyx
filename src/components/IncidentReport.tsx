@@ -884,15 +884,15 @@ export function IncidentReport() {
     }
   };
 
-  // Memoized Search Filter Computations
+  // Memoized Search Filter Computations with Robust Optional Chaining
   const filteredIncidents = useMemo(() => {
     const query = incidentSearchQuery.toLowerCase().trim();
     if (!query) return incidents;
     return incidents.filter(inc => 
-      inc.incident_refno.toLowerCase().includes(query) ||
-      (inc.vehicle_plate && inc.vehicle_plate.toLowerCase().includes(query)) ||
-      inc.reported_by.toLowerCase().includes(query) ||
-      inc.incident_description.toLowerCase().includes(query)
+      (inc.incident_refno ?? '').toLowerCase().includes(query) ||
+      (inc.vehicle_plate ?? '').toLowerCase().includes(query) ||
+      (inc.reported_by ?? '').toLowerCase().includes(query) ||
+      (inc.incident_description ?? '').toLowerCase().includes(query)
     );
   }, [incidents, incidentSearchQuery]);
 
@@ -900,10 +900,10 @@ export function IncidentReport() {
     const query = employeeSearchQuery.toLowerCase().trim();
     if (!query) return employees;
     return employees.filter(e => 
-      e.full_name.toLowerCase().includes(query) ||
-      (e.employee_no && e.employee_no.toLowerCase().includes(query)) ||
-      (e.department && e.department.toLowerCase().includes(query)) ||
-      (e.position && e.position.toLowerCase().includes(query))
+      (e.full_name ?? '').toLowerCase().includes(query) ||
+      (e.employee_no ?? '').toLowerCase().includes(query) ||
+      (e.department ?? '').toLowerCase().includes(query) ||
+      (e.position ?? '').toLowerCase().includes(query)
     );
   }, [employees, employeeSearchQuery]);
 
@@ -912,8 +912,8 @@ export function IncidentReport() {
     return conditionDetailOptions.filter(d => {
       const matchesCategory = !childForm.selectedOptionId || d.condition_id === childForm.selectedOptionId;
       const matchesQuery = !query || 
-        d.code.toLowerCase().includes(query) ||
-        d.description.toLowerCase().includes(query);
+        (d.code ?? '').toLowerCase().includes(query) ||
+        (d.description ?? '').toLowerCase().includes(query);
       return matchesCategory && matchesQuery;
     });
   }, [conditionDetailOptions, childForm.selectedOptionId, conditionDetailSearchQuery]);
@@ -923,8 +923,8 @@ export function IncidentReport() {
     return actDetailOptions.filter(d => {
       const matchesCategory = !childForm.selectedOptionId || d.act_id === childForm.selectedOptionId;
       const matchesQuery = !query || 
-        d.code.toLowerCase().includes(query) ||
-        d.description.toLowerCase().includes(query);
+        (d.code ?? '').toLowerCase().includes(query) ||
+        (d.description ?? '').toLowerCase().includes(query);
       return matchesCategory && matchesQuery;
     });
   }, [actDetailOptions, childForm.selectedOptionId, actDetailSearchQuery]);
@@ -934,8 +934,8 @@ export function IncidentReport() {
     return factorDetailOptions.filter(d => {
       const matchesCategory = !childForm.selectedOptionId || d.factor_id === childForm.selectedOptionId;
       const matchesQuery = !query || 
-        d.code.toLowerCase().includes(query) ||
-        d.description.toLowerCase().includes(query);
+        (d.code ?? '').toLowerCase().includes(query) ||
+        (d.description ?? '').toLowerCase().includes(query);
       return matchesCategory && matchesQuery;
     });
   }, [factorDetailOptions, childForm.selectedOptionId, factorDetailSearchQuery]);
@@ -945,8 +945,8 @@ export function IncidentReport() {
     return causeDetailOptions.filter(d => {
       const matchesCategory = !childForm.selectedOptionId || d.cause_id === childForm.selectedOptionId;
       const matchesQuery = !query || 
-        d.code.toLowerCase().includes(query) ||
-        d.description.toLowerCase().includes(query);
+        (d.code ?? '').toLowerCase().includes(query) ||
+        (d.description ?? '').toLowerCase().includes(query);
       return matchesCategory && matchesQuery;
     });
   }, [causeDetailOptions, childForm.selectedOptionId, causeDetailSearchQuery]);
@@ -955,22 +955,22 @@ export function IncidentReport() {
   const isLockedRecord = selectedIncidentRecord?.status_name === 'Completed' || selectedIncidentRecord?.status_name === 'Cancelled';
 
   return (
-    <div className="p-6 w-full max-w-7xl mx-auto space-y-6 max-h-screen overflow-y-auto">
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
       {/* Main Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+      <div className="shrink-0 flex items-center justify-between border-b border-slate-800 pb-3">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-red-600/20 text-red-400 rounded-xl">
-            <AlertTriangle className="w-7 h-7" />
+            <AlertTriangle className="w-6 h-6 sm:w-7 sm:h-7" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-100">Incident Reports & Cause Analysis</h1>
-            <p className="text-sm text-slate-400">Log equipment incidents and analyze root causes across unsafe conditions, acts, factors, and causes.</p>
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-100">Incident Reports & Cause Analysis</h1>
+            <p className="text-xs text-slate-400">Log equipment incidents and analyze root causes across unsafe conditions, acts, factors, and causes.</p>
           </div>
         </div>
 
         <button
           onClick={handleOpenCreateModal}
-          className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow"
+          className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>New Incident Report</span>
@@ -979,22 +979,22 @@ export function IncidentReport() {
 
       {/* Messages */}
       {successMsg && (
-        <div className="bg-emerald-950/50 border border-emerald-800 text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm shadow-inner">
-          <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+        <div className="shrink-0 bg-emerald-950/50 border border-emerald-800 text-emerald-200 px-3.5 py-2.5 rounded-lg flex items-center gap-3 text-xs shadow-inner">
+          <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="bg-red-950/50 border border-red-800 text-red-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm shadow-inner">
-          <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+        <div className="shrink-0 bg-red-950/50 border border-red-800 text-red-200 px-3.5 py-2.5 rounded-lg flex items-center gap-3 text-xs shadow-inner">
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* AREA 2: COLLAPSIBLE SINGLE INCIDENT RECORD DISPLAY */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-5">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <div className="shrink-0 bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
           <div className="flex items-center gap-3">
             {/* Dynamic Incident Ref Number & Severity */}
             <div className="text-xs font-semibold whitespace-nowrap">
@@ -1017,9 +1017,9 @@ export function IncidentReport() {
                 setIncidentSearchQuery('');
                 setIsIncidentSearchOpen(true);
               }}
-              className="bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-700 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer"
+              className="bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
             >
-              <Search className="w-4 h-4 text-blue-400" />
+              <Search className="w-3.5 h-3.5 text-blue-400" />
               <span>Search Incident Reports...</span>
             </button>
           </div>
@@ -1027,7 +1027,7 @@ export function IncidentReport() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsSecondAreaOpen(!isSecondAreaOpen)}
-              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors cursor-pointer"
+              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors cursor-pointer"
               title={isSecondAreaOpen ? "Collapse Incident Record Display" : "Expand Incident Record Display"}
             >
               {isSecondAreaOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -1039,36 +1039,36 @@ export function IncidentReport() {
         {isSecondAreaOpen && (
           <>
             {loadingIncidents ? (
-              <div className="p-12 text-center text-slate-400 flex items-center justify-center gap-2 text-xs">
-                <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+              <div className="py-6 text-center text-slate-400 flex items-center justify-center gap-2 text-xs">
+                <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
                 <span>Loading incident report details...</span>
               </div>
             ) : !selectedIncidentRecord ? (
-              <div className="p-12 text-center text-slate-400 space-y-3">
-                <FolderSearch className="w-10 h-10 text-slate-600 mx-auto" />
-                <p className="text-sm">No Incident Report selected.</p>
-                <p className="text-xs text-slate-500 max-w-md mx-auto">
-                  Use the search button above to load an incident record or click "New Incident Report" to create a record.
+              <div className="py-6 text-center text-slate-400 space-y-2">
+                <FolderSearch className="w-8 h-8 text-slate-600 mx-auto" />
+                <p className="text-xs">No Incident Report selected.</p>
+                <p className="text-[11px] text-slate-500 max-w-md mx-auto">
+                  Use the search button above to load an incident record or click &quot;New Incident Report&quot; to create a record.
                 </p>
                 <button
                   onClick={() => {
                     setIncidentSearchQuery('');
                     setIsIncidentSearchOpen(true);
                   }}
-                  className="mt-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                  className="mt-1 bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1 cursor-pointer"
                 >
                   <Search className="w-3.5 h-3.5" />
                   <span>Browse & Select Incident</span>
                 </button>
               </div>
             ) : (
-              <div className="bg-slate-950 border border-slate-800 rounded-xl p-5 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-3">
+              <div className="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-2.5">
                   <div>
                     <span className="text-[10px] uppercase font-semibold text-slate-500 block">Incident Ref #</span>
-                    <div className="text-lg font-bold text-blue-400 font-mono flex items-center gap-2">
+                    <div className="text-sm font-bold text-blue-400 font-mono flex items-center gap-2">
                       {selectedIncidentRecord.incident_refno}
-                      <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
                         selectedIncidentRecord.incident_severity === 'Critical' ? 'bg-red-950 text-red-400 border border-red-800' :
                         selectedIncidentRecord.incident_severity === 'High' ? 'bg-amber-950 text-amber-400 border border-amber-800' :
                         selectedIncidentRecord.incident_severity === 'Medium' ? 'bg-yellow-950 text-yellow-400 border border-yellow-800' :
@@ -1083,34 +1083,34 @@ export function IncidentReport() {
                     <button
                       disabled={isLockedRecord}
                       onClick={() => handleOpenEditModal(selectedIncidentRecord)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors ${
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors ${
                         isLockedRecord 
                           ? 'bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed opacity-60' 
                           : 'bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 cursor-pointer'
                       }`}
                       title={isLockedRecord ? `Cannot edit because status is "${selectedIncidentRecord.status_name}"` : 'Edit Record'}
                     >
-                      {isLockedRecord ? <Lock className="w-3.5 h-3.5" /> : <Edit2 className="w-3.5 h-3.5" />}
-                      <span>Edit Record</span>
+                      {isLockedRecord ? <Lock className="w-3 h-3" /> : <Edit2 className="w-3 h-3" />}
+                      <span>Edit</span>
                     </button>
                     <button
                       disabled={isLockedRecord}
                       onClick={() => handleDeleteMaster(selectedIncidentRecord.incident_id, selectedIncidentRecord.status_name)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors ${
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors ${
                         isLockedRecord 
                           ? 'bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed opacity-60' 
                           : 'bg-slate-800 hover:bg-slate-700 text-red-400 border border-slate-700 cursor-pointer'
                       }`}
                       title={isLockedRecord ? `Cannot delete because status is "${selectedIncidentRecord.status_name}"` : 'Delete'}
                     >
-                      {isLockedRecord ? <Lock className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
+                      {isLockedRecord ? <Lock className="w-3 h-3" /> : <Trash2 className="w-3 h-3" />}
                       <span>Delete</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Top Row Grid details */}
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-xs">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
                   <div>
                     <span className="text-[11px] text-slate-400 uppercase block">Incident Date</span>
                     <span className="font-semibold text-slate-200 font-mono">{selectedIncidentRecord.incident_date}</span>
@@ -1122,7 +1122,7 @@ export function IncidentReport() {
                   <div>
                     <span className="text-[11px] text-slate-400 uppercase block">Estimated Loss</span>
                     <span className="font-semibold text-emerald-400 font-mono">
-                      ₱{selectedIncidentRecord.incident_loss.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ₱{(selectedIncidentRecord.incident_loss || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                   <div>
@@ -1142,16 +1142,16 @@ export function IncidentReport() {
                 {/* Description Block */}
                 <div className="pt-2 border-t border-slate-800/60">
                   <span className="text-[11px] text-slate-400 uppercase block mb-1">Description</span>
-                  <p className="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-3 rounded-lg border border-slate-800/80">
+                  <p className="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80">
                     {selectedIncidentRecord.incident_description || 'No description provided.'}
                   </p>
                 </div>
 
                 {/* Separate Reported By and Validated By Below Description */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-slate-800/60">
-                  <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-800/80 flex items-center gap-3">
-                    <div className="p-2 bg-blue-950/60 text-blue-400 rounded-lg shrink-0">
-                      <User className="w-4 h-4" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-800/60">
+                  <div className="bg-slate-900/40 p-2.5 rounded-lg border border-slate-800/80 flex items-center gap-2.5">
+                    <div className="p-1.5 bg-blue-950/60 text-blue-400 rounded-lg shrink-0">
+                      <User className="w-3.5 h-3.5" />
                     </div>
                     <div>
                       <span className="text-[10px] text-slate-400 uppercase font-semibold block">Reported By</span>
@@ -1159,9 +1159,9 @@ export function IncidentReport() {
                     </div>
                   </div>
 
-                  <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-800/80 flex items-center gap-3">
-                    <div className="p-2 bg-emerald-950/60 text-emerald-400 rounded-lg shrink-0">
-                      <UserCheck2 className="w-4 h-4" />
+                  <div className="bg-slate-900/40 p-2.5 rounded-lg border border-slate-800/80 flex items-center gap-2.5">
+                    <div className="p-1.5 bg-emerald-950/60 text-emerald-400 rounded-lg shrink-0">
+                      <UserCheck2 className="w-3.5 h-3.5" />
                     </div>
                     <div>
                       <span className="text-[10px] text-slate-400 uppercase font-semibold block">Validated By</span>
@@ -1183,11 +1183,11 @@ export function IncidentReport() {
       </div>
 
       {/* Child Analysis Tabs Section */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <div className="flex flex-col flex-1 min-h-0 bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
+        <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
           <div>
-            <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
-              <Layers className="w-5 h-5 text-blue-400" />
+            <h2 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
+              <Layers className="w-4 h-4 text-blue-400" />
               Incident Cause Breakdown & Analysis
               {selectedIncidentRecord && (
                 <span className="text-xs text-blue-400 font-mono">
@@ -1205,23 +1205,23 @@ export function IncidentReport() {
           <button
             disabled={!selectedIncidentId || isLockedRecord}
             onClick={handleOpenAddChild}
-            className={`px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow shrink-0 ${
               !selectedIncidentId || isLockedRecord 
                 ? 'bg-slate-800 text-slate-500 opacity-50 cursor-not-allowed' 
                 : 'bg-blue-600 hover:bg-blue-500 text-white cursor-pointer'
             }`}
             title={isLockedRecord ? 'Analysis items cannot be added because the incident is Completed or Cancelled' : 'Add Analysis Item'}
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             <span>Add Analysis Item</span>
           </button>
         </div>
 
         {/* 4 Child Breakdown Tabs */}
-        <div className="flex gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
+        <div className="shrink-0 flex gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
           <button
             onClick={() => setActiveAnalysisTab('conditions')}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
               activeAnalysisTab === 'conditions'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
                 : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
@@ -1233,7 +1233,7 @@ export function IncidentReport() {
 
           <button
             onClick={() => setActiveAnalysisTab('acts')}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
               activeAnalysisTab === 'acts'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
                 : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
@@ -1245,7 +1245,7 @@ export function IncidentReport() {
 
           <button
             onClick={() => setActiveAnalysisTab('personal')}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
               activeAnalysisTab === 'personal'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
                 : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
@@ -1257,7 +1257,7 @@ export function IncidentReport() {
 
           <button
             onClick={() => setActiveAnalysisTab('workrelated')}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
               activeAnalysisTab === 'workrelated'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
                 : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
@@ -1269,7 +1269,7 @@ export function IncidentReport() {
         </div>
 
         {/* Scrollable Container for Child Tabs */}
-        <div className="overflow-y-auto overflow-x-auto max-h-64 border border-slate-800/60 rounded-lg">
+        <div className="flex-1 min-h-0 overflow-auto border border-slate-800/60 rounded-lg bg-slate-950">
           {loadingChild ? (
             <div className="p-8 text-center text-slate-400 flex items-center justify-center gap-2 text-xs">
               <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
@@ -1286,26 +1286,26 @@ export function IncidentReport() {
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="border-b border-slate-800 text-slate-400 uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
-                      <th className="p-2.5 w-32">Condition Code</th>
-                      <th className="p-2.5">Category</th>
-                      <th className="p-2.5">Condition Detail</th>
-                      <th className="p-2.5">Investigation Remarks</th>
-                      <th className="p-2.5 text-right w-24">Actions</th>
+                      <th className="py-2 px-3 w-32">Condition Code</th>
+                      <th className="py-2 px-3">Category</th>
+                      <th className="py-2 px-3">Condition Detail</th>
+                      <th className="py-2 px-3">Investigation Remarks</th>
+                      <th className="py-2 px-3 text-right w-24">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800 text-slate-300">
                     {incidentConditions.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="p-8 text-center text-slate-500">No unsafe conditions recorded for this incident.</td>
+                        <td colSpan={5} className="py-6 text-center text-slate-500 text-xs">No unsafe conditions recorded for this incident.</td>
                       </tr>
                     ) : (
                       incidentConditions.map((row) => (
-                        <tr key={row.incident_conditions_id} className="hover:bg-slate-950/40 transition-colors">
-                          <td className="p-2.5 font-mono font-bold text-amber-400">{row.detail_code || row.code || '—'}</td>
-                          <td className="p-2.5 text-slate-200">{row.description || '—'}</td>
-                          <td className="p-2.5 text-slate-300 font-medium">{row.detail_description || '—'}</td>
-                          <td className="p-2.5 text-slate-400">{row.remarks || '—'}</td>
-                          <td className="p-2.5 text-right space-x-2 shrink-0">
+                        <tr key={row.incident_conditions_id} className="hover:bg-slate-900/50 transition-colors">
+                          <td className="py-2 px-3 font-mono font-bold text-amber-400">{row.detail_code || row.code || '—'}</td>
+                          <td className="py-2 px-3 text-slate-200">{row.description || '—'}</td>
+                          <td className="py-2 px-3 text-slate-300 font-medium">{row.detail_description || '—'}</td>
+                          <td className="py-2 px-3 text-slate-400">{row.remarks || '—'}</td>
+                          <td className="py-2 px-3 text-right space-x-2 shrink-0">
                             <button
                               disabled={isLockedRecord}
                               onClick={() => handleOpenEditChild(row.incident_conditions_id, row.condition_id, row.remarks, row.detail_id)}
@@ -1335,26 +1335,26 @@ export function IncidentReport() {
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="border-b border-slate-800 text-slate-400 uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
-                      <th className="p-2.5 w-32">Act Code</th>
-                      <th className="p-2.5">Category</th>
-                      <th className="p-2.5">Act Detail</th>
-                      <th className="p-2.5">Investigation Remarks</th>
-                      <th className="p-2.5 text-right w-24">Actions</th>
+                      <th className="py-2 px-3 w-32">Act Code</th>
+                      <th className="py-2 px-3">Category</th>
+                      <th className="py-2 px-3">Act Detail</th>
+                      <th className="py-2 px-3">Investigation Remarks</th>
+                      <th className="py-2 px-3 text-right w-24">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800 text-slate-300">
                     {incidentActs.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="p-8 text-center text-slate-500">No unsafe acts recorded for this incident.</td>
+                        <td colSpan={5} className="py-6 text-center text-slate-500 text-xs">No unsafe acts recorded for this incident.</td>
                       </tr>
                     ) : (
                       incidentActs.map((row) => (
-                        <tr key={row.incident_act_id} className="hover:bg-slate-950/40 transition-colors">
-                          <td className="p-2.5 font-mono font-bold text-amber-400">{row.detail_code || row.code || '—'}</td>
-                          <td className="p-2.5 text-slate-200">{row.description || '—'}</td>
-                          <td className="p-2.5 text-slate-300 font-medium">{row.detail_description || '—'}</td>
-                          <td className="p-2.5 text-slate-400">{row.remarks || '—'}</td>
-                          <td className="p-2.5 text-right space-x-2 shrink-0">
+                        <tr key={row.incident_act_id} className="hover:bg-slate-900/50 transition-colors">
+                          <td className="py-2 px-3 font-mono font-bold text-amber-400">{row.detail_code || row.code || '—'}</td>
+                          <td className="py-2 px-3 text-slate-200">{row.description || '—'}</td>
+                          <td className="py-2 px-3 text-slate-300 font-medium">{row.detail_description || '—'}</td>
+                          <td className="py-2 px-3 text-slate-400">{row.remarks || '—'}</td>
+                          <td className="py-2 px-3 text-right space-x-2 shrink-0">
                             <button
                               disabled={isLockedRecord}
                               onClick={() => handleOpenEditChild(row.incident_act_id, row.act_id, row.remarks, row.detail_id)}
@@ -1384,26 +1384,26 @@ export function IncidentReport() {
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="border-b border-slate-800 text-slate-400 uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
-                      <th className="p-2.5 w-32">Factor Code</th>
-                      <th className="p-2.5">Category</th>
-                      <th className="p-2.5">Factor Detail</th>
-                      <th className="p-2.5">Investigation Remarks</th>
-                      <th className="p-2.5 text-right w-24">Actions</th>
+                      <th className="py-2 px-3 w-32">Factor Code</th>
+                      <th className="py-2 px-3">Category</th>
+                      <th className="py-2 px-3">Factor Detail</th>
+                      <th className="py-2 px-3">Investigation Remarks</th>
+                      <th className="py-2 px-3 text-right w-24">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800 text-slate-300">
                     {incidentPersonal.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="p-8 text-center text-slate-500">No personal factors recorded for this incident.</td>
+                        <td colSpan={5} className="py-6 text-center text-slate-500 text-xs">No personal factors recorded for this incident.</td>
                       </tr>
                     ) : (
                       incidentPersonal.map((row) => (
-                        <tr key={row.incident_personal_id} className="hover:bg-slate-950/40 transition-colors">
-                          <td className="p-2.5 font-mono font-bold text-amber-400">{row.detail_code || row.code || '—'}</td>
-                          <td className="p-2.5 text-slate-200">{row.description || '—'}</td>
-                          <td className="p-2.5 text-slate-300 font-medium">{row.detail_description || '—'}</td>
-                          <td className="p-2.5 text-slate-400">{row.remarks || '—'}</td>
-                          <td className="p-2.5 text-right space-x-2 shrink-0">
+                        <tr key={row.incident_personal_id} className="hover:bg-slate-900/50 transition-colors">
+                          <td className="py-2 px-3 font-mono font-bold text-amber-400">{row.detail_code || row.code || '—'}</td>
+                          <td className="py-2 px-3 text-slate-200">{row.description || '—'}</td>
+                          <td className="py-2 px-3 text-slate-300 font-medium">{row.detail_description || '—'}</td>
+                          <td className="py-2 px-3 text-slate-400">{row.remarks || '—'}</td>
+                          <td className="py-2 px-3 text-right space-x-2 shrink-0">
                             <button
                               disabled={isLockedRecord}
                               onClick={() => handleOpenEditChild(row.incident_personal_id, row.factor_id, row.remarks, row.detail_id)}
@@ -1433,26 +1433,26 @@ export function IncidentReport() {
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="border-b border-slate-800 text-slate-400 uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
-                      <th className="p-2.5 w-32">Cause Code</th>
-                      <th className="p-2.5">Category</th>
-                      <th className="p-2.5">Cause Detail</th>
-                      <th className="p-2.5">Investigation Remarks</th>
-                      <th className="p-2.5 text-right w-24">Actions</th>
+                      <th className="py-2 px-3 w-32">Cause Code</th>
+                      <th className="py-2 px-3">Category</th>
+                      <th className="py-2 px-3">Cause Detail</th>
+                      <th className="py-2 px-3">Investigation Remarks</th>
+                      <th className="py-2 px-3 text-right w-24">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800 text-slate-300">
                     {incidentWorkRelated.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="p-8 text-center text-slate-500">No work-related causes recorded for this incident.</td>
+                        <td colSpan={5} className="py-6 text-center text-slate-500 text-xs">No work-related causes recorded for this incident.</td>
                       </tr>
                     ) : (
                       incidentWorkRelated.map((row) => (
-                        <tr key={row.incident_workrelated_id} className="hover:bg-slate-950/40 transition-colors">
-                          <td className="p-2.5 font-mono font-bold text-amber-400">{row.detail_code || row.code || '—'}</td>
-                          <td className="p-2.5 text-slate-200">{row.description || '—'}</td>
-                          <td className="p-2.5 text-slate-300 font-medium">{row.detail_description || '—'}</td>
-                          <td className="p-2.5 text-slate-400">{row.remarks || '—'}</td>
-                          <td className="p-2.5 text-right space-x-2 shrink-0">
+                        <tr key={row.incident_workrelated_id} className="hover:bg-slate-900/50 transition-colors">
+                          <td className="py-2 px-3 font-mono font-bold text-amber-400">{row.detail_code || row.code || '—'}</td>
+                          <td className="py-2 px-3 text-slate-200">{row.description || '—'}</td>
+                          <td className="py-2 px-3 text-slate-300 font-medium">{row.detail_description || '—'}</td>
+                          <td className="py-2 px-3 text-slate-400">{row.remarks || '—'}</td>
+                          <td className="py-2 px-3 text-right space-x-2 shrink-0">
                             <button
                               disabled={isLockedRecord}
                               onClick={() => handleOpenEditChild(row.incident_workrelated_id, row.cause_id, row.remarks, row.detail_id)}
@@ -1484,8 +1484,8 @@ export function IncidentReport() {
       {/* INCIDENT REPORT SEARCH MODAL */}
       {isIncidentSearchOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-60">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-950">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-950 shrink-0">
               <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                 <Search className="w-4 h-4 text-blue-400" />
                 Search & Select Incident Report
@@ -1495,7 +1495,7 @@ export function IncidentReport() {
               </button>
             </div>
 
-            <div className="p-4 border-b border-slate-800 bg-slate-950/40">
+            <div className="p-3 border-b border-slate-800 bg-slate-950/40 shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
                 <input
@@ -1554,7 +1554,7 @@ export function IncidentReport() {
               )}
             </div>
 
-            <div className="p-3 border-t border-slate-800 bg-slate-950 text-right">
+            <div className="p-3 border-t border-slate-800 bg-slate-950 text-right shrink-0">
               <button
                 onClick={() => setIsIncidentSearchOpen(false)}
                 className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
@@ -1569,8 +1569,8 @@ export function IncidentReport() {
       {/* MASTER FORM MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-950">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-950 shrink-0">
               <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
                 <FileText className="w-4 h-4 text-blue-400" />
                 {editingId ? 'Edit Incident Report' : 'Create Incident Report'}
@@ -1580,243 +1580,245 @@ export function IncidentReport() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmitMaster} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-              {/* Equipment Selector Section */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                  Selected Equipment <span className="text-red-500">*</span>
-                </label>
-                
-                {selectedEquipment ? (
-                  <div className="flex items-center justify-between bg-slate-950 border border-blue-900/60 p-4 rounded-xl">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full text-xs">
-                      <div>
-                        <span className="text-[11px] text-slate-400 uppercase block">Plate Number / ID</span>
-                        <div className="font-bold text-blue-400 text-sm font-mono">{selectedEquipment.plate_no}</div>
+            <form onSubmit={handleSubmitMaster} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-6 overflow-y-auto flex-1 space-y-4">
+                {/* Equipment Selector Section */}
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                    Selected Equipment <span className="text-red-500">*</span>
+                  </label>
+                  
+                  {selectedEquipment ? (
+                    <div className="flex items-center justify-between bg-slate-950 border border-blue-900/60 p-3.5 rounded-xl">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full text-xs">
+                        <div>
+                          <span className="text-[11px] text-slate-400 uppercase block">Plate Number / ID</span>
+                          <div className="font-bold text-blue-400 text-sm font-mono">{selectedEquipment.plate_no}</div>
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-slate-400 uppercase block">Current Reading</span>
+                          <div className="font-semibold text-slate-100">{selectedEquipment.service_rdg ?? '0'}</div>
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-slate-400 uppercase block">Make / Model</span>
+                          <div className="font-semibold text-slate-100">{selectedEquipment.make_name || 'N/A'} {selectedEquipment.model_name ? `/ ${selectedEquipment.model_name}` : ''}</div>
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-slate-400 uppercase block">Type</span>
+                          <div className="font-semibold text-slate-100">{selectedEquipment.type_description || 'N/A'}</div>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-[11px] text-slate-400 uppercase block">Current Reading</span>
-                        <div className="font-semibold text-slate-100">{selectedEquipment.service_rdg ?? '0'}</div>
-                      </div>
-                      <div>
-                        <span className="text-[11px] text-slate-400 uppercase block">Make / Model</span>
-                        <div className="font-semibold text-slate-100">{selectedEquipment.make_name || 'N/A'} {selectedEquipment.model_name ? `/ ${selectedEquipment.model_name}` : ''}</div>
-                      </div>
-                      <div>
-                        <span className="text-[11px] text-slate-400 uppercase block">Type</span>
-                        <div className="font-semibold text-slate-100">{selectedEquipment.type_description || 'N/A'}</div>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedEquipment(null);
+                          setFormData(prev => ({ ...prev, vehicle_id: '', vehicle_plate: '' }));
+                        }}
+                        className="text-slate-400 hover:text-red-400 p-2 transition-colors cursor-pointer shrink-0"
+                        title="Change equipment"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
                     </div>
+                  ) : (
                     <button
                       type="button"
                       onClick={() => {
-                        setSelectedEquipment(null);
-                        setFormData(prev => ({ ...prev, vehicle_id: '', vehicle_plate: '' }));
+                        setShowEquipmentPicker(true);
+                        fetchEquipmentList();
                       }}
-                      className="text-slate-400 hover:text-red-400 p-2 transition-colors cursor-pointer shrink-0"
-                      title="Change equipment"
+                      className="w-full bg-slate-950 border border-slate-700 hover:border-blue-500 text-slate-300 px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer"
                     >
-                      <X className="w-5 h-5" />
+                      <span className="flex items-center gap-2">
+                        <Search className="w-4 h-4 text-blue-400" />
+                        {equipmentList.length > 0 ? `Click here to select an equipment (${equipmentList.length} loaded)...` : 'Click here to select an equipment...'}
+                      </span>
+                      <span className="text-xs bg-blue-600/20 text-blue-400 px-2 py-0.5 rounded font-medium">Browse</span>
                     </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowEquipmentPicker(true);
-                      fetchEquipmentList();
-                    }}
-                    className="w-full bg-slate-950 border border-slate-700 hover:border-blue-500 text-slate-300 px-4 py-3 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer"
-                  >
-                    <span className="flex items-center gap-2">
-                      <Search className="w-4 h-4 text-blue-400" />
-                      {equipmentList.length > 0 ? `Click here to select an equipment (${equipmentList.length} loaded)...` : 'Click here to select an equipment...'}
-                    </span>
-                    <span className="text-xs bg-blue-600/20 text-blue-400 px-2 py-1 rounded font-medium">Browse</span>
-                  </button>
-                )}
-              </div>
+                  )}
+                </div>
 
-              <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                      Incident Ref # <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.incident_refno}
+                      onChange={(e) => setFormData({ ...formData, incident_refno: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                      Incident Date <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                      <input
+                        type="date"
+                        required
+                        value={formData.incident_date}
+                        onChange={(e) => setFormData({ ...formData, incident_date: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                      Incident Severity Level
+                    </label>
+                    <select
+                      value={formData.incident_severity}
+                      onChange={(e) => setFormData({ ...formData, incident_severity: e.target.value as IncidentRecord['incident_severity'] })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                      <option value="Critical">Critical</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                      Estimated Loss (₱)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2 text-xs font-mono font-bold text-slate-400">₱</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.incident_loss}
+                        onChange={(e) => setFormData({ ...formData, incident_loss: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={formData.status_id}
+                      onChange={(e) => handleStatusChange(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="">Select Status...</option>
+                      {statuses.map(st => (
+                        <option key={st.status_id} value={st.status_id}>{st.status_name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Read Only Completed Date Field */}
                 <div>
                   <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                    Incident Ref # <span className="text-red-500">*</span>
+                    Completed Date (Read-only)
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
+                    <input
+                      type="date"
+                      readOnly
+                      value={formData.reportcompleted_date}
+                      placeholder="Automatically set when status is Completed"
+                      className="w-full bg-slate-950/60 border border-slate-800/80 rounded-lg pl-9 pr-3.5 py-2 text-xs font-mono text-slate-400 cursor-not-allowed focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                    Incident Description
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={formData.incident_description}
+                    onChange={(e) => setFormData({ ...formData, incident_description: e.target.value })}
+                    placeholder="Describe what occurred during the equipment incident..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                    Incident Impact Summary
                   </label>
                   <input
                     type="text"
-                    required
-                    value={formData.incident_refno}
-                    onChange={(e) => setFormData({ ...formData, incident_refno: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"
+                    value={formData.incident_impact}
+                    onChange={(e) => setFormData({ ...formData, incident_impact: e.target.value })}
+                    placeholder="e.g. Downtime 4 hrs, minor bumper damage"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                    Incident Date <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-                    <input
-                      type="date"
-                      required
-                      value={formData.incident_date}
-                      onChange={(e) => setFormData({ ...formData, incident_date: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                    Incident Severity Level
-                  </label>
-                  <select
-                    value={formData.incident_severity}
-                    onChange={(e) => setFormData({ ...formData, incident_severity: e.target.value as IncidentRecord['incident_severity'] })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                  >
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
-                    <option value="Critical">Critical</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                    Estimated Loss (₱)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2 text-xs font-mono font-bold text-slate-400">₱</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formData.incident_loss}
-                      onChange={(e) => setFormData({ ...formData, incident_loss: parseFloat(e.target.value) || 0 })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3.5 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={formData.status_id}
-                    onChange={(e) => handleStatusChange(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                  >
-                    <option value="">Select Status...</option>
-                    {statuses.map(st => (
-                      <option key={st.status_id} value={st.status_id}>{st.status_name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Read Only Completed Date Field */}
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                  Completed Date (Read-only)
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-500" />
-                  <input
-                    type="date"
-                    readOnly
-                    value={formData.reportcompleted_date}
-                    placeholder="Automatically set when status is Completed"
-                    className="w-full bg-slate-950/60 border border-slate-800/80 rounded-lg pl-9 pr-3.5 py-2 text-xs font-mono text-slate-400 cursor-not-allowed focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                  Incident Description
-                </label>
-                <textarea
-                  rows={3}
-                  required
-                  value={formData.incident_description}
-                  onChange={(e) => setFormData({ ...formData, incident_description: e.target.value })}
-                  placeholder="Describe what occurred during the equipment incident..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                  Incident Impact Summary
-                </label>
-                <input
-                  type="text"
-                  value={formData.incident_impact}
-                  onChange={(e) => setFormData({ ...formData, incident_impact: e.target.value })}
-                  placeholder="e.g. Downtime 4 hrs, minor bumper damage"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* Reported By Employee Picker */}
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                    Reported By
-                  </label>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <User className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-                      <input
-                        type="text"
-                        value={formData.reported_by}
-                        onChange={(e) => setFormData({ ...formData, reported_by: e.target.value })}
-                        placeholder="Select or enter reporter name..."
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                      />
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Reported By Employee Picker */}
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                      Reported By
+                    </label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <User className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                        <input
+                          type="text"
+                          value={formData.reported_by}
+                          onChange={(e) => setFormData({ ...formData, reported_by: e.target.value })}
+                          placeholder="Select or enter reporter name..."
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEmployeeModal('reported_by')}
+                        className="bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                      >
+                        <Search className="w-3.5 h-3.5" />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEmployeeModal('reported_by')}
-                      className="bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
-                    >
-                      <Search className="w-3.5 h-3.5" />
-                    </button>
                   </div>
-                </div>
 
-                {/* Validated By Employee Picker */}
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                    Validated By
-                  </label>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <UserCheck2 className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-                      <input
-                        type="text"
-                        value={formData.validated_by}
-                        onChange={(e) => setFormData({ ...formData, validated_by: e.target.value })}
-                        placeholder="Select or enter validator name..."
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                      />
+                  {/* Validated By Employee Picker */}
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                      Validated By
+                    </label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <UserCheck2 className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                        <input
+                          type="text"
+                          value={formData.validated_by}
+                          onChange={(e) => setFormData({ ...formData, validated_by: e.target.value })}
+                          placeholder="Select or enter validator name..."
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEmployeeModal('validated_by')}
+                        className="bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                      >
+                        <Search className="w-3.5 h-3.5" />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEmployeeModal('validated_by')}
-                      className="bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
-                    >
-                      <Search className="w-3.5 h-3.5" />
-                    </button>
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-800 shrink-0 bg-slate-950">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -1839,8 +1841,8 @@ export function IncidentReport() {
       {/* EQUIPMENT PICKER MODAL */}
       {showEquipmentPicker && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-800 bg-slate-950">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-800 bg-slate-950 shrink-0">
               <h3 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
                 <Car className="w-4 h-4 text-blue-400" />
                 Select Equipment
@@ -1859,7 +1861,7 @@ export function IncidentReport() {
                 e.preventDefault();
                 fetchEquipmentList(equipmentSearchQuery);
               }}
-              className="p-4 border-b border-slate-800 bg-slate-950/50 flex gap-2"
+              className="p-3 border-b border-slate-800 bg-slate-950/50 flex gap-2 shrink-0"
             >
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
@@ -1868,18 +1870,18 @@ export function IncidentReport() {
                   placeholder="Filter by Equipment Plate / ID..."
                   value={equipmentSearchQuery}
                   onChange={(e) => setEquipmentSearchQuery(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 text-slate-100 pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-slate-900 border border-slate-700 text-slate-100 pl-9 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
               >
                 Search
               </button>
             </form>
 
-            <div className="p-4 max-h-96 overflow-y-auto space-y-2">
+            <div className="p-4 overflow-y-auto flex-1 space-y-2">
               {loadingEquipment ? (
                 <div className="py-12 text-center text-slate-400 flex items-center justify-center gap-2 text-xs">
                   <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
@@ -1904,7 +1906,7 @@ export function IncidentReport() {
                         }));
                         setShowEquipmentPicker(false);
                       }}
-                      className="flex items-center justify-between bg-slate-950 hover:bg-blue-950/40 border border-slate-800 hover:border-blue-600/50 p-3 rounded-lg transition-colors cursor-pointer group"
+                      className="flex items-center justify-between bg-slate-950 hover:bg-blue-950/40 border border-slate-800 hover:border-blue-600/50 p-2.5 rounded-lg transition-colors cursor-pointer group"
                     >
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-slate-900 rounded-lg group-hover:bg-blue-900/40 text-blue-400 transition-colors">
@@ -1933,8 +1935,8 @@ export function IncidentReport() {
       {/* EMPLOYEE SEARCH MODAL */}
       {isEmployeeModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-60">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-950">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-950 shrink-0">
               <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                 <User className="w-4 h-4 text-blue-400" />
                 Select Employee ({employeeModalTarget === 'reported_by' ? 'Reported By' : 'Validated By'})
@@ -1944,7 +1946,7 @@ export function IncidentReport() {
               </button>
             </div>
 
-            <div className="p-4 border-b border-slate-800 bg-slate-950/40">
+            <div className="p-3 border-b border-slate-800 bg-slate-950/40 shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
                 <input
@@ -1991,7 +1993,7 @@ export function IncidentReport() {
               )}
             </div>
 
-            <div className="p-3 border-t border-slate-800 bg-slate-950 text-right">
+            <div className="p-3 border-t border-slate-800 bg-slate-950 text-right shrink-0">
               <button
                 onClick={() => setIsEmployeeModalOpen(false)}
                 className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
@@ -2006,8 +2008,8 @@ export function IncidentReport() {
       {/* CHILD ANALYSIS FORM MODAL */}
       {isChildModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-950">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-950 shrink-0">
               <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wide">
                 {childEditingId ? 'Edit' : 'Add'} {
                   activeAnalysisTab === 'conditions' ? 'Unsafe Condition' :
@@ -2020,349 +2022,351 @@ export function IncidentReport() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmitChild} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                  Incident Ref
-                </label>
-                <input
-                  type="text"
-                  readOnly
-                  value={`${selectedIncidentRecord?.incident_refno} (${selectedIncidentRecord?.vehicle_plate})`}
-                  className="w-full bg-slate-950/60 border border-slate-800/80 rounded-lg px-3.5 py-2 text-xs text-slate-400 cursor-not-allowed focus:outline-none"
-                />
+            <form onSubmit={handleSubmitChild} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-6 overflow-y-auto flex-1 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                    Incident Ref
+                  </label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={`${selectedIncidentRecord?.incident_refno} (${selectedIncidentRecord?.vehicle_plate})`}
+                    className="w-full bg-slate-950/60 border border-slate-800/80 rounded-lg px-3.5 py-2 text-xs text-slate-400 cursor-not-allowed focus:outline-none"
+                  />
+                </div>
+
+                {/* UNSAFE CONDITIONS CUSTOM SEARCH & PICKER */}
+                {activeAnalysisTab === 'conditions' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                        Unsafe Condition Category <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        required
+                        value={childForm.selectedOptionId}
+                        onChange={(e) => {
+                          const newCondId = e.target.value;
+                          const matchingDetails = conditionDetailOptions.filter(d => d.condition_id === newCondId);
+                          setChildForm(prev => ({
+                            ...prev,
+                            selectedOptionId: newCondId,
+                            selectedDetailId: matchingDetails[0]?.detail_id || ''
+                          }));
+                        }}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="">Select Condition Category...</option>
+                        {conditionOptions.map(opt => (
+                          <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                        Search Condition Detail (<span className="text-blue-400 font-mono">condition_details</span>)
+                      </label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Search detail code or description..."
+                          value={conditionDetailSearchQuery}
+                          onChange={(e) => setConditionDetailSearchQuery(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div className="border border-slate-800 rounded-xl max-h-40 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
+                        {filteredConditionDetails.length === 0 ? (
+                          <div className="p-3 text-center text-slate-500 text-xs">
+                            No matching condition details found.
+                          </div>
+                        ) : (
+                          filteredConditionDetails.map(det => {
+                            const isSelected = childForm.selectedDetailId === det.detail_id;
+                            return (
+                              <div
+                                key={det.detail_id}
+                                onClick={() => {
+                                  setChildForm(prev => ({
+                                    ...prev,
+                                    selectedDetailId: det.detail_id,
+                                    selectedOptionId: det.condition_id
+                                  }));
+                                }}
+                                className={`p-2.5 cursor-pointer text-xs transition-colors flex items-center justify-between ${
+                                  isSelected ? 'bg-blue-950/80 border-l-2 border-blue-500 text-blue-200' : 'hover:bg-slate-900 text-slate-300'
+                                }`}
+                              >
+                                <div>
+                                  <span className="font-mono font-bold text-amber-400 mr-2">[{det.code}]</span>
+                                  <span>{det.description}</span>
+                                </div>
+                                {isSelected && <CheckCircle className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* UNSAFE ACTS CUSTOM SEARCH & PICKER */}
+                {activeAnalysisTab === 'acts' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                        Unsafe Act Category <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        required
+                        value={childForm.selectedOptionId}
+                        onChange={(e) => {
+                          const newActId = e.target.value;
+                          const matchingDetails = actDetailOptions.filter(d => d.act_id === newActId);
+                          setChildForm(prev => ({
+                            ...prev,
+                            selectedOptionId: newActId,
+                            selectedDetailId: matchingDetails[0]?.detail_id || ''
+                          }));
+                        }}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="">Select Unsafe Act Category...</option>
+                        {actOptions.map(opt => (
+                          <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                        Search Act Detail (<span className="text-blue-400 font-mono">act_details</span>)
+                      </label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Search detail code or description..."
+                          value={actDetailSearchQuery}
+                          onChange={(e) => setActDetailSearchQuery(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div className="border border-slate-800 rounded-xl max-h-40 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
+                        {filteredActDetails.length === 0 ? (
+                          <div className="p-3 text-center text-slate-500 text-xs">
+                            No matching act details found.
+                          </div>
+                        ) : (
+                          filteredActDetails.map(det => {
+                            const isSelected = childForm.selectedDetailId === det.detail_id;
+                            return (
+                              <div
+                                key={det.detail_id}
+                                onClick={() => {
+                                  setChildForm(prev => ({
+                                    ...prev,
+                                    selectedDetailId: det.detail_id,
+                                    selectedOptionId: det.act_id
+                                  }));
+                                }}
+                                className={`p-2.5 cursor-pointer text-xs transition-colors flex items-center justify-between ${
+                                  isSelected ? 'bg-blue-950/80 border-l-2 border-blue-500 text-blue-200' : 'hover:bg-slate-900 text-slate-300'
+                                }`}
+                              >
+                                <div>
+                                  <span className="font-mono font-bold text-amber-400 mr-2">[{det.code}]</span>
+                                  <span>{det.description}</span>
+                                </div>
+                                {isSelected && <CheckCircle className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* PERSONAL FACTORS CUSTOM SEARCH & PICKER */}
+                {activeAnalysisTab === 'personal' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                        Personal Factor Category <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        required
+                        value={childForm.selectedOptionId}
+                        onChange={(e) => {
+                          const newFactorId = e.target.value;
+                          const matchingDetails = factorDetailOptions.filter(d => d.factor_id === newFactorId);
+                          setChildForm(prev => ({
+                            ...prev,
+                            selectedOptionId: newFactorId,
+                            selectedDetailId: matchingDetails[0]?.detail_id || ''
+                          }));
+                        }}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="">Select Personal Factor Category...</option>
+                        {factorOptions.map(opt => (
+                          <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                        Search Factor Detail (<span className="text-blue-400 font-mono">factor_details</span>)
+                      </label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Search detail code or description..."
+                          value={factorDetailSearchQuery}
+                          onChange={(e) => setFactorDetailSearchQuery(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div className="border border-slate-800 rounded-xl max-h-40 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
+                        {filteredFactorDetails.length === 0 ? (
+                          <div className="p-3 text-center text-slate-500 text-xs">
+                            No matching factor details found.
+                          </div>
+                        ) : (
+                          filteredFactorDetails.map(det => {
+                            const isSelected = childForm.selectedDetailId === det.detail_id;
+                            return (
+                              <div
+                                key={det.detail_id}
+                                onClick={() => {
+                                  setChildForm(prev => ({
+                                    ...prev,
+                                    selectedDetailId: det.detail_id,
+                                    selectedOptionId: det.factor_id
+                                  }));
+                                }}
+                                className={`p-2.5 cursor-pointer text-xs transition-colors flex items-center justify-between ${
+                                  isSelected ? 'bg-blue-950/80 border-l-2 border-blue-500 text-blue-200' : 'hover:bg-slate-900 text-slate-300'
+                                }`}
+                              >
+                                <div>
+                                  <span className="font-mono font-bold text-amber-400 mr-2">[{det.code}]</span>
+                                  <span>{det.description}</span>
+                                </div>
+                                {isSelected && <CheckCircle className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* WORK RELATED CAUSES CUSTOM SEARCH & PICKER */}
+                {activeAnalysisTab === 'workrelated' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                        Work Related Cause Category <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        required
+                        value={childForm.selectedOptionId}
+                        onChange={(e) => {
+                          const newCauseId = e.target.value;
+                          const matchingDetails = causeDetailOptions.filter(d => d.cause_id === newCauseId);
+                          setChildForm(prev => ({
+                            ...prev,
+                            selectedOptionId: newCauseId,
+                            selectedDetailId: matchingDetails[0]?.detail_id || ''
+                          }));
+                        }}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="">Select Work Cause Category...</option>
+                        {causeOptions.map(opt => (
+                          <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                        Search Cause Detail (<span className="text-blue-400 font-mono">cause_details</span>)
+                      </label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Search detail code or description..."
+                          value={causeDetailSearchQuery}
+                          onChange={(e) => setCauseDetailSearchQuery(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div className="border border-slate-800 rounded-xl max-h-40 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
+                        {filteredCauseDetails.length === 0 ? (
+                          <div className="p-3 text-center text-slate-500 text-xs">
+                            No matching cause details found.
+                          </div>
+                        ) : (
+                          filteredCauseDetails.map(det => {
+                            const isSelected = childForm.selectedDetailId === det.detail_id;
+                            return (
+                              <div
+                                key={det.detail_id}
+                                onClick={() => {
+                                  setChildForm(prev => ({
+                                    ...prev,
+                                    selectedDetailId: det.detail_id,
+                                    selectedOptionId: det.cause_id
+                                  }));
+                                }}
+                                className={`p-2.5 cursor-pointer text-xs transition-colors flex items-center justify-between ${
+                                  isSelected ? 'bg-blue-950/80 border-l-2 border-blue-500 text-blue-200' : 'hover:bg-slate-900 text-slate-300'
+                                }`}
+                              >
+                                <div>
+                                  <span className="font-mono font-bold text-amber-400 mr-2">[{det.code}]</span>
+                                  <span>{det.description}</span>
+                                </div>
+                                {isSelected && <CheckCircle className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                    Investigation Remarks
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={childForm.remarks}
+                    onChange={(e) => setChildForm({ ...childForm, remarks: e.target.value })}
+                    placeholder="Enter specific investigation notes or observations..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
               </div>
 
-              {/* UNSAFE CONDITIONS CUSTOM SEARCH & PICKER */}
-              {activeAnalysisTab === 'conditions' && (
-                <>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                      Unsafe Condition Category <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      required
-                      value={childForm.selectedOptionId}
-                      onChange={(e) => {
-                        const newCondId = e.target.value;
-                        const matchingDetails = conditionDetailOptions.filter(d => d.condition_id === newCondId);
-                        setChildForm(prev => ({
-                          ...prev,
-                          selectedOptionId: newCondId,
-                          selectedDetailId: matchingDetails[0]?.detail_id || ''
-                        }));
-                      }}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="">Select Condition Category...</option>
-                      {conditionOptions.map(opt => (
-                        <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                      Search Condition Detail (<span className="text-blue-400 font-mono">condition_details</span>)
-                    </label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="Search detail code or description..."
-                        value={conditionDetailSearchQuery}
-                        onChange={(e) => setConditionDetailSearchQuery(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-
-                    <div className="border border-slate-800 rounded-xl max-h-40 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
-                      {filteredConditionDetails.length === 0 ? (
-                        <div className="p-3 text-center text-slate-500 text-xs">
-                          No matching condition details found.
-                        </div>
-                      ) : (
-                        filteredConditionDetails.map(det => {
-                          const isSelected = childForm.selectedDetailId === det.detail_id;
-                          return (
-                            <div
-                              key={det.detail_id}
-                              onClick={() => {
-                                setChildForm(prev => ({
-                                  ...prev,
-                                  selectedDetailId: det.detail_id,
-                                  selectedOptionId: det.condition_id
-                                }));
-                              }}
-                              className={`p-2.5 cursor-pointer text-xs transition-colors flex items-center justify-between ${
-                                isSelected ? 'bg-blue-950/80 border-l-2 border-blue-500 text-blue-200' : 'hover:bg-slate-900 text-slate-300'
-                              }`}
-                            >
-                              <div>
-                                <span className="font-mono font-bold text-amber-400 mr-2">[{det.code}]</span>
-                                <span>{det.description}</span>
-                              </div>
-                              {isSelected && <CheckCircle className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* UNSAFE ACTS CUSTOM SEARCH & PICKER */}
-              {activeAnalysisTab === 'acts' && (
-                <>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                      Unsafe Act Category <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      required
-                      value={childForm.selectedOptionId}
-                      onChange={(e) => {
-                        const newActId = e.target.value;
-                        const matchingDetails = actDetailOptions.filter(d => d.act_id === newActId);
-                        setChildForm(prev => ({
-                          ...prev,
-                          selectedOptionId: newActId,
-                          selectedDetailId: matchingDetails[0]?.detail_id || ''
-                        }));
-                      }}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="">Select Unsafe Act Category...</option>
-                      {actOptions.map(opt => (
-                        <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                      Search Act Detail (<span className="text-blue-400 font-mono">act_details</span>)
-                    </label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="Search detail code or description..."
-                        value={actDetailSearchQuery}
-                        onChange={(e) => setActDetailSearchQuery(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-
-                    <div className="border border-slate-800 rounded-xl max-h-40 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
-                      {filteredActDetails.length === 0 ? (
-                        <div className="p-3 text-center text-slate-500 text-xs">
-                          No matching act details found.
-                        </div>
-                      ) : (
-                        filteredActDetails.map(det => {
-                          const isSelected = childForm.selectedDetailId === det.detail_id;
-                          return (
-                            <div
-                              key={det.detail_id}
-                              onClick={() => {
-                                setChildForm(prev => ({
-                                  ...prev,
-                                  selectedDetailId: det.detail_id,
-                                  selectedOptionId: det.act_id
-                                }));
-                              }}
-                              className={`p-2.5 cursor-pointer text-xs transition-colors flex items-center justify-between ${
-                                isSelected ? 'bg-blue-950/80 border-l-2 border-blue-500 text-blue-200' : 'hover:bg-slate-900 text-slate-300'
-                              }`}
-                            >
-                              <div>
-                                <span className="font-mono font-bold text-amber-400 mr-2">[{det.code}]</span>
-                                <span>{det.description}</span>
-                              </div>
-                              {isSelected && <CheckCircle className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* PERSONAL FACTORS CUSTOM SEARCH & PICKER */}
-              {activeAnalysisTab === 'personal' && (
-                <>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                      Personal Factor Category <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      required
-                      value={childForm.selectedOptionId}
-                      onChange={(e) => {
-                        const newFactorId = e.target.value;
-                        const matchingDetails = factorDetailOptions.filter(d => d.factor_id === newFactorId);
-                        setChildForm(prev => ({
-                          ...prev,
-                          selectedOptionId: newFactorId,
-                          selectedDetailId: matchingDetails[0]?.detail_id || ''
-                        }));
-                      }}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="">Select Personal Factor Category...</option>
-                      {factorOptions.map(opt => (
-                        <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                      Search Factor Detail (<span className="text-blue-400 font-mono">factor_details</span>)
-                    </label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="Search detail code or description..."
-                        value={factorDetailSearchQuery}
-                        onChange={(e) => setFactorDetailSearchQuery(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-
-                    <div className="border border-slate-800 rounded-xl max-h-40 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
-                      {filteredFactorDetails.length === 0 ? (
-                        <div className="p-3 text-center text-slate-500 text-xs">
-                          No matching factor details found.
-                        </div>
-                      ) : (
-                        filteredFactorDetails.map(det => {
-                          const isSelected = childForm.selectedDetailId === det.detail_id;
-                          return (
-                            <div
-                              key={det.detail_id}
-                              onClick={() => {
-                                setChildForm(prev => ({
-                                  ...prev,
-                                  selectedDetailId: det.detail_id,
-                                  selectedOptionId: det.factor_id
-                                }));
-                              }}
-                              className={`p-2.5 cursor-pointer text-xs transition-colors flex items-center justify-between ${
-                                isSelected ? 'bg-blue-950/80 border-l-2 border-blue-500 text-blue-200' : 'hover:bg-slate-900 text-slate-300'
-                              }`}
-                            >
-                              <div>
-                                <span className="font-mono font-bold text-amber-400 mr-2">[{det.code}]</span>
-                                <span>{det.description}</span>
-                              </div>
-                              {isSelected && <CheckCircle className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* WORK RELATED CAUSES CUSTOM SEARCH & PICKER */}
-              {activeAnalysisTab === 'workrelated' && (
-                <>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                      Work Related Cause Category <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      required
-                      value={childForm.selectedOptionId}
-                      onChange={(e) => {
-                        const newCauseId = e.target.value;
-                        const matchingDetails = causeDetailOptions.filter(d => d.cause_id === newCauseId);
-                        setChildForm(prev => ({
-                          ...prev,
-                          selectedOptionId: newCauseId,
-                          selectedDetailId: matchingDetails[0]?.detail_id || ''
-                        }));
-                      }}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="">Select Work Cause Category...</option>
-                      {causeOptions.map(opt => (
-                        <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                      Search Cause Detail (<span className="text-blue-400 font-mono">cause_details</span>)
-                    </label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="Search detail code or description..."
-                        value={causeDetailSearchQuery}
-                        onChange={(e) => setCauseDetailSearchQuery(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-
-                    <div className="border border-slate-800 rounded-xl max-h-40 overflow-y-auto bg-slate-950 divide-y divide-slate-800/60">
-                      {filteredCauseDetails.length === 0 ? (
-                        <div className="p-3 text-center text-slate-500 text-xs">
-                          No matching cause details found.
-                        </div>
-                      ) : (
-                        filteredCauseDetails.map(det => {
-                          const isSelected = childForm.selectedDetailId === det.detail_id;
-                          return (
-                            <div
-                              key={det.detail_id}
-                              onClick={() => {
-                                setChildForm(prev => ({
-                                  ...prev,
-                                  selectedDetailId: det.detail_id,
-                                  selectedOptionId: det.cause_id
-                                }));
-                              }}
-                              className={`p-2.5 cursor-pointer text-xs transition-colors flex items-center justify-between ${
-                                isSelected ? 'bg-blue-950/80 border-l-2 border-blue-500 text-blue-200' : 'hover:bg-slate-900 text-slate-300'
-                              }`}
-                            >
-                              <div>
-                                <span className="font-mono font-bold text-amber-400 mr-2">[{det.code}]</span>
-                                <span>{det.description}</span>
-                              </div>
-                              {isSelected && <CheckCircle className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                  Investigation Remarks
-                </label>
-                <textarea
-                  rows={3}
-                  value={childForm.remarks}
-                  onChange={(e) => setChildForm({ ...childForm, remarks: e.target.value })}
-                  placeholder="Enter specific investigation notes or observations..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-800 shrink-0 bg-slate-950">
                 <button
                   type="button"
                   onClick={() => setIsChildModalOpen(false)}
