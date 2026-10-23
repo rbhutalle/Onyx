@@ -320,7 +320,7 @@ export function JobOrder() {
   const fetchPickerVehicles = async (queryToRun?: string) => {
     try {
       setLoadingVehicles(true);
-      const activeQuery = queryToRun !== undefined ? queryToRun : vehicleSearchQuery;
+      const activeQuery = (queryToRun !== undefined ? queryToRun : vehicleSearchQuery) ?? '';
 
       let query = supabase
         .from('vw_vehicle_pm_details')
@@ -370,7 +370,7 @@ export function JobOrder() {
   const fetchPickerJobOrders = async (queryToRun?: string, statusToRun?: string) => {
     try {
       setLoadingJobOrders(true);
-      const activeQuery = queryToRun !== undefined ? queryToRun : jobOrderSearchQuery;
+      const activeQuery = (queryToRun !== undefined ? queryToRun : jobOrderSearchQuery) ?? '';
       const activeStatus = statusToRun !== undefined ? statusToRun : jobOrderSearchStatus;
 
       const vehicleIds: string[] = [];
@@ -451,7 +451,10 @@ export function JobOrder() {
   };
 
   const handleOpenJobOrderSearch = async () => {
-    const inProgressStatus = statuses.find(s => s.status_name.toLowerCase() === 'in-progress' || s.status_name.toLowerCase() === 'in progress');
+    const inProgressStatus = statuses.find(s => {
+      const name = (s.status_name ?? '').toLowerCase();
+      return name === 'in-progress' || name === 'in progress';
+    });
     const defaultStatusId = inProgressStatus ? inProgressStatus.status_id : (statuses[0]?.status_id || '');
 
     setJobOrderSearchStatus(defaultStatusId);
@@ -512,7 +515,7 @@ export function JobOrder() {
     setSupervisorSearchQuery('');
     const defaultStatusId = statuses[0]?.status_id || '';
     const defaultStatus = statuses.find(s => s.status_id === defaultStatusId);
-    const isCompleted = defaultStatus?.status_name?.toLowerCase() === 'completed';
+    const isCompleted = (defaultStatus?.status_name ?? '').toLowerCase() === 'completed';
     const todayStr = new Date().toISOString().split('T')[0];
 
     setHeaderForm({
@@ -543,12 +546,12 @@ export function JobOrder() {
     const matchedSup = employees.find(e => e.employee_id === currentJobOrder.assigned_supervisor);
     setSupervisorSearchQuery(
       matchedSup 
-        ? (matchedSup.employee_name || matchedSup.name || `${matchedSup.first_name || ''} ${matchedSup.last_name || ''}`) 
+        ? (matchedSup.employee_name ?? matchedSup.name ?? `${matchedSup.first_name ?? ''} ${matchedSup.last_name ?? ''}`) 
         : ''
     );
 
     const currentStatus = statuses.find(s => s.status_id === currentJobOrder.status_id);
-    const isCompleted = currentStatus?.status_name?.toLowerCase() === 'completed';
+    const isCompleted = (currentStatus?.status_name ?? '').toLowerCase() === 'completed';
     const todayStr = new Date().toISOString().split('T')[0];
 
     setHeaderForm({
@@ -588,14 +591,14 @@ export function JobOrder() {
   const handleSubmitHeader = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!headerForm.vehicle_id) {
-      setErrorMsg('Please select a Equipment for this job order.');
+      setErrorMsg('Please select an Equipment for this job order.');
       return;
     }
     setErrorMsg(null);
 
     try {
       const selectedStatus = statuses.find(s => s.status_id === headerForm.status_id);
-      const isCompleted = selectedStatus?.status_name?.toLowerCase() === 'completed';
+      const isCompleted = (selectedStatus?.status_name ?? '').toLowerCase() === 'completed';
 
       const payload = {
         vehicle_id: headerForm.vehicle_id,
@@ -676,7 +679,7 @@ export function JobOrder() {
       const rec = item as JobOrderTaskDetailRecord;
       const matchedTs = taskStandards.find(ts => ts.task_standard_id === rec.task_standard_id);
       setTaskDetailForm({ task_standard_id: rec.task_standard_id, standard_time: String(rec.standard_time ?? 0) });
-      setTaskStandardSearchQuery(matchedTs ? matchedTs.task_standard_desc : '');
+      setTaskStandardSearchQuery(matchedTs ? (matchedTs.task_standard_desc ?? '') : '');
     } else if (activeChildTab === 'resources') {
       const rec = item as JobOrderResourceRecord;
       setResourceForm({
@@ -764,7 +767,7 @@ export function JobOrder() {
           job_order_id: currentJobOrder.job_order_id,
           job_order_task_id: resourceForm.job_order_task_id,
           employee_id: resourceForm.employee_id,
-          task_standard_id: matchedTask ? matchedTask.task_standard_id : taskStandards[0]?.task_standard_id,
+          task_standard_id: matchedTask ? matchedTask.task_standard_id : (taskStandards[0]?.task_standard_id || ''),
           charged_time: chargedTimeVal,
           ee_rate: ratePerHour,
           ee_sell_rate: sellRatePerHour,
@@ -920,93 +923,90 @@ export function JobOrder() {
   const matchedPriority = priorities.find(p => p.priority_id === currentJobOrder?.priority_id);
   const matchedSupervisor = employees.find(e => e.employee_id === currentJobOrder?.assigned_supervisor);
 
-  const statusNameLower = matchedStatus?.status_name?.toLowerCase() || '';
+  const statusNameLower = (matchedStatus?.status_name ?? '').toLowerCase();
   const isStatusCompleted = statusNameLower === 'completed';
   const isStatusCancelled = statusNameLower === 'cancelled';
 
   const filteredSupervisors = employees.filter(emp => {
     if (!emp.is_active || !emp.is_supervisor) return false;
-    const name = emp.employee_name || emp.name || `${emp.first_name || ''} ${emp.last_name || ''}`;
-    return name.toLowerCase().includes(supervisorSearchQuery.toLowerCase());
+    const name = emp.employee_name ?? emp.name ?? `${emp.first_name ?? ''} ${emp.last_name ?? ''}`;
+    return (name ?? '').toLowerCase().includes((supervisorSearchQuery ?? '').toLowerCase());
   });
 
   const filteredTaskStandards = taskStandards.filter(ts => 
-    ts.task_standard_desc.toLowerCase().includes(taskStandardSearchQuery.toLowerCase())
+    (ts.task_standard_desc ?? '').toLowerCase().includes((taskStandardSearchQuery ?? '').toLowerCase())
   );
 
   return (
-    <div className="p-6 w-full max-w-7xl mx-auto space-y-6 max-h-screen overflow-y-auto">
+    <div className="h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+      <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-800 pb-3 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl">
-            <ClipboardCheck className="w-7 h-7" />
+          <div className="p-2.5 bg-blue-100 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
+            <ClipboardCheck className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-100">Job Order Management</h1>
-            <p className="text-sm text-slate-400">Manage Job Order and associated Tasks, Materials, Resources, and Contracted Jobs.</p>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Job Order Management</h1>
+            <p className="text-xs text-slate-600 dark:text-slate-400">Manage Job Order and associated Tasks, Materials, Resources, and Contracted Jobs.</p>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleOpenAddHeader}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Job Order</span>
-          </button>
         </div>
       </div>
 
       {successMsg && (
-        <div className="bg-emerald-950/50 border border-emerald-800 text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
-          <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+        <div className="bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-4 py-2.5 rounded-lg flex items-center gap-3 text-xs shrink-0">
+          <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="bg-red-950/50 border border-red-800 text-red-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
-          <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+        <div className="bg-red-50 dark:bg-red-950/50 border border-red-300 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-2.5 rounded-lg flex items-center gap-3 text-xs shrink-0">
+          <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
-      {/* HEADER CARD (Collapsible Single Record Viewer - Main Panel) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-bold uppercase tracking-wider text-blue-400 bg-blue-950/50 border border-blue-800/60 px-4 py-1.5 rounded-xl shadow-inner">
+      {/* HEADER CARD (Master Job Order Viewer - Fixed Height) */}
+      <div className="bg-slate-50/90 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 shadow-xs rounded-xl p-4 shrink-0 space-y-3">
+        <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-800 pb-3">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800/60 px-3 py-1 rounded-lg shadow-xs">
               {currentJobOrder ? `JO #${currentJobOrder.job_order_no}` : 'No JO Selected'}
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={handleOpenJobOrderSearch}
-              className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg"
+              className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 px-2.5 py-1 rounded-lg"
             >
-              <Search className="w-3.5 h-3.5" /> Search Job Order
+              <Search className="w-3.5 h-3.5" /> Search
             </button>
             <button
               onClick={handleOpenEditHeader}
               disabled={!currentJobOrder || isStatusCompleted || isStatusCancelled}
-              className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
+              className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 px-2.5 py-1 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <Edit2 className="w-3.5 h-3.5" /> Edit Job Order
+              <Edit2 className="w-3.5 h-3.5" /> Edit
             </button>
             <button
               onClick={handleDeleteHeader}
               disabled={!currentJobOrder || isStatusCompleted}
-              className="text-xs text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
+              className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 px-2.5 py-1 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <Trash2 className="w-3.5 h-3.5" /> Delete Job Order
+              <Trash2 className="w-3.5 h-3.5" /> Delete
+            </button>
+            <button
+              onClick={handleOpenAddHeader}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Job Order</span>
             </button>
             {currentJobOrder && (
               <button
                 onClick={() => setIsHeaderCollapsed(!isHeaderCollapsed)}
-                className="text-xs text-slate-300 hover:text-white inline-flex items-center gap-1 cursor-pointer bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg transition-colors"
+                className="text-xs text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white inline-flex items-center gap-1 cursor-pointer bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 px-2.5 py-1 rounded-lg transition-colors"
                 title={isHeaderCollapsed ? "Expand Header" : "Collapse Header"}
               >
                 {isHeaderCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
@@ -1017,83 +1017,83 @@ export function JobOrder() {
         </div>
 
         {!currentJobOrder ? (
-          <div className="p-12 text-center text-slate-500">No job order loaded. Click "Search Job Order" above or create a new one to begin.</div>
+          <div className="p-6 text-center text-xs text-slate-500 dark:text-slate-400">No job order loaded. Click "Search Job Order" above or create a new one to begin.</div>
         ) : !isHeaderCollapsed ? (
-          <div className="space-y-4 pt-2">
+          <div className="space-y-3">
             {/* ALIGNED 4-COLUMN DETAILS GRID */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-sm items-start">
-              <div className="space-y-1">
-                <span className="block text-xs font-semibold uppercase text-slate-500">Equipment</span>
-                <span className="text-blue-400 font-bold block">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs items-start">
+              <div className="space-y-0.5">
+                <span className="block text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400">Equipment</span>
+                <span className="text-blue-600 dark:text-blue-400 font-bold block">
                   {selectedPickerVehicle?.plate_no || '—'}
                 </span>
-                <span className="text-xs text-slate-400 block">
+                <span className="text-[11px] text-slate-600 dark:text-slate-400 block truncate">
                   {selectedPickerVehicle 
                     ? `${selectedPickerVehicle.make_name || ''} ${selectedPickerVehicle.model_name ? `/ ${selectedPickerVehicle.model_name}` : ''} (${selectedPickerVehicle.type_description || 'N/A'})` 
                     : '—'}
                 </span>
               </div>
 
-              <div className="space-y-1">
-                <span className="block text-xs font-semibold uppercase text-slate-500">Status</span>
-                <span className="text-emerald-400 font-medium block">{matchedStatus ? matchedStatus.status_name : '—'}</span>
+              <div className="space-y-0.5">
+                <span className="block text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400">Status</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-medium block">{matchedStatus ? matchedStatus.status_name : '—'}</span>
               </div>
 
-              <div className="space-y-1">
-                <span className="block text-xs font-semibold uppercase text-slate-500">Priority</span>
-                <span className="text-amber-400 font-medium block">{matchedPriority ? matchedPriority.priority_desc : '—'}</span>
+              <div className="space-y-0.5">
+                <span className="block text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400">Priority</span>
+                <span className="text-amber-600 dark:text-amber-400 font-medium block">{matchedPriority ? matchedPriority.priority_desc : '—'}</span>
               </div>
 
-              <div className="space-y-1">
-                <span className="block text-xs font-semibold uppercase text-slate-500">Expected Completion</span>
-                <span className="text-slate-200 font-mono block">{currentJobOrder.expected_completion || '—'}</span>
+              <div className="space-y-0.5">
+                <span className="block text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400">Expected Completion</span>
+                <span className="text-slate-800 dark:text-slate-200 font-mono block">{currentJobOrder.expected_completion || '—'}</span>
               </div>
 
-              <div className="space-y-1">
-                <span className="block text-xs font-semibold uppercase text-slate-500">Supervisor</span>
-                <span className="text-slate-200 block">
-                  {matchedSupervisor ? (matchedSupervisor.employee_name || matchedSupervisor.name || `${matchedSupervisor.first_name || ''} ${matchedSupervisor.last_name || ''}`) : '—'}
+              <div className="space-y-0.5">
+                <span className="block text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400">Supervisor</span>
+                <span className="text-slate-800 dark:text-slate-200 block truncate">
+                  {matchedSupervisor ? (matchedSupervisor.employee_name ?? matchedSupervisor.name ?? `${matchedSupervisor.first_name ?? ''} ${matchedSupervisor.last_name ?? ''}`) : '—'}
                 </span>
               </div>
 
-              <div className="space-y-1">
-                <span className="block text-xs font-semibold uppercase text-slate-500">Odometer Reading</span>
-                <span className="text-slate-200 font-mono block">{currentJobOrder.odo_rdg ?? 0}</span>
+              <div className="space-y-0.5">
+                <span className="block text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400">Odometer Reading</span>
+                <span className="text-slate-800 dark:text-slate-200 font-mono block">{currentJobOrder.odo_rdg ?? 0}</span>
               </div>
 
-              <div className="space-y-1">
-                <span className="block text-xs font-semibold uppercase text-slate-500">Dates (Started / Completed)</span>
-                <span className="text-slate-200 font-mono block">{currentJobOrder.date_started || '—'} / {currentJobOrder.date_completed || '—'}</span>
+              <div className="space-y-0.5">
+                <span className="block text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400">Dates (Started / Completed)</span>
+                <span className="text-slate-800 dark:text-slate-200 font-mono block">{currentJobOrder.date_started || '—'} / {currentJobOrder.date_completed || '—'}</span>
               </div>
 
-              <div className="space-y-1">
-                <span className="block text-xs font-bold uppercase text-emerald-400">Total Cost</span>
-                <span className="text-emerald-400 font-mono text-base font-bold block">₱{(currentJobOrder.total_cost ?? 0).toFixed(2)}</span>
+              <div className="space-y-0.5">
+                <span className="block text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">Total Cost</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-mono text-sm font-bold block">₱{(currentJobOrder.total_cost ?? 0).toFixed(2)}</span>
               </div>
             </div>
 
             {/* ALIGNED GROUPED COST AREA */}
-            <div className="pt-3 border-t border-slate-800/80">
-              <span className="block text-xs font-semibold uppercase text-slate-400 mb-2.5 tracking-wider">Cost Summary</span>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80 items-center">
-                <div className="space-y-1">
-                  <span className="block text-xs font-semibold uppercase text-slate-500">Labor Cost</span>
-                  <span className="text-slate-200 font-mono block">₱{(currentJobOrder.labor_cost ?? 0).toFixed(2)}</span>
+            <div className="pt-2 border-t border-slate-300 dark:border-slate-800/80">
+              <span className="block text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400 mb-1.5 tracking-wider">Cost Summary</span>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white/80 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-300 dark:border-slate-800/80 items-center">
+                <div className="space-y-0.5">
+                  <span className="block text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400">Labor Cost</span>
+                  <span className="text-slate-800 dark:text-slate-200 font-mono text-xs block">₱{(currentJobOrder.labor_cost ?? 0).toFixed(2)}</span>
                 </div>
 
-                <div className="space-y-1">
-                  <span className="block text-xs font-semibold uppercase text-slate-500">Materials Cost</span>
-                  <span className="text-slate-200 font-mono block">₱{(currentJobOrder.materials_cost ?? 0).toFixed(2)}</span>
+                <div className="space-y-0.5">
+                  <span className="block text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400">Materials Cost</span>
+                  <span className="text-slate-800 dark:text-slate-200 font-mono text-xs block">₱{(currentJobOrder.materials_cost ?? 0).toFixed(2)}</span>
                 </div>
 
-                <div className="space-y-1">
-                  <span className="block text-xs font-semibold uppercase text-slate-500">Contract Cost</span>
-                  <span className="text-slate-200 font-mono block">₱{(currentJobOrder.contract_cost ?? 0).toFixed(2)}</span>
+                <div className="space-y-0.5">
+                  <span className="block text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400">Contract Cost</span>
+                  <span className="text-slate-800 dark:text-slate-200 font-mono text-xs block">₱{(currentJobOrder.contract_cost ?? 0).toFixed(2)}</span>
                 </div>
 
-                <div className="space-y-1">
-                  <span className="block text-xs font-bold uppercase text-emerald-400">Total Cost</span>
-                  <span className="text-emerald-400 font-mono text-base font-bold block">₱{(currentJobOrder.total_cost ?? 0).toFixed(2)}</span>
+                <div className="space-y-0.5">
+                  <span className="block text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">Total Cost</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-mono text-sm font-bold block">₱{(currentJobOrder.total_cost ?? 0).toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -1101,15 +1101,15 @@ export function JobOrder() {
         ) : null}
       </div>
 
-      {/* CHILD TABS SECTION */}
+      {/* CHILD TABS SECTION (Fills Remaining Screen Height) */}
       {currentJobOrder && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-          <div className="flex flex-wrap justify-between items-center gap-4 border-b border-slate-800 pb-4">
+        <div className="bg-slate-50/90 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 shadow-xl rounded-xl p-4 flex flex-col flex-1 min-h-0 overflow-hidden space-y-3">
+          <div className="flex flex-wrap justify-between items-center gap-3 border-b border-slate-300 dark:border-slate-800 pb-3 shrink-0">
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => setActiveChildTab('tasks')}
-                className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
-                  activeChildTab === 'tasks' ? 'bg-blue-600 text-white' : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer shrink-0 ${
+                  activeChildTab === 'tasks' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-300 dark:border-slate-800'
                 }`}
               >
                 <Wrench className="w-3.5 h-3.5" />
@@ -1118,8 +1118,8 @@ export function JobOrder() {
 
               <button
                 onClick={() => setActiveChildTab('materials')}
-                className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
-                  activeChildTab === 'materials' ? 'bg-blue-600 text-white' : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer shrink-0 ${
+                  activeChildTab === 'materials' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-300 dark:border-slate-800'
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
@@ -1128,8 +1128,8 @@ export function JobOrder() {
 
               <button
                 onClick={() => setActiveChildTab('resources')}
-                className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
-                  activeChildTab === 'resources' ? 'bg-blue-600 text-white' : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer shrink-0 ${
+                  activeChildTab === 'resources' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-300 dark:border-slate-800'
                 }`}
               >
                 <Users className="w-3.5 h-3.5" />
@@ -1138,8 +1138,8 @@ export function JobOrder() {
 
               <button
                 onClick={() => setActiveChildTab('contracts')}
-                className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
-                  activeChildTab === 'contracts' ? 'bg-blue-600 text-white' : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer shrink-0 ${
+                  activeChildTab === 'contracts' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-300 dark:border-slate-800'
                 }`}
               >
                 <Briefcase className="w-3.5 h-3.5" />
@@ -1150,49 +1150,49 @@ export function JobOrder() {
             <button
               onClick={handleOpenAddChild}
               disabled={!currentJobOrder || isStatusCompleted || isStatusCancelled}
-              className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow"
+              className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
             >
               <Plus className="w-4 h-4" />
               <span>Add Details</span>
             </button>
           </div>
 
-          {/* Scrollable Container with Sticky Table Headers */}
-          <div className="overflow-y-auto overflow-x-auto max-h-[calc(100vh-360px)] border border-slate-800/60 rounded-lg">
+          {/* Fully Responsive Scrollable Table Wrapper */}
+          <div className="flex-1 min-h-0 overflow-auto border border-slate-300 dark:border-slate-800/60 rounded-lg bg-white dark:bg-slate-950">
             {/* CHILD TAB 1: TASK DETAILS */}
             {activeChildTab === 'tasks' && (
-              <table className="w-full text-left border-collapse text-sm">
+              <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
-                    <th className="p-3">Task Standard Description</th>
-                    <th className="p-3">Standard Time (m)</th>
-                    <th className="p-3 text-right">Actions</th>
+                  <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[11px] uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 font-semibold shadow-xs">
+                    <th className="py-2 px-3">Task Standard Description</th>
+                    <th className="py-2 px-3">Standard Time (m)</th>
+                    <th className="py-2 px-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800 text-slate-300">
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                   {taskDetails.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="p-8 text-center text-slate-500">No task details found for this job order.</td>
+                      <td colSpan={3} className="py-8 px-3 text-center text-slate-500 dark:text-slate-400">No task details found for this job order.</td>
                     </tr>
                   ) : (
                     taskDetails.map((item) => {
                       const matchedStd = taskStandards.find(ts => ts.task_standard_id === item.task_standard_id);
                       return (
-                        <tr key={item.job_order_task_id} className="hover:bg-slate-950/40 transition-colors">
-                          <td className="p-3 font-semibold text-slate-100">{matchedStd ? matchedStd.task_standard_desc : 'Task'}</td>
-                          <td className="p-3 font-mono">{item.standard_time ?? '—'}</td>
-                          <td className="p-3 text-right space-x-3">
+                        <tr key={item.job_order_task_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                          <td className="py-2 px-3 font-semibold text-slate-900 dark:text-slate-100">{matchedStd ? matchedStd.task_standard_desc : 'Task'}</td>
+                          <td className="py-2 px-3 font-mono">{item.standard_time ?? '—'}</td>
+                          <td className="py-2 px-3 text-right space-x-3">
                             <button
                               onClick={() => handleOpenEditChild(item)}
                               disabled={isStatusCompleted || isStatusCancelled}
-                              className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                              className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <Edit2 className="w-3.5 h-3.5" /> Edit
                             </button>
                             <button
                               onClick={() => handleDeleteChild(item.job_order_task_id, 'joborder_task_details', 'job_order_task_id')}
                               disabled={isStatusCompleted || isStatusCancelled}
-                              className="text-xs text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                              className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <Trash2 className="w-3.5 h-3.5" /> Delete
                             </button>
@@ -1207,39 +1207,39 @@ export function JobOrder() {
 
             {/* CHILD TAB 2: MATERIALS */}
             {activeChildTab === 'materials' && (
-              <table className="w-full text-left border-collapse text-sm">
+              <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
-                    <th className="p-3">Stock Code</th>
-                    <th className="p-3">Part Number</th>
-                    <th className="p-3">Qty</th>
-                    <th className="p-3">Unit Price</th>
-                    <th className="p-3">List Price</th>
-                    <th className="p-3">Line Total</th>
-                    <th className="p-3">Reference Total</th>
-                    <th className="p-3 text-right">Actions</th>
+                  <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[11px] uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 font-semibold shadow-xs">
+                    <th className="py-2 px-3">Stock Code</th>
+                    <th className="py-2 px-3">Part Number</th>
+                    <th className="py-2 px-3">Qty</th>
+                    <th className="py-2 px-3">Unit Price</th>
+                    <th className="py-2 px-3">List Price</th>
+                    <th className="py-2 px-3">Line Total</th>
+                    <th className="py-2 px-3">Reference Total</th>
+                    <th className="py-2 px-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800 text-slate-300">
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                   {materials.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-slate-500">No materials recorded for this job order. Use "Add Details" above to upload materials via CSV.</td>
+                      <td colSpan={8} className="py-8 px-3 text-center text-slate-500 dark:text-slate-400">No materials recorded for this job order. Use "Add Details" above to upload materials via CSV.</td>
                     </tr>
                   ) : (
                     materials.map((item) => (
-                      <tr key={item.job_order_matls_id} className="hover:bg-slate-950/40 transition-colors">
-                        <td className="p-3 font-semibold text-slate-100">{item.stock_code || '—'}</td>
-                        <td className="p-3 text-slate-400">{item.part_number || '—'}</td>
-                        <td className="p-3 font-mono">{item.qty ?? 0} {item.unit_of_measure || ''}</td>
-                        <td className="p-3 font-mono">₱{(item.unit_price ?? 0).toFixed(2)}</td>
-                        <td className="p-3 font-mono">₱{(item.list_price ?? 0).toFixed(2)}</td>
-                        <td className="p-3 font-mono text-emerald-400">₱{(item.line_total ?? 0).toFixed(2)}</td>
-                        <td className="p-3 font-mono text-blue-400">₱{(item.reference_total ?? 0).toFixed(2)}</td>
-                        <td className="p-3 text-right space-x-3">
+                      <tr key={item.job_order_matls_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                        <td className="py-2 px-3 font-semibold text-slate-900 dark:text-slate-100">{item.stock_code || '—'}</td>
+                        <td className="py-2 px-3 text-slate-600 dark:text-slate-400">{item.part_number || '—'}</td>
+                        <td className="py-2 px-3 font-mono">{item.qty ?? 0} {item.unit_of_measure || ''}</td>
+                        <td className="py-2 px-3 font-mono">₱{(item.unit_price ?? 0).toFixed(2)}</td>
+                        <td className="py-2 px-3 font-mono">₱{(item.list_price ?? 0).toFixed(2)}</td>
+                        <td className="py-2 px-3 font-mono text-emerald-600 dark:text-emerald-400">₱{(item.line_total ?? 0).toFixed(2)}</td>
+                        <td className="py-2 px-3 font-mono text-blue-600 dark:text-blue-400">₱{(item.reference_total ?? 0).toFixed(2)}</td>
+                        <td className="py-2 px-3 text-right space-x-3">
                           <button
                             onClick={() => handleDeleteChild(item.job_order_matls_id, 'joborder_materials', 'job_order_matls_id')}
                             disabled={isStatusCompleted || isStatusCancelled}
-                            className="text-xs text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             <Trash2 className="w-3.5 h-3.5" /> Delete
                           </button>
@@ -1253,48 +1253,48 @@ export function JobOrder() {
 
             {/* CHILD TAB 3: RESOURCES */}
             {activeChildTab === 'resources' && (
-              <table className="w-full text-left border-collapse text-sm">
+              <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
-                    <th className="p-3">Employee</th>
-                    <th className="p-3">Assigned Date</th>
-                    <th className="p-3">Charged Time (h)</th>
-                    <th className="p-3">Rate</th>
-                    <th className="p-3">Sell Rate</th>
-                    <th className="p-3">Line Total</th>
-                    <th className="p-3">Reference Total</th>
-                    <th className="p-3 text-right">Actions</th>
+                  <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[11px] uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 font-semibold shadow-xs">
+                    <th className="py-2 px-3">Employee</th>
+                    <th className="py-2 px-3">Assigned Date</th>
+                    <th className="py-2 px-3">Charged Time (h)</th>
+                    <th className="py-2 px-3">Rate</th>
+                    <th className="py-2 px-3">Sell Rate</th>
+                    <th className="py-2 px-3">Line Total</th>
+                    <th className="py-2 px-3">Reference Total</th>
+                    <th className="py-2 px-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800 text-slate-300">
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                   {resources.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-slate-500">No resources assigned to this job order.</td>
+                      <td colSpan={8} className="py-8 px-3 text-center text-slate-500 dark:text-slate-400">No resources assigned to this job order.</td>
                     </tr>
                   ) : (
                     resources.map((item) => {
                       const matchedEmp = employees.find(e => e.employee_id === item.employee_id);
                       return (
-                        <tr key={item.job_order_resource_id} className="hover:bg-slate-950/40 transition-colors">
-                          <td className="p-3 font-semibold text-slate-100">{matchedEmp ? (matchedEmp.employee_name || matchedEmp.name || `${matchedEmp.first_name || ''} ${matchedEmp.last_name || ''}`) : 'Employee'}</td>
-                          <td className="p-3 font-mono text-slate-400">{item.assigned_date}</td>
-                          <td className="p-3 font-mono">{item.charged_time}</td>
-                          <td className="p-3 font-mono">₱{(item.ee_rate ?? 0).toFixed(2)}</td>
-                          <td className="p-3 font-mono">₱{(item.ee_sell_rate ?? 0).toFixed(2)}</td>
-                          <td className="p-3 font-mono text-emerald-400">₱{(item.ee_line_total ?? 0).toFixed(2)}</td>
-                          <td className="p-3 font-mono text-blue-400">₱{(item.ee_reference_total ?? 0).toFixed(2)}</td>
-                          <td className="p-3 text-right space-x-3">
+                        <tr key={item.job_order_resource_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                          <td className="py-2 px-3 font-semibold text-slate-900 dark:text-slate-100">{matchedEmp ? (matchedEmp.employee_name ?? matchedEmp.name ?? `${matchedEmp.first_name ?? ''} ${matchedEmp.last_name ?? ''}`) : 'Employee'}</td>
+                          <td className="py-2 px-3 font-mono text-slate-600 dark:text-slate-400">{item.assigned_date}</td>
+                          <td className="py-2 px-3 font-mono">{item.charged_time}</td>
+                          <td className="py-2 px-3 font-mono">₱{(item.ee_rate ?? 0).toFixed(2)}</td>
+                          <td className="py-2 px-3 font-mono">₱{(item.ee_sell_rate ?? 0).toFixed(2)}</td>
+                          <td className="py-2 px-3 font-mono text-emerald-600 dark:text-emerald-400">₱{(item.ee_line_total ?? 0).toFixed(2)}</td>
+                          <td className="py-2 px-3 font-mono text-blue-600 dark:text-blue-400">₱{(item.ee_reference_total ?? 0).toFixed(2)}</td>
+                          <td className="py-2 px-3 text-right space-x-3">
                             <button
                               onClick={() => handleOpenEditChild(item)}
                               disabled={isStatusCompleted || isStatusCancelled}
-                              className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                              className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <Edit2 className="w-3.5 h-3.5" /> Edit
                             </button>
                             <button
                               onClick={() => handleDeleteChild(item.job_order_resource_id, 'joborder_resources', 'job_order_resource_id')}
                               disabled={isStatusCompleted || isStatusCancelled}
-                              className="text-xs text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                              className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <Trash2 className="w-3.5 h-3.5" /> Delete
                             </button>
@@ -1309,44 +1309,44 @@ export function JobOrder() {
 
             {/* CHILD TAB 4: CONTRACTED JOBS */}
             {activeChildTab === 'contracts' && (
-              <table className="w-full text-left border-collapse text-sm">
+              <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase bg-slate-950 sticky top-0 z-10 shadow-xs">
-                    <th className="p-3">Contract Description</th>
-                    <th className="p-3">Qty</th>
-                    <th className="p-3">Unit Price</th>
-                    <th className="p-3">List Price</th>
-                    <th className="p-3">Line Total</th>
-                    <th className="p-3">Reference Total</th>
-                    <th className="p-3 text-right">Actions</th>
+                  <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[11px] uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 font-semibold shadow-xs">
+                    <th className="py-2 px-3">Contract Description</th>
+                    <th className="py-2 px-3">Qty</th>
+                    <th className="py-2 px-3">Unit Price</th>
+                    <th className="py-2 px-3">List Price</th>
+                    <th className="py-2 px-3">Line Total</th>
+                    <th className="py-2 px-3">Reference Total</th>
+                    <th className="py-2 px-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800 text-slate-300">
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                   {contracts.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="p-8 text-center text-slate-500">No contracted jobs added yet. Click "Add Details" above to add one.</td>
+                      <td colSpan={7} className="py-8 px-3 text-center text-slate-500 dark:text-slate-400">No contracted jobs added yet. Click "Add Details" above to add one.</td>
                     </tr>
                   ) : (
                     contracts.map((item) => (
-                      <tr key={item.job_order_matls_id} className="hover:bg-slate-950/40 transition-colors">
-                        <td className="p-3 font-semibold text-slate-100">{item.contract_decription || '—'}</td>
-                        <td className="p-3 font-mono">{item.qty ?? 0}</td>
-                        <td className="p-3 font-mono">₱{(item.unit_price ?? 0).toFixed(2)}</td>
-                        <td className="p-3 font-mono">₱{(item.list_price ?? 0).toFixed(2)}</td>
-                        <td className="p-3 font-mono text-emerald-400">₱{(item.line_total ?? 0).toFixed(2)}</td>
-                        <td className="p-3 font-mono text-blue-400">₱{(item.reference_total ?? 0).toFixed(2)}</td>
-                        <td className="p-3 text-right space-x-3">
+                      <tr key={item.job_order_matls_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                        <td className="py-2 px-3 font-semibold text-slate-900 dark:text-slate-100">{item.contract_decription || '—'}</td>
+                        <td className="py-2 px-3 font-mono">{item.qty ?? 0}</td>
+                        <td className="py-2 px-3 font-mono">₱{(item.unit_price ?? 0).toFixed(2)}</td>
+                        <td className="py-2 px-3 font-mono">₱{(item.list_price ?? 0).toFixed(2)}</td>
+                        <td className="py-2 px-3 font-mono text-emerald-600 dark:text-emerald-400">₱{(item.line_total ?? 0).toFixed(2)}</td>
+                        <td className="py-2 px-3 font-mono text-blue-600 dark:text-blue-400">₱{(item.reference_total ?? 0).toFixed(2)}</td>
+                        <td className="py-2 px-3 text-right space-x-3">
                           <button
                             onClick={() => handleOpenEditChild(item)}
                             disabled={isStatusCompleted || isStatusCancelled}
-                            className="text-xs text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             <Edit2 className="w-3.5 h-3.5" /> Edit
                           </button>
                           <button
                             onClick={() => handleDeleteChild(item.job_order_matls_id, 'joborder_contract', 'job_order_matls_id')}
                             disabled={isStatusCompleted || isStatusCancelled}
-                            className="text-xs text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             <Trash2 className="w-3.5 h-3.5" /> Delete
                           </button>
@@ -1363,20 +1363,20 @@ export function JobOrder() {
 
       {/* JOB ORDER SEARCH PICKER MODAL */}
       {showJobOrderPicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-800 bg-slate-950 shrink-0">
-              <h3 className="text-lg font-semibold text-slate-100">Search Job Order</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 shrink-0">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Search Job Order</h3>
               <button
                 type="button"
                 onClick={() => setShowJobOrderPicker(false)}
-                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
+                className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleJobOrderSearchSubmit} className="p-4 border-b border-slate-800 bg-slate-950/50 flex flex-col sm:flex-row gap-2 shrink-0">
+            <form onSubmit={handleJobOrderSearchSubmit} className="p-4 border-b border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex flex-col sm:flex-row gap-2 shrink-0">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                 <input
@@ -1384,7 +1384,7 @@ export function JobOrder() {
                   placeholder="Search Job Order No or Plate Number..."
                   value={jobOrderSearchQuery}
                   onChange={(e) => setJobOrderSearchQuery(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 text-slate-100 pl-9 pr-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -1392,7 +1392,7 @@ export function JobOrder() {
                 required
                 value={jobOrderSearchStatus}
                 onChange={(e) => setJobOrderSearchStatus(e.target.value)}
-                className="bg-slate-900 border border-slate-700 text-slate-100 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 px-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {statuses.map(s => (
                   <option key={s.status_id} value={s.status_id}>{s.status_name}</option>
@@ -1401,20 +1401,20 @@ export function JobOrder() {
 
               <button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer"
               >
                 Search
               </button>
             </form>
 
-            <div className="p-4 overflow-y-auto space-y-2 flex-1">
+            <div className="p-4 overflow-y-auto flex-1 space-y-2">
               {loadingJobOrders ? (
-                <div className="py-12 text-center text-slate-400 flex items-center justify-center gap-2">
+                <div className="py-12 text-center text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2 text-xs">
                   <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
                   <span>Loading job orders...</span>
                 </div>
               ) : pickerJobOrders.length === 0 ? (
-                <div className="py-12 text-center text-slate-400">
+                <div className="py-12 text-center text-xs text-slate-500 dark:text-slate-400">
                   {jobOrderSearchQuery.trim() ? 'No job orders found matching your criteria.' : 'Enter a search term and click Search to find job orders.'}
                 </div>
               ) : (
@@ -1429,34 +1429,34 @@ export function JobOrder() {
                         setCurrentIndex(0);
                         setShowJobOrderPicker(false);
                       }}
-                      className="flex items-center justify-between bg-slate-950 hover:bg-blue-950/40 border border-slate-800 hover:border-blue-600/50 p-3 rounded-lg transition-colors cursor-pointer group"
+                      className="flex items-center justify-between bg-white dark:bg-slate-950 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-300 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-600/50 p-3 rounded-lg transition-colors cursor-pointer group"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-slate-900 rounded-lg group-hover:bg-blue-900/40 text-blue-400 transition-colors">
+                        <div className="p-2 bg-slate-100 dark:bg-slate-900 rounded-lg group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 transition-colors">
                           <ClipboardCheck className="w-4 h-4" />
                         </div>
                         <div>
-                          <div className="font-bold text-blue-400 flex items-center gap-2">
+                          <div className="font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2 text-xs">
                             <span>JO #{jo.job_order_no}</span>
                             {vInfo && (
-                              <span className="text-xs bg-slate-900 text-slate-200 px-2 py-0.5 rounded font-mono border border-slate-800">
+                              <span className="text-[10px] bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-200 px-2 py-0.5 rounded font-mono border border-slate-300 dark:border-slate-800">
                                 {vInfo.plate_no}
                               </span>
                             )}
                           </div>
-                          <div className="text-xs text-slate-300 mt-0.5">
+                          <div className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
                             {vInfo 
                               ? `${vInfo.make_name || ''} ${vInfo.model_name ? `/ ${vInfo.model_name}` : ''} (${vInfo.type_description || 'N/A'})` 
                               : '—'}
                           </div>
-                          <div className="text-xs text-slate-400 mt-0.5">
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                             Expected: {jo.expected_completion} {sObj ? `• Status: ${sObj.status_name}` : ''}
                           </div>
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className="text-xs text-slate-400 uppercase">Total Cost</span>
-                        <div className="text-sm font-semibold text-emerald-400">₱{(jo.total_cost ?? 0).toFixed(2)}</div>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Total Cost</span>
+                        <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">₱{(jo.total_cost ?? 0).toFixed(2)}</div>
                       </div>
                     </div>
                   );
@@ -1469,37 +1469,37 @@ export function JobOrder() {
 
       {/* HEADER FORM MODAL */}
       {isHeaderModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 shrink-0 bg-slate-950">
-              <h3 className="text-lg font-bold text-slate-100">
+        <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-800 px-6 py-4 shrink-0 bg-slate-100 dark:bg-slate-900">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                 {isHeaderEditing ? `Edit Job Order #${currentJobOrder?.job_order_no}` : 'New Job Order'}
               </h3>
-              <button onClick={() => setIsHeaderModalOpen(false)} className="text-slate-400 hover:text-slate-100 cursor-pointer">
+              <button onClick={() => setIsHeaderModalOpen(false)} className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitHeader} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-6 overflow-y-auto space-y-4 flex-1">
+            <form onSubmit={handleSubmitHeader} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
                 <div className="space-y-2">
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
                     Selected Equipment <span className="text-red-500">*</span>
                   </label>
                   {selectedPickerVehicle ? (
-                    <div className="flex items-center justify-between bg-slate-950 border border-blue-900/60 p-3 rounded-xl">
+                    <div className="flex items-center justify-between bg-white dark:bg-slate-950 border border-blue-300 dark:border-blue-900/60 p-3 rounded-xl">
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full text-xs">
                         <div>
-                          <span className="text-slate-400 uppercase">Plate Number</span>
-                          <div className="font-bold text-blue-400 text-sm">{selectedPickerVehicle.plate_no}</div>
+                          <span className="text-slate-500 dark:text-slate-400 uppercase text-[10px]">Plate Number</span>
+                          <div className="font-bold text-blue-600 dark:text-blue-400 text-xs">{selectedPickerVehicle.plate_no}</div>
                         </div>
                         <div>
-                          <span className="text-slate-400 uppercase">Make / Model</span>
-                          <div className="font-semibold text-slate-100">{selectedPickerVehicle.make_name || 'N/A'} {selectedPickerVehicle.model_name ? `/ ${selectedPickerVehicle.model_name}` : ''}</div>
+                          <span className="text-slate-500 dark:text-slate-400 uppercase text-[10px]">Make / Model</span>
+                          <div className="font-semibold text-slate-900 dark:text-slate-100">{selectedPickerVehicle.make_name || 'N/A'} {selectedPickerVehicle.model_name ? `/ ${selectedPickerVehicle.model_name}` : ''}</div>
                         </div>
                         <div>
-                          <span className="text-slate-400 uppercase">Type</span>
-                          <div className="font-semibold text-slate-100">{selectedPickerVehicle.type_description || 'N/A'}</div>
+                          <span className="text-slate-500 dark:text-slate-400 uppercase text-[10px]">Type</span>
+                          <div className="font-semibold text-slate-900 dark:text-slate-100">{selectedPickerVehicle.type_description || 'N/A'}</div>
                         </div>
                       </div>
                       <button
@@ -1508,7 +1508,7 @@ export function JobOrder() {
                           setSelectedPickerVehicle(null);
                           setHeaderForm({ ...headerForm, vehicle_id: '', odo_rdg: '0' });
                         }}
-                        className="text-slate-400 hover:text-red-400 p-1.5 transition-colors cursor-pointer"
+                        className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 p-1.5 transition-colors cursor-pointer shrink-0"
                         title="Change Equipment"
                       >
                         <X className="w-4 h-4" />
@@ -1518,27 +1518,27 @@ export function JobOrder() {
                     <button
                       type="button"
                       onClick={() => setShowVehiclePicker(true)}
-                      className="w-full bg-slate-950 border border-slate-700 hover:border-blue-500 text-slate-300 px-4 py-3 rounded-xl text-sm flex items-center justify-between transition-colors cursor-pointer"
+                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 hover:border-blue-500 text-slate-700 dark:text-slate-300 px-4 py-3 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer"
                     >
                       <span className="flex items-center gap-2">
-                        <Search className="w-4 h-4 text-blue-400" />
-                        {pickerVehicles.length > 0 ? 'Click here to search and select a Equipment...' : 'Click here to select a Equipment...'}
+                        <Search className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        {pickerVehicles.length > 0 ? 'Click here to search and select Equipment...' : 'Click here to select Equipment...'}
                       </span>
-                      <span className="text-xs bg-blue-600/20 text-blue-400 px-2 py-1 rounded font-medium">Browse</span>
+                      <span className="text-xs bg-blue-100 dark:bg-blue-600/20 text-blue-700 dark:text-blue-400 px-2 py-1 rounded font-medium">Browse</span>
                     </button>
                   )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Status</label>
+                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Status</label>
                     <select
                       required
                       value={headerForm.status_id}
                       onChange={(e) => {
                         const selectedStatusId = e.target.value;
                         const selectedStatus = statuses.find(s => s.status_id === selectedStatusId);
-                        const isCompleted = selectedStatus?.status_name?.toLowerCase() === 'completed';
+                        const isCompleted = (selectedStatus?.status_name ?? '').toLowerCase() === 'completed';
                         const todayStr = new Date().toISOString().split('T')[0];
 
                         setHeaderForm(prev => ({
@@ -1547,7 +1547,7 @@ export function JobOrder() {
                           date_completed: isCompleted ? (prev.date_completed || todayStr) : ''
                         }));
                       }}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500"
                     >
                       <option value="">Select Status</option>
                       {statuses.map(s => (
@@ -1557,12 +1557,12 @@ export function JobOrder() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Priority</label>
+                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Priority</label>
                     <select
                       required
                       value={headerForm.priority_id}
                       onChange={(e) => setHeaderForm({ ...headerForm, priority_id: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500"
                     >
                       <option value="">Select Priority</option>
                       {priorities.map(p => (
@@ -1574,10 +1574,10 @@ export function JobOrder() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="relative" ref={supervisorDropdownRef}>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Assigned Supervisor</label>
+                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Assigned Supervisor</label>
                     <div 
                       onClick={() => setShowSupervisorDropdown(true)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-200 flex items-center justify-between cursor-pointer focus-within:border-blue-500"
+                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 flex items-center justify-between cursor-pointer focus-within:border-blue-500"
                     >
                       <input
                         type="text"
@@ -1588,20 +1588,20 @@ export function JobOrder() {
                           setShowSupervisorDropdown(true);
                         }}
                         onFocus={() => setShowSupervisorDropdown(true)}
-                        className="bg-transparent w-full focus:outline-none text-slate-200 text-sm cursor-pointer"
+                        className="bg-transparent w-full focus:outline-none text-slate-900 dark:text-slate-100 text-xs cursor-pointer"
                       />
                       <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
                     </div>
 
                     {showSupervisorDropdown && (
-                      <div className="absolute left-0 right-0 top-full mt-1 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl z-30 max-h-56 overflow-y-auto">
+                      <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl shadow-2xl z-30 max-h-56 overflow-y-auto">
                         <div 
                           onClick={() => {
                             setHeaderForm({ ...headerForm, assigned_supervisor: '' });
                             setSupervisorSearchQuery('');
                             setShowSupervisorDropdown(false);
                           }}
-                          className="px-4 py-2.5 text-xs text-slate-400 hover:bg-slate-900 cursor-pointer border-b border-slate-800"
+                          className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 cursor-pointer border-b border-slate-200 dark:border-slate-800"
                         >
                           -- Clear Selection --
                         </div>
@@ -1609,7 +1609,7 @@ export function JobOrder() {
                           <div className="px-4 py-3 text-xs text-slate-500 text-center">No active supervisors found.</div>
                         ) : (
                           filteredSupervisors.map(emp => {
-                            const empName = emp.employee_name || emp.name || `${emp.first_name || ''} ${emp.last_name || ''}`;
+                            const empName = emp.employee_name ?? emp.name ?? `${emp.first_name ?? ''} ${emp.last_name ?? ''}`;
                             return (
                               <div
                                 key={emp.employee_id}
@@ -1618,7 +1618,7 @@ export function JobOrder() {
                                   setSupervisorSearchQuery(empName);
                                   setShowSupervisorDropdown(false);
                                 }}
-                                className="px-4 py-2.5 text-sm text-slate-200 hover:bg-blue-950/40 hover:text-blue-400 cursor-pointer transition-colors"
+                                className="px-4 py-2 text-xs text-slate-800 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors"
                               >
                                 {empName}
                               </div>
@@ -1630,7 +1630,7 @@ export function JobOrder() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Expected Completion</label>
+                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Expected Completion</label>
                     <div className="relative">
                       <input
                         ref={expectedCompletionRef}
@@ -1638,7 +1638,7 @@ export function JobOrder() {
                         required
                         value={headerForm.expected_completion || ''}
                         onChange={(e) => setHeaderForm({ ...headerForm, expected_completion: e.target.value })}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 pr-10 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3.5 py-2 pr-10 text-xs focus:outline-none focus:border-blue-500"
                       />
                       <button
                         type="button"
@@ -1652,7 +1652,7 @@ export function JobOrder() {
                             }
                           }
                         }}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-400 cursor-pointer"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
                       >
                         <Calendar className="w-4 h-4" />
                       </button>
@@ -1662,14 +1662,14 @@ export function JobOrder() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Date Started</label>
+                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Date Started</label>
                     <div className="relative">
                       <input
                         ref={dateStartedRef}
                         type="date"
                         value={headerForm.date_started || ''}
                         onChange={(e) => setHeaderForm({ ...headerForm, date_started: e.target.value })}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 pr-10 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3.5 py-2 pr-10 text-xs focus:outline-none focus:border-blue-500"
                       />
                       <button
                         type="button"
@@ -1683,47 +1683,47 @@ export function JobOrder() {
                             }
                           }
                         }}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-400 cursor-pointer"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
                       >
                         <Calendar className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Date Completed</label>
+                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Date Completed</label>
                     <input
                       type="date"
                       readOnly
                       value={headerForm.date_completed || ''}
-                      className="w-full bg-slate-950/50 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-400 cursor-not-allowed focus:outline-none"
+                      className="w-full bg-slate-100 dark:bg-slate-950/50 border border-slate-300 dark:border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-500 dark:text-slate-400 cursor-not-allowed focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Odometer Reading</label>
+                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Odometer Reading</label>
                     <input
                       type="number"
                       readOnly
                       value={headerForm.odo_rdg}
-                      className="w-full bg-slate-950/50 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-400 cursor-not-allowed focus:outline-none"
+                      className="w-full bg-slate-100 dark:bg-slate-950/50 border border-slate-300 dark:border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-500 dark:text-slate-400 cursor-not-allowed focus:outline-none"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-800 shrink-0 bg-slate-950">
+              <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-300 dark:border-slate-800 shrink-0 bg-slate-100 dark:bg-slate-900">
                 <button
                   type="button"
                   onClick={() => setIsHeaderModalOpen(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-xs"
                 >
                   Save Changes
                 </button>
@@ -1735,20 +1735,20 @@ export function JobOrder() {
 
       {/* VEHICLE PICKER MODAL */}
       {showVehiclePicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-800 bg-slate-950 shrink-0">
-              <h3 className="text-lg font-semibold text-slate-100">Select Equipment</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 shrink-0">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Select Equipment</h3>
               <button
                 type="button"
                 onClick={() => setShowVehiclePicker(false)}
-                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
+                className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleVehicleSearchSubmit} className="p-4 border-b border-slate-800 bg-slate-950/50 flex gap-2 shrink-0">
+            <form onSubmit={handleVehicleSearchSubmit} className="p-4 border-b border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex gap-2 shrink-0">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                 <input
@@ -1756,25 +1756,25 @@ export function JobOrder() {
                   placeholder="Filter by Plate Number..."
                   value={vehicleSearchQuery}
                   onChange={(e) => setVehicleSearchQuery(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 text-slate-100 pl-9 pr-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer"
               >
                 Search
               </button>
             </form>
 
-            <div className="p-4 overflow-y-auto space-y-2 flex-1">
+            <div className="p-4 overflow-y-auto flex-1 space-y-2">
               {loadingVehicles ? (
-                <div className="py-12 text-center text-slate-400 flex items-center justify-center gap-2">
+                <div className="py-12 text-center text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2 text-xs">
                   <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
                   <span>Loading Equipment records...</span>
                 </div>
               ) : pickerVehicles.length === 0 ? (
-                <div className="py-12 text-center text-slate-400">
+                <div className="py-12 text-center text-xs text-slate-500 dark:text-slate-400">
                   No Equipment records found.
                 </div>
               ) : (
@@ -1791,22 +1791,22 @@ export function JobOrder() {
                       }));
                       setShowVehiclePicker(false);
                     }}
-                    className="flex items-center justify-between bg-slate-950 hover:bg-blue-950/40 border border-slate-800 hover:border-blue-600/50 p-3 rounded-lg transition-colors cursor-pointer group"
+                    className="flex items-center justify-between bg-white dark:bg-slate-950 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-300 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-600/50 p-3 rounded-lg transition-colors cursor-pointer group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-slate-900 rounded-lg group-hover:bg-blue-900/40 text-blue-400 transition-colors">
+                      <div className="p-2 bg-slate-100 dark:bg-slate-900 rounded-lg group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 transition-colors">
                         <Car className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="font-bold text-blue-400">{v.plate_no}</div>
-                        <div className="text-xs text-slate-400">
+                        <div className="font-bold text-blue-600 dark:text-blue-400 text-xs">{v.plate_no}</div>
+                        <div className="text-xs text-slate-600 dark:text-slate-400">
                           {v.make_name || 'N/A'} {v.model_name ? `/ ${v.model_name}` : ''} ({v.type_description || 'N/A'})
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-xs text-slate-400 uppercase">Service Rdg</span>
-                      <div className="text-sm font-semibold text-slate-200">{v.service_rdg ?? v.srv_rdg ?? '0'}</div>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Service Rdg</span>
+                      <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">{v.service_rdg ?? v.srv_rdg ?? '0'}</div>
                     </div>
                   </div>
                 ))
@@ -1818,26 +1818,26 @@ export function JobOrder() {
 
       {/* CHILD FORM MODAL */}
       {isChildModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col overflow-visible">
-            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 shrink-0 bg-slate-950 rounded-t-2xl">
-              <h3 className="text-lg font-bold text-slate-100">
+        <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-lg max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-800 px-6 py-4 shrink-0 bg-slate-100 dark:bg-slate-900">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                 {childEditingId ? 'Edit Details' : 'Add Details'} ({activeChildTab === 'contracts' ? 'Contracted Job' : activeChildTab})
               </h3>
-              <button onClick={() => setIsChildModalOpen(false)} className="text-slate-400 hover:text-slate-100 cursor-pointer">
+              <button onClick={() => setIsChildModalOpen(false)} className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitChildForm} className="flex flex-col flex-1 overflow-visible">
-              <div className="p-6 overflow-visible space-y-4 flex-1">
+            <form onSubmit={handleSubmitChildForm} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
                 {activeChildTab === 'tasks' && (
                   <>
                     <div className="relative" ref={taskStandardDropdownRef}>
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Task Standard</label>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Task Standard</label>
                       <div 
                         onClick={() => setShowTaskStandardDropdown(true)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-200 flex items-center justify-between cursor-pointer focus-within:border-blue-500"
+                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 flex items-center justify-between cursor-pointer focus-within:border-blue-500"
                       >
                         <input
                           type="text"
@@ -1851,20 +1851,20 @@ export function JobOrder() {
                             }
                           }}
                           onFocus={() => setShowTaskStandardDropdown(true)}
-                          className="bg-transparent w-full focus:outline-none text-slate-200 text-sm cursor-pointer"
+                          className="bg-transparent w-full focus:outline-none text-slate-900 dark:text-slate-100 text-xs cursor-pointer"
                         />
                         <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
                       </div>
 
                       {showTaskStandardDropdown && (
-                        <div className="absolute left-0 right-0 top-full mt-1 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl z-30 max-h-56 overflow-y-auto">
+                        <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl shadow-2xl z-30 max-h-56 overflow-y-auto">
                           <div 
                             onClick={() => {
                               setTaskDetailForm({ task_standard_id: '', standard_time: '' });
                               setTaskStandardSearchQuery('');
                               setShowTaskStandardDropdown(false);
                             }}
-                            className="px-4 py-2.5 text-xs text-slate-400 hover:bg-slate-900 cursor-pointer border-b border-slate-800"
+                            className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 cursor-pointer border-b border-slate-200 dark:border-slate-800"
                           >
                             -- Clear Selection --
                           </div>
@@ -1883,7 +1883,7 @@ export function JobOrder() {
                                   setTaskStandardSearchQuery(ts.task_standard_desc);
                                   setShowTaskStandardDropdown(false);
                                 }}
-                                className="px-4 py-2.5 text-sm text-slate-200 hover:bg-blue-950/40 hover:text-blue-400 cursor-pointer transition-colors"
+                                className="px-4 py-2 text-xs text-slate-800 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors"
                               >
                                 {ts.task_standard_desc}
                               </div>
@@ -1894,12 +1894,12 @@ export function JobOrder() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Standard Time (mins)</label>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Standard Time (mins)</label>
                       <input
                         type="number"
                         readOnly
                         value={taskDetailForm.standard_time}
-                        className="w-full bg-slate-950/50 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-400 cursor-not-allowed focus:outline-none"
+                        className="w-full bg-slate-100 dark:bg-slate-950/50 border border-slate-300 dark:border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-500 dark:text-slate-400 cursor-not-allowed focus:outline-none"
                       />
                     </div>
                   </>
@@ -1907,14 +1907,14 @@ export function JobOrder() {
 
                 {activeChildTab === 'materials' && (
                   <div className="space-y-4">
-                    <div className="bg-slate-950 border border-dashed border-slate-700 p-6 rounded-xl text-center space-y-3">
-                      <div className="mx-auto w-10 h-10 bg-blue-600/20 text-blue-400 rounded-full flex items-center justify-center">
+                    <div className="bg-slate-50 dark:bg-slate-950 border border-dashed border-slate-300 dark:border-slate-700 p-6 rounded-xl text-center space-y-3">
+                      <div className="mx-auto w-10 h-10 bg-blue-100 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center">
                         <Upload className="w-5 h-5" />
                       </div>
                       <div>
-                        <h4 className="text-sm font-semibold text-slate-200">Upload Materials File</h4>
-                        <p className="text-xs text-slate-400 mt-1">
-                          Upload a CSV or TSV file containing header columns: <code className="text-blue-400">stock_id, stock_code, part_number, qty, unit_price, list_price, unit_of_measure</code>.
+                        <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-200">Upload Materials File</h4>
+                        <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
+                          Upload a CSV or TSV file containing header columns: <code className="text-blue-600 dark:text-blue-400 font-mono">stock_id, stock_code, part_number, qty, unit_price, list_price, unit_of_measure</code>.
                         </p>
                       </div>
                       <div>
@@ -1922,7 +1922,7 @@ export function JobOrder() {
                           type="file"
                           accept=".csv, .tsv, .txt"
                           onChange={handleMaterialsFileUpload}
-                          className="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer"
+                          className="block w-full text-xs text-slate-500 dark:text-slate-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer"
                         />
                       </div>
                     </div>
@@ -1932,12 +1932,12 @@ export function JobOrder() {
                 {activeChildTab === 'resources' && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Associated Task</label>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Associated Task</label>
                       <select
                         required
                         value={resourceForm.job_order_task_id}
                         onChange={(e) => setResourceForm({ ...resourceForm, job_order_task_id: e.target.value })}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500"
                       >
                         <option value="">Select Task Detail</option>
                         {taskDetails.map(td => {
@@ -1951,43 +1951,43 @@ export function JobOrder() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Employee</label>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Employee</label>
                       <select
                         required
                         value={resourceForm.employee_id}
                         onChange={(e) => {
                           setResourceForm({ ...resourceForm, employee_id: e.target.value });
                         }}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500"
                       >
                         <option value="">Select Employee</option>
                         {employees.map(emp => (
                           <option key={emp.employee_id} value={emp.employee_id}>
-                            {emp.employee_name || emp.name || `${emp.first_name || ''} ${emp.last_name || ''}`}
+                            {emp.employee_name ?? emp.name ?? `${emp.first_name ?? ''} ${emp.last_name ?? ''}`}
                           </option>
                         ))}
                       </select>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Assigned Date</label>
+                        <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Assigned Date</label>
                         <input
                           type="date"
                           required
                           value={resourceForm.assigned_date}
                           onChange={(e) => setResourceForm({ ...resourceForm, assigned_date: e.target.value })}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                          className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Charged Time (h)</label>
+                        <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Charged Time (h)</label>
                         <input
                           type="number"
                           step="any"
                           required
                           value={resourceForm.charged_time}
                           onChange={(e) => setResourceForm({ ...resourceForm, charged_time: e.target.value })}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                          className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500"
                         />
                       </div>
                     </div>
@@ -1997,48 +1997,48 @@ export function JobOrder() {
                 {activeChildTab === 'contracts' && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Contract Description</label>
+                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Contract Description</label>
                       <textarea
                         required
                         rows={3}
                         placeholder="Enter contracted job description..."
                         value={contractForm.contract_decription}
                         onChange={(e) => setContractForm({ ...contractForm, contract_decription: e.target.value })}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500"
                       />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Qty</label>
+                        <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Qty</label>
                         <input
                           type="number"
                           step="any"
                           required
                           value={contractForm.qty}
                           onChange={(e) => setContractForm({ ...contractForm, qty: e.target.value })}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                          className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Unit Price (₱)</label>
+                        <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Unit Price (₱)</label>
                         <input
                           type="number"
                           step="any"
                           required
                           value={contractForm.unit_price}
                           onChange={(e) => setContractForm({ ...contractForm, unit_price: e.target.value })}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                          className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">List Price (₱)</label>
+                        <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">List Price (₱)</label>
                         <input
                           type="number"
                           step="any"
                           required
                           value={contractForm.list_price}
                           onChange={(e) => setContractForm({ ...contractForm, list_price: e.target.value })}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+                          className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500"
                         />
                       </div>
                     </div>
@@ -2047,17 +2047,17 @@ export function JobOrder() {
               </div>
 
               {activeChildTab !== 'materials' && (
-                <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-800 shrink-0 bg-slate-950 rounded-b-2xl">
+                <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-300 dark:border-slate-800 shrink-0 bg-slate-100 dark:bg-slate-900">
                   <button
                     type="button"
                     onClick={() => setIsChildModalOpen(false)}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                    className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-xs"
                   >
                     Save Changes
                   </button>
@@ -2072,6 +2072,10 @@ export function JobOrder() {
 }
 
 export default JobOrder;
+
+
+
+
 
 
 
