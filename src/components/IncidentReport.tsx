@@ -967,14 +967,6 @@ export function IncidentReport() {
             <p className="text-xs text-slate-400">Log equipment incidents and analyze root causes across unsafe conditions, acts, factors, and causes.</p>
           </div>
         </div>
-
-        <button
-          onClick={handleOpenCreateModal}
-          className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Incident Report</span>
-        </button>
       </div>
 
       {/* Messages */}
@@ -1025,6 +1017,14 @@ export function IncidentReport() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleOpenCreateModal}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>New Incident Report</span>
+            </button>
+
             <button
               onClick={() => setIsSecondAreaOpen(!isSecondAreaOpen)}
               className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors cursor-pointer"
@@ -1268,8 +1268,8 @@ export function IncidentReport() {
           </button>
         </div>
 
-        {/* Scrollable Container for Child Tabs */}
-        <div className="flex-1 min-h-0 overflow-auto border border-slate-800/60 rounded-lg bg-slate-950">
+        {/* Scrollable Container for Child Tabs with Fixed Flex Scrolling */}
+        <div className="flex-1 min-h-0 overflow-y-auto border border-slate-800/60 rounded-lg bg-slate-950">
           {loadingChild ? (
             <div className="p-8 text-center text-slate-400 flex items-center justify-center gap-2 text-xs">
               <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
