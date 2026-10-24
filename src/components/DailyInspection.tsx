@@ -145,8 +145,7 @@ export function DailyInspection() {
       const { data, error: fetchError } = await query;
       if (fetchError) throw fetchError;
       setVehicles(data || []);
-    } catch (err: unknown) {
-      console.error('Error fetching vehicles:', err);
+    } catch {
       setErrorMsg('Failed to load vehicle records. Please try again later.');
     } finally {
       setLoading(false);
@@ -199,8 +198,8 @@ export function DailyInspection() {
 
       setDailyRisks(formatted);
       setFilteredDailyRisks(formatted.filter(r => r.log_date === todayDateStr));
-    } catch (err: unknown) {
-      console.error('Error fetching daily risks:', err);
+    } catch {
+      // Error handling
     }
   }, [todayDateStr]);
 
@@ -287,8 +286,7 @@ export function DailyInspection() {
       });
 
       setDateFilteredVehicles(Array.from(uniqueMap.values()));
-    } catch (err) {
-      console.error('Error fetching filtered vehicles for search modal:', err);
+    } catch {
       setDateFilteredVehicles([]);
     }
   };
@@ -308,8 +306,8 @@ export function DailyInspection() {
       } else {
         setSelectedLogId('');
       }
-    } catch (err) {
-      console.error('Error fetching current day logs for vehicle:', err);
+    } catch {
+      // Error handling
     }
   };
 
@@ -317,8 +315,8 @@ export function DailyInspection() {
     try {
       const fmeaRes = await supabase.from('vs_fmea_items').select('*').limit(100);
       setFmeaList(fmeaRes.data || []);
-    } catch (err) {
-      console.error('Error fetching flag options:', err);
+    } catch {
+      // Error handling
     }
   };
 
@@ -351,8 +349,8 @@ export function DailyInspection() {
       const { data, error } = await query.limit(50);
       if (error) throw error;
       setFlagVehiclesList(data || []);
-    } catch (err) {
-      console.error('Error searching current day vehicles for flags:', err);
+    } catch {
+      // Error handling
     } finally {
       setLoading(false);
     }
@@ -371,9 +369,8 @@ export function DailyInspection() {
 
         if (fetchError) throw fetchError;
         if (isMounted) setVehicles(data || []);
-      } catch (err: unknown) {
+      } catch {
         if (isMounted) {
-          console.error('Error fetching vehicles:', err);
           setErrorMsg('Failed to load vehicle records. Please try again later.');
         }
       }
@@ -462,8 +459,7 @@ export function DailyInspection() {
       setCurrentRdg('');
       setRemarks('');
       await fetchVehicles();
-    } catch (err: unknown) {
-      console.error('Error recording daily log:', err);
+    } catch {
       setErrorMsg('Failed to record daily inspection. Please verify your inputs.');
     } finally {
       setSubmitting(false);
@@ -513,8 +509,7 @@ export function DailyInspection() {
 
       setSuccessMsg('Inspection flag added successfully!');
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: unknown) {
-      console.error('Error saving inspection flag:', err);
+    } catch {
       alert('Failed to save inspection flag.');
     } finally {
       setSubmitting(false);
@@ -530,8 +525,7 @@ export function DailyInspection() {
       setFilteredDailyRisks(filteredDailyRisks.filter(r => r.logrisk_id !== logriskId));
       setSuccessMsg('Inspection flag deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: unknown) {
-      console.error('Error deleting flag:', err);
+    } catch {
       alert('Failed to delete inspection flag.');
     }
   };
@@ -571,13 +565,13 @@ export function DailyInspection() {
   return (
     <div className="h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-slate-300 dark:border-slate-800 pb-3 shrink-0">
-        <div className="p-2.5 bg-blue-100 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
+      <div className="flex items-center gap-3 border-b border-(--border-main) pb-3 shrink-0">
+        <div className="bg-black text-white p-2 rounded-xl shadow-xs shrink-0">
           <ClipboardList className="w-6 h-6" />
         </div>
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Daily Inspection & Telemetry</h1>
-          <p className="text-xs text-slate-600 dark:text-slate-400">Record daily meter increments and monitor vehicle risk inspection flags.</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-(--text-primary)">Daily Inspection & Telemetry</h1>
+          <p className="text-xs sm:text-sm text-(--text-muted)">Record daily meter increments and monitor vehicle risk inspection flags.</p>
         </div>
       </div>
 
@@ -597,15 +591,15 @@ export function DailyInspection() {
       )}
 
       {/* Main Content Body Container */}
-      <div className="flex flex-col flex-1 min-h-0 bg-slate-50/90 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
         {/* Tab Navigation Header */}
-        <div className="flex border-b border-slate-300 dark:border-slate-800 gap-2 shrink-0">
+        <div className="flex border-b border-(--border-main) gap-2 shrink-0">
           <button
             onClick={() => setActiveTab('form')}
             className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors cursor-pointer border-b-2 ${
               activeTab === 'form'
-                ? 'border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30'
-                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
+                : 'border-transparent text-(--text-secondary) hover:text-(--text-primary)'
             }`}
           >
             <ClipboardList className="w-3.5 h-3.5" />
@@ -619,8 +613,8 @@ export function DailyInspection() {
             }}
             className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors cursor-pointer border-b-2 ${
               activeTab === 'flags'
-                ? 'border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30'
-                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
+                : 'border-transparent text-(--text-secondary) hover:text-(--text-primary)'
             }`}
           >
             <Flag className="w-3.5 h-3.5" />
@@ -631,43 +625,43 @@ export function DailyInspection() {
         {/* TAB 1: DAILY INSPECTION FORM */}
         {activeTab === 'form' && (
           <div className="flex flex-col flex-1 min-h-0 space-y-3 overflow-y-auto p-1">
-            <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl p-4 sm:p-6 shadow-xs space-y-4">
+            <form onSubmit={handleSubmit} className="bg-(--bg-surface) border border-(--border-main) rounded-xl p-4 sm:p-6 shadow-xs space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex">
+                  <span className="text-xs font-semibold text-(--text-secondary) uppercase tracking-wider flex">
                     Selected Vehicle <span className="text-red-500 ml-1">*</span>
                   </span>
                   {capturedLogId && (
-                    <span className="text-[10px] font-semibold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800/60">
+                    <span className="text-[10px] font-semibold bg-(--accent-subtle) text-(--text-primary) px-2.5 py-0.5 rounded-full border border-(--border-main)">
                       Log Recorded
                     </span>
                   )}
                 </div>
                 
                 {selectedVehicle ? (
-                  <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 border border-blue-300 dark:border-blue-900/60 p-3 rounded-xl">
+                  <div className="flex items-center justify-between bg-(--bg-elevated) border border-(--border-main) p-3 rounded-xl">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full text-xs">
                       <div>
-                        <span className="text-slate-500 dark:text-slate-400 uppercase text-[10px]">Plate Number</span>
-                        <div className="font-bold text-blue-600 dark:text-blue-400 text-xs">{selectedVehicle.plate_no}</div>
+                        <span className="text-(--text-muted) uppercase text-[10px]">Plate Number</span>
+                        <div className="font-bold text-(--text-primary) text-xs">{selectedVehicle.plate_no}</div>
                       </div>
                       <div>
-                        <span className="text-slate-500 dark:text-slate-400 uppercase text-[10px]">Baseline Reading</span>
-                        <div className="font-semibold text-slate-900 dark:text-slate-100">{previousRdg}</div>
+                        <span className="text-(--text-muted) uppercase text-[10px]">Baseline Reading</span>
+                        <div className="font-semibold text-(--text-primary)">{previousRdg}</div>
                       </div>
                       <div>
-                        <span className="text-slate-500 dark:text-slate-400 uppercase text-[10px]">Make / Model</span>
-                        <div className="font-semibold text-slate-900 dark:text-slate-100">{selectedVehicle.make_name || 'N/A'} {selectedVehicle.model_name ? `/ ${selectedVehicle.model_name}` : ''}</div>
+                        <span className="text-(--text-muted) uppercase text-[10px]">Make / Model</span>
+                        <div className="font-semibold text-(--text-primary)">{selectedVehicle.make_name || 'N/A'} {selectedVehicle.model_name ? `/ ${selectedVehicle.model_name}` : ''}</div>
                       </div>
                       <div>
-                        <span className="text-slate-500 dark:text-slate-400 uppercase text-[10px]">Type</span>
-                        <div className="font-semibold text-slate-900 dark:text-slate-100">{selectedVehicle.type_description || 'N/A'}</div>
+                        <span className="text-(--text-muted) uppercase text-[10px]">Type</span>
+                        <div className="font-semibold text-(--text-primary)">{selectedVehicle.type_description || 'N/A'}</div>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => { setSelectedVehicle(null); setCapturedLogId(null); setPreviousRdgInput(''); }}
-                      className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 p-1.5 transition-colors cursor-pointer shrink-0"
+                      className="text-(--text-muted) hover:text-red-600 dark:hover:text-red-400 p-1.5 transition-colors cursor-pointer shrink-0"
                       title="Change vehicle"
                     >
                       <X className="w-4 h-4" />
@@ -677,35 +671,35 @@ export function DailyInspection() {
                   <button
                     type="button"
                     onClick={() => setShowPicker(true)}
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 hover:border-blue-500 text-slate-700 dark:text-slate-300 px-4 py-3 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer"
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) px-4 py-3 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer"
                   >
                     <span className="flex items-center gap-2">
-                      <Search className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      <Search className="w-4 h-4 text-(--text-primary)" />
                       {vehicles.length > 0 ? `Search / Select Vehicle (${vehicles.length} loaded)...` : 'Search / Select Vehicle...'}
                     </span>
-                    <span className="text-xs bg-blue-100 dark:bg-blue-600/20 text-blue-700 dark:text-blue-400 px-2 py-1 rounded font-semibold">Browse</span>
+                    <span className="text-xs bg-(--accent-subtle) text-(--text-primary) px-2 py-1 rounded font-semibold">Browse</span>
                   </button>
                 )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="space-y-1.5">
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <span className="text-xs font-semibold text-(--text-secondary) uppercase tracking-wider flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-(--text-primary)" />
                     Log Date <span className="text-red-500">*</span>
                   </span>
                   <input
                     type="date"
                     value={logDate}
                     onChange={(e) => setLogDate(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 px-3.5 py-2 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) px-3.5 py-2 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
                     required
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1">
-                    <Gauge className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <span className="text-xs font-semibold text-(--text-secondary) uppercase tracking-wider flex items-center gap-1">
+                    <Gauge className="w-3.5 h-3.5 text-(--text-primary)" />
                     Previous Reading <span className="text-red-500">*</span>
                   </span>
                   <input
@@ -713,13 +707,13 @@ export function DailyInspection() {
                     step="0.01"
                     disabled
                     value={previousRdgInput}
-                    className="w-full bg-slate-100 dark:bg-slate-950/50 border border-slate-300 dark:border-slate-800 text-slate-500 dark:text-slate-400 px-3.5 py-2 rounded-lg text-xs cursor-not-allowed font-mono"
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-muted) px-3.5 py-2 rounded-lg text-xs cursor-not-allowed font-mono"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1">
-                    <Gauge className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <span className="text-xs font-semibold text-(--text-secondary) uppercase tracking-wider flex items-center gap-1">
+                    <Gauge className="w-3.5 h-3.5 text-(--text-primary)" />
                     Current Reading <span className="text-red-500">*</span>
                   </span>
                   <input
@@ -728,28 +722,28 @@ export function DailyInspection() {
                     placeholder="e.g. 52000.00"
                     value={currentRdg}
                     onChange={(e) => setCurrentRdg(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 px-3.5 py-2 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) px-3.5 py-2 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
                     required
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1">
-                    <Gauge className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <span className="text-xs font-semibold text-(--text-secondary) uppercase tracking-wider flex items-center gap-1">
+                    <Gauge className="w-3.5 h-3.5 text-(--text-primary)" />
                     Daily Increment
                   </span>
                   <input
                     type="number"
                     disabled
                     value={computedIncrement}
-                    className="w-full bg-slate-100 dark:bg-slate-950/50 border border-slate-300 dark:border-slate-800 text-amber-600 dark:text-amber-400 font-mono font-bold px-3.5 py-2 rounded-lg text-xs cursor-not-allowed"
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) font-mono font-bold px-3.5 py-2 rounded-lg text-xs cursor-not-allowed"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1">
-                  <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <span className="text-xs font-semibold text-(--text-secondary) uppercase tracking-wider flex items-center gap-1">
+                  <FileText className="w-3.5 h-3.5 text-(--text-primary)" />
                   Remarks / Route Notes
                 </span>
                 <textarea
@@ -757,15 +751,15 @@ export function DailyInspection() {
                   placeholder="e.g. Standard delivery route, minor maintenance check performed..."
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 px-3.5 py-2 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) px-3.5 py-2 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
                 />
               </div>
 
-              <div className="flex justify-end pt-2 border-t border-slate-200 dark:border-slate-800 shrink-0">
+              <div className="flex justify-end pt-2 border-t border-(--border-main) shrink-0">
                 <button
                   type="submit"
                   disabled={submitting || !selectedVehicle}
-                  className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
+                  className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) disabled:opacity-50 text-(--btn-primary-text) px-4 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
                 >
                   {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   Record Daily Inspection
@@ -778,13 +772,13 @@ export function DailyInspection() {
         {/* TAB 2: INSPECTION FLAGS TABLE */}
         {activeTab === 'flags' && (
           <div className="flex flex-col flex-1 min-h-0 space-y-3 overflow-hidden">
-            <div className="flex flex-wrap justify-between items-center gap-3 border-b border-slate-300 dark:border-slate-800 pb-3 shrink-0">
+            <div className="flex flex-wrap justify-between items-center gap-3 border-b border-(--border-main) pb-3 shrink-0">
               <div>
-                <h2 className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <h2 className="text-xs font-bold text-(--text-primary) flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-(--text-primary)" />
                   Vehicle Daily Risks & Inspection Flags
                 </h2>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400">Manage flags linked to daily operations logs.</p>
+                <p className="text-[11px] text-(--text-muted)">Manage flags linked to daily operations logs.</p>
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
@@ -795,18 +789,18 @@ export function DailyInspection() {
                     setDateFilteredVehicles([]);
                     setIsSearchFlagsModalOpen(true);
                   }}
-                  className="bg-white dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-800 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                  className="bg-(--bg-surface) hover:bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer inline-flex items-center gap-1.5"
                 >
-                  <Search className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <Search className="w-3.5 h-3.5 text-(--text-primary)" />
                   <span>Search Flags</span>
                   {(searchFlagDate || searchFlagVehicleId) && (
-                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    <span className="w-2 h-2 rounded-full bg-(--text-primary)"></span>
                   )}
                 </button>
 
                 <button
                   onClick={handleOpenAddFlagModal}
-                  className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
+                  className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Add Flags</span>
@@ -815,10 +809,10 @@ export function DailyInspection() {
             </div>
 
             {/* Scrollable Table Wrapper */}
-            <div className="flex-1 min-h-0 overflow-auto border border-slate-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-950">
+            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[11px] uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 font-semibold shadow-xs">
+                  <tr className="border-b border-(--border-main) text-(--text-muted) text-[11px] uppercase bg-(--bg-elevated) sticky top-0 z-10 font-semibold shadow-xs">
                     <th className="py-2 px-3">Vehicle Plate</th>
                     <th className="py-2 px-3">Log Date</th>
                     <th className="py-2 px-3">Detail Code</th>
@@ -827,10 +821,10 @@ export function DailyInspection() {
                     <th className="py-2 px-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
                   {filteredDailyRisks.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="text-center py-12 px-3 text-slate-500 dark:text-slate-400 italic">
+                      <td colSpan={6} className="text-center py-12 px-3 text-(--text-muted) italic">
                         No inspection risk flags found for the current day.
                       </td>
                     </tr>
@@ -838,12 +832,12 @@ export function DailyInspection() {
                     filteredDailyRisks.map((risk) => {
                       const isToday = risk.log_date === todayDateStr;
                       return (
-                        <tr key={risk.logrisk_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                          <td className="py-2 px-3 font-bold text-blue-600 dark:text-blue-400">{risk.plate_no || '—'}</td>
+                        <tr key={risk.logrisk_id} className="hover:bg-(--accent-subtle) transition-colors">
+                          <td className="py-2 px-3 font-bold text-(--text-primary)">{risk.plate_no || '—'}</td>
                           <td className="py-2 px-3">{risk.log_date || '—'}</td>
-                          <td className="py-2 px-3 font-mono font-semibold text-slate-900 dark:text-slate-100">{risk.detail_code || '—'}</td>
-                          <td className="py-2 px-3 text-slate-800 dark:text-slate-200">{risk.detail_description || '—'}</td>
-                          <td className="py-2 px-3 text-slate-600 dark:text-slate-400">{risk.current_control || '—'}</td>
+                          <td className="py-2 px-3 font-mono font-semibold text-(--text-primary)">{risk.detail_code || '—'}</td>
+                          <td className="py-2 px-3 text-(--text-secondary)">{risk.detail_description || '—'}</td>
+                          <td className="py-2 px-3 text-(--text-muted)">{risk.current_control || '—'}</td>
                           <td className="py-2 px-3 text-right">
                             <button
                               onClick={() => handleDeleteFlag(risk.logrisk_id)}
@@ -851,7 +845,7 @@ export function DailyInspection() {
                               className={`inline-flex items-center gap-1 font-medium text-xs ${
                                 isToday 
                                   ? 'text-red-600 dark:text-red-400 hover:underline cursor-pointer' 
-                                  : 'text-slate-400 dark:text-slate-600 opacity-40 cursor-not-allowed'
+                                  : 'text-(--text-muted) opacity-40 cursor-not-allowed'
                               }`}
                               title={isToday ? 'Delete flag' : 'Cannot delete records from past dates'}
                             >
@@ -872,33 +866,33 @@ export function DailyInspection() {
       {/* VEHICLE PICKER MODAL (Form Tab) */}
       {showPicker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 shrink-0">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Search Vehicle</h3>
+          <div className="bg-(--bg-surface) border border-(--border-main) rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-(--border-main) bg-(--bg-elevated) shrink-0">
+              <h3 className="text-lg font-bold text-(--text-primary)">Search Vehicle</h3>
               <button
                 type="button"
                 onClick={() => setShowPicker(false)}
-                className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer"
+                className="text-(--text-muted) hover:text-(--text-primary) p-1 rounded-lg hover:bg-(--accent-subtle) cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSearchSubmit} className="p-4 border-b border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-3 shrink-0">
+            <form onSubmit={handleSearchSubmit} className="p-4 border-b border-(--border-main) bg-(--bg-elevated) space-y-3 shrink-0">
               <div className="flex gap-2">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                  <Search className="absolute left-3 top-3 w-4 h-4 text-(--text-muted)" />
                   <input
                     type="text"
                     placeholder="Search by Plate Number..."
                     value={pickerSearchQuery}
                     onChange={(e) => setPickerSearchQuery(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+                  className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-4 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-xs"
                 >
                   Search
                 </button>
@@ -910,9 +904,9 @@ export function DailyInspection() {
                   id="currentDayOnlyCheckbox"
                   checked={searchCurrentDayOnly}
                   onChange={(e) => setSearchCurrentDayOnly(e.target.checked)}
-                  className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 bg-white dark:bg-slate-950 cursor-pointer"
+                  className="rounded border-(--border-main) text-(--text-primary) bg-(--bg-elevated) cursor-pointer"
                 />
-                <label htmlFor="currentDayOnlyCheckbox" className="text-xs text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                <label htmlFor="currentDayOnlyCheckbox" className="text-xs text-(--text-secondary) cursor-pointer select-none">
                   Show vehicles with logs for the current day only
                 </label>
               </div>
@@ -920,12 +914,12 @@ export function DailyInspection() {
 
             <div className="p-4 overflow-y-auto flex-1 min-h-0 space-y-2">
               {loading ? (
-                <div className="py-12 text-center text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2 text-xs">
-                  <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                <div className="py-12 text-center text-(--text-muted) flex items-center justify-center gap-2 text-xs">
+                  <Loader2 className="w-5 h-5 animate-spin text-(--text-primary)" />
                   <span>Loading vehicle records...</span>
                 </div>
               ) : vehicles.length === 0 ? (
-                <div className="py-12 text-center text-slate-500 dark:text-slate-400 text-xs italic">
+                <div className="py-12 text-center text-(--text-muted) text-xs italic">
                   No vehicle records found.
                 </div>
               ) : (
@@ -933,22 +927,22 @@ export function DailyInspection() {
                   <div
                     key={v.id || v.vehicle_id || index}
                     onClick={() => handleSelectVehicle(v)}
-                    className="flex items-center justify-between bg-white dark:bg-slate-950 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-300 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-600/50 p-3 rounded-lg transition-colors cursor-pointer group"
+                    className="flex items-center justify-between bg-(--bg-elevated) hover:bg-(--accent-subtle) border border-(--border-main) p-3 rounded-lg transition-colors cursor-pointer group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-slate-100 dark:bg-slate-900 rounded-lg group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 transition-colors">
+                      <div className="p-2 bg-(--bg-surface) rounded-lg text-(--text-primary) transition-colors">
                         <Car className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="font-bold text-blue-600 dark:text-blue-400 text-xs">{v.plate_no}</div>
-                        <div className="text-xs text-slate-600 dark:text-slate-400">
+                        <div className="font-bold text-(--text-primary) text-xs">{v.plate_no}</div>
+                        <div className="text-xs text-(--text-muted)">
                           {v.make_name || 'N/A'} {v.model_name ? `/ ${v.model_name}` : ''} ({v.type_description || 'N/A'})
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Service Rdg</span>
-                      <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">{v.service_rdg ?? '0'}</div>
+                      <span className="text-[10px] text-(--text-muted) uppercase">Service Rdg</span>
+                      <div className="text-xs font-semibold text-(--text-secondary)">{v.service_rdg ?? '0'}</div>
                     </div>
                   </div>
                 ))
@@ -961,13 +955,13 @@ export function DailyInspection() {
       {/* SEARCH INSPECTION FLAGS MODAL */}
       {isSearchFlagsModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-md max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 shrink-0">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Search Inspection Flags</h3>
+          <div className="bg-(--bg-surface) border border-(--border-main) rounded-2xl w-full max-w-md max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-(--border-main) bg-(--bg-elevated) shrink-0">
+              <h3 className="text-lg font-bold text-(--text-primary)">Search Inspection Flags</h3>
               <button
                 type="button"
                 onClick={() => setIsSearchFlagsModalOpen(false)}
-                className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer"
+                className="text-(--text-muted) hover:text-(--text-primary) p-1 rounded-lg hover:bg-(--accent-subtle) cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -976,7 +970,7 @@ export function DailyInspection() {
             <form onSubmit={handleExecuteSearchFlags} className="flex flex-col flex-1 min-h-0 overflow-hidden">
               <div className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto flex-1 min-h-0">
                 <div className="space-y-1.5">
-                  <span className="block font-semibold uppercase text-slate-700 dark:text-slate-300">Select Date</span>
+                  <span className="block font-semibold uppercase text-(--text-secondary)">Select Date</span>
                   <input
                     type="date"
                     value={searchFlagDate}
@@ -986,17 +980,17 @@ export function DailyInspection() {
                       setSearchFlagVehicleId('');
                       fetchVehiclesByDateAndRisks(newDate);
                     }}
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500"
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <span className="block font-semibold uppercase text-slate-700 dark:text-slate-300">Select Vehicle (Plate No)</span>
+                  <span className="block font-semibold uppercase text-(--text-secondary)">Select Vehicle (Plate No)</span>
                   <select
                     value={searchFlagVehicleId}
                     onChange={(e) => setSearchFlagVehicleId(e.target.value)}
                     disabled={!searchFlagDate}
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary) disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="">
                       {!searchFlagDate ? '— Select date first —' : dateFilteredVehicles.length === 0 ? 'No vehicles with records on this date' : 'Select Vehicle Plate No'}
@@ -1010,11 +1004,11 @@ export function DailyInspection() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between px-6 py-4 border-t border-slate-300 dark:border-slate-800 shrink-0 bg-slate-100 dark:bg-slate-900">
+              <div className="flex items-center justify-between px-6 py-4 border-t border-(--border-main) shrink-0 bg-(--bg-elevated)">
                 <button
                   type="button"
                   onClick={handleResetSearchFlags}
-                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-(--accent-subtle) text-(--text-primary) hover:opacity-80 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                 >
                   Reset Filter
                 </button>
@@ -1022,13 +1016,13 @@ export function DailyInspection() {
                   <button
                     type="button"
                     onClick={() => setIsSearchFlagsModalOpen(false)}
-                    className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                    className="px-4 py-2 bg-(--accent-subtle) text-(--text-primary) hover:opacity-80 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+                    className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-xs"
                   >
                     Apply Filter
                   </button>
@@ -1042,13 +1036,13 @@ export function DailyInspection() {
       {/* ADD INSPECTION FLAG MODAL */}
       {isAddFlagModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-lg max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 shrink-0">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Add Inspection Flag</h3>
+          <div className="bg-(--bg-surface) border border-(--border-main) rounded-2xl w-full max-w-lg max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-(--border-main) bg-(--bg-elevated) shrink-0">
+              <h3 className="text-lg font-bold text-(--text-primary)">Add Inspection Flag</h3>
               <button
                 type="button"
                 onClick={() => setIsAddFlagModalOpen(false)}
-                className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer"
+                className="text-(--text-muted) hover:text-(--text-primary) p-1 rounded-lg hover:bg-(--accent-subtle) cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1057,22 +1051,22 @@ export function DailyInspection() {
             <form onSubmit={handleSaveFlag} className="flex flex-col flex-1 min-h-0 overflow-hidden">
               <div className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto flex-1 min-h-0">
                 <div className="space-y-1.5">
-                  <span className="block font-semibold uppercase text-slate-700 dark:text-slate-300">
+                  <span className="block font-semibold uppercase text-(--text-secondary)">
                     Search Vehicle (Current Day Logs) <span className="text-red-500">*</span>
                   </span>
                   
                   {selectedFlagVehicle ? (
-                    <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 border border-blue-300 dark:border-blue-900/60 p-3 rounded-lg">
+                    <div className="flex items-center justify-between bg-(--bg-elevated) border border-(--border-main) p-3 rounded-lg">
                       <div>
-                        <div className="font-bold text-blue-600 dark:text-blue-400 text-xs">{selectedFlagVehicle.plate_no}</div>
-                        <div className="text-xs text-slate-600 dark:text-slate-400">
+                        <div className="font-bold text-(--text-primary) text-xs">{selectedFlagVehicle.plate_no}</div>
+                        <div className="text-xs text-(--text-muted)">
                           {selectedFlagVehicle.make_name || 'N/A'} {selectedFlagVehicle.model_name ? `/ ${selectedFlagVehicle.model_name}` : ''}
                         </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => { setSelectedFlagVehicle(null); setSelectedLogId(''); setDailyLogsList([]); }}
-                        className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 p-1.5 transition-colors cursor-pointer shrink-0"
+                        className="text-(--text-muted) hover:text-red-600 dark:hover:text-red-400 p-1.5 transition-colors cursor-pointer shrink-0"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -1085,24 +1079,24 @@ export function DailyInspection() {
                         searchVehiclesForFlagsModal('');
                         setShowFlagVehiclePicker(true);
                       }}
-                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 hover:border-blue-500 text-slate-700 dark:text-slate-300 px-3.5 py-2.5 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer"
+                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) px-3.5 py-2.5 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer"
                     >
                       <span className="flex items-center gap-2">
-                        <Search className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                        <Search className="w-3.5 h-3.5 text-(--text-primary)" />
                         Search vehicle with logs for current day...
                       </span>
-                      <span className="text-xs bg-blue-100 dark:bg-blue-600/20 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded font-semibold">Search</span>
+                      <span className="text-xs bg-(--accent-subtle) text-(--text-primary) px-2 py-0.5 rounded font-semibold">Search</span>
                     </button>
                   )}
                 </div>
 
                 <div>
-                  <span className="block font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Active Log Record (Current Day Only)</span>
+                  <span className="block font-semibold uppercase text-(--text-secondary) mb-1">Active Log Record (Current Day Only)</span>
                   <select
                     required
                     value={selectedLogId}
                     onChange={(e) => setSelectedLogId(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500"
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                   >
                     <option value="">{dailyLogsList.length === 0 ? '— Select vehicle first —' : 'Select Current Day Log'}</option>
                     {dailyLogsList.map((log) => (
@@ -1114,24 +1108,24 @@ export function DailyInspection() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <span className="block font-semibold uppercase text-slate-700 dark:text-slate-300">
+                  <span className="block font-semibold uppercase text-(--text-secondary)">
                     Select FMEA Item <span className="text-red-500">*</span>
                   </span>
                   <div className="relative">
-                    <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                    <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
                     <input
                       type="text"
                       placeholder="Filter by detail code, description, or control..."
                       value={fmeaSearchQuery}
                       onChange={(e) => setFmeaSearchQuery(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 pl-8 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:border-blue-500 mb-1.5"
+                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-8 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:border-(--text-primary) mb-1.5"
                     />
                   </div>
                   <select
                     required
                     value={selectedFmeaId}
                     onChange={(e) => setSelectedFmeaId(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500"
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                   >
                     <option value="">Select FMEA Item...</option>
                     {filteredFmeaList.map(f => {
@@ -1149,18 +1143,18 @@ export function DailyInspection() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-300 dark:border-slate-800 shrink-0 bg-slate-100 dark:bg-slate-900">
+              <div className="flex justify-end gap-3 px-6 py-4 border-t border-(--border-main) shrink-0 bg-(--bg-elevated)">
                 <button
                   type="button"
                   onClick={() => setIsAddFlagModalOpen(false)}
-                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-(--accent-subtle) text-(--text-primary) hover:opacity-80 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                  className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
                 >
                   {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   <span>Save Flag</span>
@@ -1174,21 +1168,21 @@ export function DailyInspection() {
       {/* FLAGS VEHICLE PICKER MODAL */}
       {showFlagVehiclePicker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 shrink-0">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Search Vehicle (Current Day Logs)</h3>
+          <div className="bg-(--bg-surface) border border-(--border-main) rounded-2xl w-full max-w-xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-(--border-main) bg-(--bg-elevated) shrink-0">
+              <h3 className="text-lg font-bold text-(--text-primary)">Search Vehicle (Current Day Logs)</h3>
               <button
                 type="button"
                 onClick={() => setShowFlagVehiclePicker(false)}
-                className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer"
+                className="text-(--text-muted) hover:text-(--text-primary) p-1 rounded-lg hover:bg-(--accent-subtle) cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-4 border-b border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 shrink-0">
+            <div className="p-4 border-b border-(--border-main) bg-(--bg-elevated) shrink-0">
               <div className="relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-3 top-3 w-4 h-4 text-(--text-muted)" />
                 <input
                   type="text"
                   placeholder="Filter by Plate Number..."
@@ -1197,19 +1191,19 @@ export function DailyInspection() {
                     setFlagPickerSearch(e.target.value);
                     searchVehiclesForFlagsModal(e.target.value);
                   }}
-                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
                 />
               </div>
             </div>
 
             <div className="p-4 overflow-y-auto flex-1 min-h-0 space-y-2">
               {loading ? (
-                <div className="py-12 text-center text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2 text-xs">
-                  <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                <div className="py-12 text-center text-(--text-muted) flex items-center justify-center gap-2 text-xs">
+                  <Loader2 className="w-5 h-5 animate-spin text-(--text-primary)" />
                   <span>Loading vehicles with current day logs...</span>
                 </div>
               ) : flagVehiclesList.length === 0 ? (
-                <div className="py-12 text-center text-slate-500 dark:text-slate-400 text-xs italic">
+                <div className="py-12 text-center text-(--text-muted) text-xs italic">
                   No vehicles found with logs for the current day.
                 </div>
               ) : (
@@ -1217,22 +1211,22 @@ export function DailyInspection() {
                   <div
                     key={v.id || v.vehicle_id || index}
                     onClick={() => handleSelectFlagVehicle(v)}
-                    className="flex items-center justify-between bg-white dark:bg-slate-950 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-300 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-600/50 p-3 rounded-lg transition-colors cursor-pointer group"
+                    className="flex items-center justify-between bg-(--bg-elevated) hover:bg-(--accent-subtle) border border-(--border-main) p-3 rounded-lg transition-colors cursor-pointer group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-slate-100 dark:bg-slate-900 rounded-lg group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 transition-colors">
+                      <div className="p-2 bg-(--bg-surface) rounded-lg text-(--text-primary) transition-colors">
                         <Car className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="font-bold text-blue-600 dark:text-blue-400 text-xs">{v.plate_no}</div>
-                        <div className="text-xs text-slate-600 dark:text-slate-400">
+                        <div className="font-bold text-(--text-primary) text-xs">{v.plate_no}</div>
+                        <div className="text-xs text-(--text-muted)">
                           {v.make_name || 'N/A'} {v.model_name ? `/ ${v.model_name}` : ''} ({v.type_description || 'N/A'})
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Service Rdg</span>
-                      <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">{v.service_rdg ?? '0'}</div>
+                      <span className="text-[10px] text-(--text-muted) uppercase">Service Rdg</span>
+                      <div className="text-xs font-semibold text-(--text-secondary)">{v.service_rdg ?? '0'}</div>
                     </div>
                   </div>
                 ))
