@@ -1,5 +1,5 @@
 import { useState, useEffect, ReactNode } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'; // 👈 Added BrowserRouter back here
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Sidebar } from '@/components/Sidebar';
 import LandingPage from '@/components/LandingPage';
 import { VehiclePmViewer } from '@/components/VehiclePmViewer';
@@ -20,16 +20,10 @@ import { ComponentHistory } from '@/components/ComponentHistory';
 import { IncidentReport } from '@/components/IncidentReport';
 import { FmeaSettings } from '@/components/FmeaSettings';
 import { RcaSettings } from '@/components/RcaSettings';
-import { Monitor, Tablet, AlertTriangle } from 'lucide-react';
 
-// 🔒 ProtectedRoute blocks direct external access
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const hasAccess = sessionStorage.getItem('rcmro-access') === 'granted';
-  
-  if (!hasAccess) {
-    return <Navigate to="/" replace />;
-  }
-  
+  if (!hasAccess) return <Navigate to="/" replace />;
   return <>{children}</>;
 };
 
@@ -50,61 +44,38 @@ export function App() {
     }
   }, [isDarkMode]);
 
-  const toggleTheme = () => {
-    setIsDarkMode(prev => !prev);
-  };
+  const toggleTheme = () => setIsDarkMode(prev => !prev);
 
   return (
-    <BrowserRouter> {/* 👈 Restored BrowserRouter here */}
-      {/* 📱 Mobile Guard Screen (Prominent Solid Red Notice) */}
-      <div className="flex md:hidden fixed inset-0 z-50 bg-red-950/95 dark:bg-black text-slate-900 dark:text-slate-100 p-6 flex-col items-center justify-center text-center">
-        <div className="bg-white dark:bg-slate-950 border-2 border-red-600 dark:border-red-500 p-6 rounded-2xl max-w-sm w-full shadow-2xl space-y-4">
-          <div className="flex justify-center gap-3 text-red-600 dark:text-red-500 mb-1">
-            <Monitor className="w-9 h-9" />
-            <Tablet className="w-9 h-9" />
-          </div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 rounded-full text-xs font-bold border border-red-300 dark:border-red-800">
-            <AlertTriangle className="w-3.5 h-3.5" /> Screen Size Restricted
-          </div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Laptop or Tablet Required</h2>
-          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-            This dashboard and management system contains dense data tables and controls optimized for larger screens. Please access this application from a laptop, desktop, or tablet device.
-          </p>
-        </div>
-      </div>
-
+    <BrowserRouter>
       <Routes>
-        {/* Standalone Landing Page Route */}
         <Route path="/" element={<LandingPage />} />
 
-        {/* Main Dashboard Layout with Sidebar - 🔒 Wrapped in ProtectedRoute */}
+        {/* Outer frame and viewport explicitly linked to var(--bg-app) */}
         <Route
           path="/*"
           element={
             <ProtectedRoute>
-              <div className="hidden md:flex bg-(--bg-main) h-screen w-screen overflow-hidden text-(--text-main)">
+              <div className="hidden md:flex bg-(--bg-app)] ext-(--text-secondary)] h-screen w-screen overflow-hidden">
                 <Sidebar toggleTheme={toggleTheme} isDarkMode={isDarkMode} />
-                <main className="flex-1 overflow-y-auto bg-(--bg-main)">
+                <main className="flex-1 overflow-y-auto bg-(--bg-app)">
                   <Routes>
-                    <Route path="/dashboard" element={<div className="p-6 text-xl font-bold text-(--text-heading)">Dashboard Home</div>} />
+                    <Route path="/dashboard" element={<div className="p-6 text-xl font-bold text-(--text-primary)">Dashboard Home</div>} />
                     <Route path="/vehicles" element={<VehiclePmViewer />} />
                     <Route path="/daily-inspection" element={<DailyInspection />} />
-                    <Route path="/maintenance-plan" element={<div className="p-6 text-xl font-bold text-(--text-heading)">Maintenance Plan</div>} />
+                    <Route path="/maintenance-plan" element={<div className="p-6 text-xl font-bold text-var(--text-primary)">Maintenance Plan</div>} />
                     <Route path="/component-history" element={<ComponentHistory />} />
                     <Route path="/maintenance-forecast" element={<MaintenanceForecast />} />
                     <Route path="/job-orders" element={<JobOrder />} />
                     <Route path="/job-orders/dashboard" element={<JobOrderDashboard />} />
                     
-                    {/* Incident Management Routes */}
                     <Route path="/incident-management/incident-report" element={<IncidentReport />} />
 
-                    {/* Global Settings / Registry Routes */}
                     <Route path="/global-settings/vehicle-registry" element={<VehicleRegistry />} />
                     <Route path="/global-settings/employee-registry" element={<EmployeeRegistry />} />
                     <Route path="/global-settings/component-registry" element={<ComponentRegistry />} />
 
-                    {/* Settings Routes */}
-                    <Route path="/settings" element={<div className="p-6 text-xl font-bold text-(--text-heading)">Settings</div>} />
+                    <Route path="/settings" element={<div className="p-6 text-xl font-bold text-var(--text-primary)">Settings</div>} />
                     <Route path="/settings/service-standards" element={<ServiceStandards />} />
                     <Route path="/settings/operations-standards" element={<OperationsStandards />} />
                     <Route path="/settings/system-components" element={<SystemComponents />} />
@@ -114,7 +85,6 @@ export function App() {
                     <Route path="/settings/rca" element={<RcaSettings />} />
                     <Route path="/settings/fmea" element={<FmeaSettings />} />
 
-                    {/* Fallback route for unknown dashboard paths */}
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                   </Routes>
                 </main>
@@ -123,7 +93,6 @@ export function App() {
           }
         />
 
-        {/* Global Fallback Route */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter> 
