@@ -21,6 +21,7 @@ import { IncidentReport } from '@/components/IncidentReport';
 import { FmeaSettings } from '@/components/FmeaSettings';
 import { RcaSettings } from '@/components/RcaSettings';
 import { Smartphone, Monitor } from 'lucide-react';
+import { Manual } from './components/ManualLayout'; // Updated to point directly to your layout/component export
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const hasAccess = sessionStorage.getItem('rcmro-access') === 'granted';
@@ -46,7 +47,7 @@ const MobileBlockNotice = () => {
         </div>
         <div className="pt-2 border-t border-(--border-main) flex items-center justify-center gap-2 text-[11px] text-(--text-muted)">
           <Monitor className="w-4 h-4 text-blue-500" />
-          <span>Only Landing Page and manual.html are supported on mobile.</span>
+          <span>Only Landing Page and manual are supported on mobile.</span>
         </div>
       </div>
     </div>
@@ -77,6 +78,9 @@ export function App() {
       <Routes>
         {/* Landing Page: Accessible on both Mobile and Desktop */}
         <Route path="/" element={<LandingPage />} />
+
+        {/* Manual Route: Accessible globally (matching mobile support policy) */}
+        <Route path="/manual" element={<Manual />} />
 
         {/* Protected App Routes: Hidden on mobile (shows mobile block notification), visible on md+ screens */}
         <Route
@@ -116,7 +120,6 @@ export function App() {
                       <Route path="/settings/job-order-config" element={<JobOrderSettings />} />
                       <Route path="/settings/rca" element={<RcaSettings />} />
                       <Route path="/settings/fmea" element={<FmeaSettings />} />
-
                       <Route path="*" element={<Navigate to="/dashboard" replace />} />
                     </Routes>
                   </main>

@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Wrench, ClipboardList, FileText, ChevronDown, ChevronRight, Car,
   Settings, ShieldAlert, Calendar, Cpu, CheckSquare, Wrench as WrenchIcon, ClipboardCheck,
   LayoutGrid, Activity, Globe, Users, Layers, History, AlertTriangle, FileWarning, GitFork,
-  AlertCircle, ChevronLeft, ChevronRight as ChevronRightIcon, BookOpen, ExternalLink, Sun, Moon, HelpCircle
+  AlertCircle, ChevronLeft, ChevronRight as ChevronRightIcon, BookOpen, Sun, Moon, HelpCircle
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -74,9 +74,9 @@ export function Sidebar({ toggleTheme, isDarkMode = false }: SidebarProps) {
       <nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto overflow-x-hidden">
         {/* Dashboard */}
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/dashboard')}
           className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2.5' : 'gap-3 px-3.5 py-2.5'} rounded-xl text-sm font-medium transition-all cursor-pointer ${
-            currentPath === '/'
+            currentPath === '/dashboard'
               ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) shadow-md shadow-black/10 font-semibold'
               : 'text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
           }`}
@@ -346,18 +346,13 @@ export function Sidebar({ toggleTheme, isDarkMode = false }: SidebarProps) {
                   <span className="truncate">{isDarkMode ? "Light Mode" : "Dark Mode"}</span>
                 </button>
               )}
-              <a
-                href="/manual.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle) transition-colors cursor-pointer"
-              >
-                <BookOpen className="w-3.5 h-3.5 shrink-0 text-(--text-primary)" />
-                <div className="flex items-center justify-between w-full">
+                <button
+                  onClick={() => window.open('/manual', '_blank')}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle) transition-colors cursor-pointer"
+                >
+                  <BookOpen className="w-3.5 h-3.5 shrink-0 text-(--text-primary)" />
                   <span className="truncate">User Manual</span>
-                  <ExternalLink className="w-3 h-3 text-(--text-muted) shrink-0" />
-                </div>
-              </a>
+                </button>
             </div>
           )}
         </div>
