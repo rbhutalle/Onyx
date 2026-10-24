@@ -20,7 +20,7 @@ import { ComponentHistory } from '@/components/ComponentHistory';
 import { IncidentReport } from '@/components/IncidentReport';
 import { FmeaSettings } from '@/components/FmeaSettings';
 import { RcaSettings } from '@/components/RcaSettings';
-import { Monitor, Tablet } from 'lucide-react';
+import { Monitor, Tablet, AlertTriangle } from 'lucide-react';
 
 // 🔒 ProtectedRoute blocks direct external access
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
@@ -56,15 +56,18 @@ export function App() {
 
   return (
     <BrowserRouter> {/* 👈 Restored BrowserRouter here */}
-      {/* 📱 Mobile Guard Screen */}
-      <div className="flex md:hidden fixed inset-0 z-50 bg-(--bg-main) text-(--text-main) p-6 flex-col items-center justify-center text-center">
-        <div className="bg-(--bg-surface) border border-(--border-color) p-6 rounded-2xl max-w-sm w-full shadow-2xl space-y-4">
-          <div className="flex justify-center gap-3 text-blue-600 dark:text-blue-400 mb-1">
+      {/* 📱 Mobile Guard Screen (Prominent Solid Red Notice) */}
+      <div className="flex md:hidden fixed inset-0 z-50 bg-red-950/95 dark:bg-black text-slate-900 dark:text-slate-100 p-6 flex-col items-center justify-center text-center">
+        <div className="bg-white dark:bg-slate-950 border-2 border-red-600 dark:border-red-500 p-6 rounded-2xl max-w-sm w-full shadow-2xl space-y-4">
+          <div className="flex justify-center gap-3 text-red-600 dark:text-red-500 mb-1">
             <Monitor className="w-9 h-9" />
             <Tablet className="w-9 h-9" />
           </div>
-          <h2 className="text-base font-bold text-(--text-heading)">Laptop or Tablet Required</h2>
-          <p className="text-xs text-(--text-muted) leading-relaxed">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 rounded-full text-xs font-bold border border-red-300 dark:border-red-800">
+            <AlertTriangle className="w-3.5 h-3.5" /> Screen Size Restricted
+          </div>
+          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Laptop or Tablet Required</h2>
+          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
             This dashboard and management system contains dense data tables and controls optimized for larger screens. Please access this application from a laptop, desktop, or tablet device.
           </p>
         </div>
