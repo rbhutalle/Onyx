@@ -16,6 +16,8 @@ import {
   Cpu,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Filter,
   MinusCircle
 } from 'lucide-react';
@@ -113,6 +115,9 @@ export function ComponentHistory() {
   const [componentList, setComponentList] = useState<ComponentMaintenanceRecord[]>([]);
   const [selectedComponent, setSelectedComponent] = useState<ComponentMaintenanceRecord | null>(null);
   
+  // Component Collapsible Summary State
+  const [isSummaryCollapsed, setIsSummaryCollapsed] = useState<boolean>(false);
+
   // Component Lookup Filter States
   const [systems, setSystems] = useState<SystemOption[]>([]);
   const [baseComponents, setBaseComponents] = useState<ComponentOption[]>([]);
@@ -253,7 +258,7 @@ export function ComponentHistory() {
   // Safe helper badge color renderer for Installed Status
   const renderStatusBadge = (status?: unknown) => {
     if (status === null || status === undefined || status === '') {
-      return <span className="text-slate-400 dark:text-slate-500">—</span>;
+      return <span className="text-(--text-muted)">—</span>;
     }
     
     const strStatus = String(status ?? '').toLowerCase();
@@ -262,20 +267,20 @@ export function ComponentHistory() {
 
     if (isBoolTrue) {
       return (
-        <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800/60">
+        <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800/60 inline-flex items-center gap-1">
           Installed
         </span>
       );
     }
     if (isBoolFalse) {
       return (
-        <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-400 border border-amber-300 dark:border-amber-800/60">
+        <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-400 border border-amber-300 dark:border-amber-800/60 inline-flex items-center gap-1">
           Removed
         </span>
       );
     }
     return (
-      <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700">
+      <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-(--accent-subtle) text-(--text-primary) border border-(--border-main)">
         {String(status)}
       </span>
     );
@@ -301,8 +306,8 @@ export function ComponentHistory() {
           setModels(modelRes.data || []);
           setVehicles(vehRes.data || []);
         }
-      } catch (err) {
-        console.error('Error fetching relation options:', err);
+      } catch {
+        // Error handling
       }
     }
     loadRelationOptions();
@@ -336,8 +341,7 @@ export function ComponentHistory() {
       if (error) throw error;
 
       setComponentList((data || []) as ComponentMaintenanceRecord[]);
-    } catch (err) {
-      console.error('Error fetching components:', err);
+    } catch {
       setErrorMsg('Failed to load active component records.');
     } finally {
       setLoadingComponents(false);
@@ -360,8 +364,7 @@ export function ComponentHistory() {
         if (isMounted && data) {
           setComponentList(data as ComponentMaintenanceRecord[]);
         }
-      } catch (err) {
-        console.error('Error loading initial component records:', err);
+      } catch {
         if (isMounted) setErrorMsg('Failed to load active component records.');
       } finally {
         if (isMounted) setLoadingComponents(false);
@@ -397,8 +400,7 @@ export function ComponentHistory() {
         if (isMounted && data) {
           setHistoryRecords(data as ComponentHistoryRecord[]);
         }
-      } catch (err) {
-        console.error('Error loading installation history:', err);
+      } catch {
         if (isMounted) setErrorMsg('Failed to load installation history for selected component.');
       } finally {
         if (isMounted) setLoadingHistory(false);
@@ -426,14 +428,12 @@ export function ComponentHistory() {
 
     setHistoryForm(prev => {
       if (editingId) {
-        // Removal Modal: update Remove Service Reading
         return {
           ...prev,
           vehicle_id: newVehicleId,
           remove_srv_rdg: readingValue || prev.remove_srv_rdg,
         };
       } else {
-        // Installation Modal: update Install Service Reading
         return {
           ...prev,
           vehicle_id: newVehicleId,
@@ -523,8 +523,7 @@ export function ComponentHistory() {
       setSuccessMsg('History record deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 3000);
       setHistoryRecords(prev => prev.filter(r => r.equipment_component_child_id !== id));
-    } catch (err) {
-      console.error('Error deleting record:', err);
+    } catch {
       setErrorMsg('Failed to delete history record.');
     }
   };
@@ -591,8 +590,7 @@ export function ComponentHistory() {
       if (refreshedData) {
         setHistoryRecords(refreshedData as ComponentHistoryRecord[]);
       }
-    } catch (err) {
-      console.error('Error saving history record:', err);
+    } catch {
       setErrorMsg('Failed to save history record.');
     } finally {
       setSubmitting(false);
@@ -620,18 +618,18 @@ export function ComponentHistory() {
 
   return (
     <div className="h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center gap-3 border-b border-slate-300 dark:border-slate-800 pb-3 shrink-0">
-        <div className="p-2.5 bg-blue-100 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
+      {/* Page Header */}
+      <div className="flex items-center gap-3 border-b border-(--border-main) pb-3 shrink-0">
+        <div className="bg-black text-white p-2 rounded-xl shadow-xs shrink-0">
           <History className="w-6 h-6" />
         </div>
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Component History & Lifecycle</h1>
-          <p className="text-xs text-slate-600 dark:text-slate-400">Track equipment component installation, removal metrics, SRV Run, and service readings.</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-(--text-primary)">Component History & Lifecycle</h1>
+          <p className="text-xs sm:text-sm text-(--text-muted)">Track equipment component installation, removal metrics, SRV Run, and service readings.</p>
         </div>
       </div>
 
-      {/* Notifications */}
+      {/* Alert Notifications */}
       {successMsg && (
         <div className="bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-3.5 py-2 rounded-lg flex items-center gap-3 text-xs shrink-0">
           <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -646,84 +644,127 @@ export function ComponentHistory() {
         </div>
       )}
 
-      {/* Selected Component Summary Banner */}
+      {/* Selected Component Target Container (Collapsible) */}
       <div className="space-y-1.5 shrink-0">
-        <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-          Selected Component Target <span className="text-red-500">*</span>
-        </label>
-        
-        {selectedComponent ? (
-          <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 border border-blue-300 dark:border-blue-900/60 p-3 rounded-xl shadow-xs">
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3 w-full text-xs">
-              <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Component Code</span>
-                <div className="font-bold text-blue-600 dark:text-blue-400 text-xs">{selectedComponent.equipment_component_code}</div>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Serial No.</span>
-                <div className="font-mono text-slate-800 dark:text-slate-200">{selectedComponent.serial_no || '—'}</div>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Description</span>
-                <div className="font-semibold text-slate-800 dark:text-slate-200 truncate" title={selectedComponent.equipment_component_desc || '—'}>
-                  {selectedComponent.equipment_component_desc || '—'}
-                </div>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">System / Component</span>
-                <div className="font-semibold text-slate-800 dark:text-slate-200">
-                  {getSystemDisplay(selectedComponent)} / {getComponentDisplay(selectedComponent)}
-                </div>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Make / Model</span>
-                <div className="font-semibold text-slate-800 dark:text-slate-200">
-                  {getMakeModelDisplay(selectedComponent)}
-                </div>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Cost</span>
-                <div className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">₱{Number(selectedComponent.cost ?? 0).toLocaleString()}</div>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Service Rdg</span>
-                <div className="font-mono text-slate-700 dark:text-slate-300">{selectedComponent.srv_rdg ?? 0}</div>
-              </div>
-            </div>
+        <div className="flex items-center justify-between">
+          <label className="text-[11px] font-semibold text-(--text-secondary) uppercase tracking-wider">
+            Selected Component Target <span className="text-red-500">*</span>
+          </label>
+          
+          {selectedComponent && (
             <button
               type="button"
-              onClick={() => {
-                setSelectedComponent(null);
-                setHistoryRecords([]);
-              }}
-              className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 p-1.5 transition-colors cursor-pointer shrink-0 ml-2"
-              title="Clear selection"
+              onClick={() => setIsSummaryCollapsed(prev => !prev)}
+              className="text-xs text-(--text-primary) hover:underline flex items-center gap-1 font-semibold cursor-pointer"
             >
-              <X className="w-4 h-4" />
+              {isSummaryCollapsed ? (
+                <>
+                  <span>Expand Details</span>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </>
+              ) : (
+                <>
+                  <span>Collapse</span>
+                  <ChevronUp className="w-3.5 h-3.5" />
+                </>
+              )}
             </button>
+          )}
+        </div>
+        
+        {selectedComponent ? (
+          <div className="bg-(--bg-elevated) border border-(--border-main) rounded-xl p-3 shadow-xs transition-all">
+            {/* Header Summary Row */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs">
+                {/* Displays Component Code when collapsed */}
+                <span className="font-bold text-(--text-primary)">
+                  {selectedComponent.equipment_component_code}
+                </span>
+                {selectedComponent.equipment_component_desc && (
+                  <span className="text-(--text-secondary) hidden sm:inline">
+                    — {selectedComponent.equipment_component_desc}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedComponent(null);
+                    setHistoryRecords([]);
+                  }}
+                  className="text-(--text-muted) hover:text-red-600 dark:hover:text-red-400 p-1 transition-colors cursor-pointer shrink-0"
+                  title="Clear component selection"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Expandable Details Grid */}
+            {!isSummaryCollapsed && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3 w-full text-xs pt-3 mt-2 border-t border-(--border-main)">
+                <div>
+                  <span className="text-[10px] text-(--text-muted) uppercase block">Component Code</span>
+                  <div className="font-bold text-(--text-primary) text-xs">{selectedComponent.equipment_component_code}</div>
+                </div>
+                <div>
+                  <span className="text-[10px] text-(--text-muted) uppercase block">Serial No.</span>
+                  <div className="font-mono text-(--text-secondary)">{selectedComponent.serial_no || '—'}</div>
+                </div>
+                <div>
+                  <span className="text-[10px] text-(--text-muted) uppercase block">Description</span>
+                  <div className="font-semibold text-(--text-secondary) truncate" title={selectedComponent.equipment_component_desc || '—'}>
+                    {selectedComponent.equipment_component_desc || '—'}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] text-(--text-muted) uppercase block">System / Component</span>
+                  <div className="font-semibold text-(--text-secondary)">
+                    {getSystemDisplay(selectedComponent)} / {getComponentDisplay(selectedComponent)}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] text-(--text-muted) uppercase block">Make / Model</span>
+                  <div className="font-semibold text-(--text-secondary)">
+                    {getMakeModelDisplay(selectedComponent)}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] text-(--text-muted) uppercase block">Cost</span>
+                  <div className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">₱{Number(selectedComponent.cost ?? 0).toLocaleString()}</div>
+                </div>
+                <div>
+                  <span className="text-[10px] text-(--text-muted) uppercase block">Service Rdg</span>
+                  <div className="font-mono text-(--text-secondary)">{selectedComponent.srv_rdg ?? 0}</div>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <button
             type="button"
             onClick={() => setShowPicker(true)}
-            className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 hover:border-blue-500 text-slate-700 dark:text-slate-300 px-4 py-2.5 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer"
+            className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) px-4 py-2.5 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer"
           >
             <span className="flex items-center gap-2">
-              <Search className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <Search className="w-3.5 h-3.5 text-(--text-primary)" />
               {componentList.length > 0 ? `Click here to select an active component (${componentList.length} loaded)...` : 'Click here to search and select a component...'}
             </span>
-            <span className="bg-blue-100 dark:bg-blue-600/20 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded text-xs font-semibold">Browse</span>
+            <span className="bg-(--accent-subtle) text-(--text-primary) px-2 py-0.5 rounded text-xs font-semibold">Browse</span>
           </button>
         )}
       </div>
 
       {/* Main Content Body Container */}
-      <div className="bg-slate-50/90 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl p-4 shadow-xl overflow-hidden space-y-3 flex flex-col flex-1 min-h-0">
+      <div className="bg-(--bg-elevated) border border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3 flex flex-col flex-1 min-h-0">
         
         {/* Action Controls Bar */}
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center border-b border-slate-300 dark:border-slate-800 pb-3 gap-3 shrink-0">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-slate-100">
-            <Layers className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center border-b border-(--border-main) pb-3 gap-3 shrink-0">
+          <div className="flex items-center gap-2 text-xs font-bold text-(--text-primary)">
+            <Layers className="w-4 h-4 text-(--text-primary)" />
             <span>Installed Components & Telemetry Performance</span>
           </div>
 
@@ -732,9 +773,9 @@ export function ComponentHistory() {
               <button
                 type="button"
                 onClick={() => setShowPicker(true)}
-                className="bg-white dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-800 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                className="bg-(--bg-surface) hover:bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
               >
-                <Search className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <Search className="w-3.5 h-3.5 text-(--text-primary)" />
                 <span>Select Component</span>
               </button>
             )}
@@ -743,7 +784,7 @@ export function ComponentHistory() {
               onClick={handleOpenAdd}
               disabled={isInstallDisabled}
               title={isInstallDisabled ? 'Component is currently installed or not selected.' : 'Record a new installation'}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Record Installation</span>
@@ -763,10 +804,10 @@ export function ComponentHistory() {
 
         {/* Sub-tab content panel & Scrollable Table Wrapper */}
         <div className="flex flex-col flex-1 min-h-0 space-y-2">
-          <div className="flex-1 min-h-0 overflow-auto border border-slate-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-950">
+          <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider font-semibold sticky top-0 z-10 shadow-xs">
+                <tr className="border-b border-(--border-main) bg-(--bg-elevated) text-(--text-muted) text-[11px] uppercase tracking-wider font-semibold sticky top-0 z-10 shadow-xs">
                   <th className="py-2 px-3">Vehicle</th>
                   <th className="py-2 px-3">Status</th>
                   <th className="py-2 px-3 font-mono">Install Date</th>
@@ -777,50 +818,50 @@ export function ComponentHistory() {
                   <th className="py-2 px-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
                 {loadingHistory ? (
                   <tr>
-                    <td colSpan={8} className="py-8 px-3 text-center text-slate-500 dark:text-slate-400">
+                    <td colSpan={8} className="py-8 px-3 text-center text-(--text-muted)">
                       <div className="flex items-center justify-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                        <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
                         <span>Loading telemetry records for selected component...</span>
                       </div>
                     </td>
                   </tr>
                 ) : !selectedComponent ? (
                   <tr>
-                    <td colSpan={8} className="py-8 px-3 text-center text-slate-500 dark:text-slate-400 text-xs italic">
+                    <td colSpan={8} className="py-8 px-3 text-center text-(--text-muted) text-xs italic">
                       Please select an active component above to view its installation lifecycle history.
                     </td>
                   </tr>
                 ) : displayedHistory.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-8 px-3 text-center text-slate-500 dark:text-slate-400 text-xs italic">
+                    <td colSpan={8} className="py-8 px-3 text-center text-(--text-muted) text-xs italic">
                       No installation history records found for this component. Click "Record Installation" above to add one.
                     </td>
                   </tr>
                 ) : (
                   displayedHistory.map((item) => (
-                    <tr key={item.equipment_component_child_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                      <td className="py-2 px-3 font-medium text-slate-900 dark:text-slate-100">
+                    <tr key={item.equipment_component_child_id} className="hover:bg-(--accent-subtle) transition-colors">
+                      <td className="py-2 px-3 font-medium text-(--text-primary)">
                         {getVehicleDisplay(item.vehicle_id)}
                       </td>
                       <td className="py-2 px-3">
                         {renderStatusBadge(item.installed_status)}
                       </td>
-                      <td className="py-2 px-3 font-mono text-slate-700 dark:text-slate-300">
+                      <td className="py-2 px-3 font-mono text-(--text-secondary)">
                         {item.install_date || '—'}
                       </td>
-                      <td className="py-2 px-3 font-mono text-slate-700 dark:text-slate-300">
+                      <td className="py-2 px-3 font-mono text-(--text-secondary)">
                         {item.install_srv_rdg ?? 0}
                       </td>
-                      <td className="py-2 px-3 font-mono text-slate-700 dark:text-slate-300">
+                      <td className="py-2 px-3 font-mono text-(--text-secondary)">
                         {item.remove_date || '—'}
                       </td>
-                      <td className="py-2 px-3 font-mono text-slate-700 dark:text-slate-300">
+                      <td className="py-2 px-3 font-mono text-(--text-secondary)">
                         {item.remove_srv_rdg !== null && item.remove_srv_rdg !== undefined ? item.remove_srv_rdg : '—'}
                       </td>
-                      <td className="py-2 px-3 font-mono text-blue-600 dark:text-blue-400 font-semibold">
+                      <td className="py-2 px-3 font-mono text-(--text-primary) font-semibold">
                         {item.srv_run !== null && item.srv_run !== undefined ? item.srv_run : '—'}
                       </td>
                       <td className="py-2 px-3 text-right">
@@ -840,12 +881,12 @@ export function ComponentHistory() {
 
           {/* Pagination Toolbar */}
           {selectedComponent && totalItems > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 shrink-0">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-(--border-main) text-xs text-(--text-muted) shrink-0">
               <div className="flex items-center gap-3">
                 <span>
-                  Showing <strong className="text-slate-900 dark:text-slate-200">{startIndex + 1}</strong> to{' '}
-                  <strong className="text-slate-900 dark:text-slate-200">{endIndex}</strong> of{' '}
-                  <strong className="text-slate-900 dark:text-slate-200">{totalItems}</strong> records
+                  Showing <strong className="text-(--text-primary)">{startIndex + 1}</strong> to{' '}
+                  <strong className="text-(--text-primary)">{endIndex}</strong> of{' '}
+                  <strong className="text-(--text-primary)">{totalItems}</strong> records
                 </span>
 
                 <div className="flex items-center gap-1.5 ml-2">
@@ -856,7 +897,7 @@ export function ComponentHistory() {
                       setPageSize(Number(e.target.value));
                       setCurrentPage(1);
                     }}
-                    className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-slate-200 rounded px-2 py-1 focus:outline-none focus:border-blue-500 cursor-pointer"
+                    className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded px-2 py-1 focus:outline-none focus:border-(--text-primary) cursor-pointer"
                   >
                     <option value={5}>5</option>
                     <option value={10}>10</option>
@@ -871,13 +912,13 @@ export function ComponentHistory() {
                   type="button"
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
-                  className="px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg border border-(--border-main) bg-(--bg-elevated) text-(--text-secondary) hover:bg-(--accent-subtle) disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
                   <span>Prev</span>
                 </button>
 
-                <span className="px-3 py-1 font-mono text-slate-700 dark:text-slate-300">
+                <span className="px-3 py-1 font-mono text-(--text-secondary)">
                   Page {currentPage} of {totalPages}
                 </span>
 
@@ -885,7 +926,7 @@ export function ComponentHistory() {
                   type="button"
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage >= totalPages}
-                  className="px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg border border-(--border-main) bg-(--bg-elevated) text-(--text-secondary) hover:bg-(--accent-subtle) disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <span>Next</span>
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -899,26 +940,26 @@ export function ComponentHistory() {
       {/* COMPONENT SEARCH PICKER MODAL */}
       {showPicker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 shrink-0">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Search & Select Component
+          <div className="bg-(--bg-surface) border border-(--border-main) rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-(--border-main) bg-(--bg-elevated) shrink-0">
+              <h3 className="text-lg font-bold text-(--text-primary) flex items-center gap-2">
+                <Cpu className="w-4 h-4 text-(--text-primary)" /> Search & Select Component
               </h3>
               <button
                 type="button"
                 onClick={() => setShowPicker(false)}
-                className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer"
+                className="text-(--text-muted) hover:text-(--text-primary) p-1 rounded-lg hover:bg-(--accent-subtle) cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Filter Form Controls */}
-            <div className="p-4 border-b border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-2.5 shrink-0 text-xs">
+            <div className="p-4 border-b border-(--border-main) bg-(--bg-elevated) space-y-2.5 shrink-0 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
-                  <label className="text-[11px] font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
-                    <Filter className="w-3 h-3 text-blue-600 dark:text-blue-400" /> System
+                  <label className="text-[11px] font-semibold uppercase text-(--text-secondary) mb-1 flex items-center gap-1">
+                    <Filter className="w-3 h-3 text-(--text-primary)" /> System
                   </label>
                   <select
                     value={searchSystemId}
@@ -928,7 +969,7 @@ export function ComponentHistory() {
                       setSearchComponentId('');
                       fetchComponents(searchQuery, sysId, '');
                     }}
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 px-2.5 py-1.5 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) px-2.5 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
                   >
                     <option value="">-- All Systems --</option>
                     {systems.map((s) => (
@@ -940,8 +981,8 @@ export function ComponentHistory() {
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
-                    <Filter className="w-3 h-3 text-blue-600 dark:text-blue-400" /> Component Type
+                  <label className="text-[11px] font-semibold uppercase text-(--text-secondary) mb-1 flex items-center gap-1">
+                    <Filter className="w-3 h-3 text-(--text-primary)" /> Component Type
                   </label>
                   <select
                     value={searchComponentId}
@@ -951,7 +992,7 @@ export function ComponentHistory() {
                       fetchComponents(searchQuery, searchSystemId, compId);
                     }}
                     disabled={!searchSystemId && tabFilteredComponents.length === 0}
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 px-2.5 py-1.5 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:opacity-50"
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) px-2.5 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer disabled:opacity-50"
                   >
                     <option value="">-- All Component Types --</option>
                     {tabFilteredComponents.map((c) => (
@@ -965,19 +1006,19 @@ export function ComponentHistory() {
 
               <form onSubmit={handleSearchSubmit} className="flex gap-2">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                  <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
                   <input
                     type="text"
                     placeholder="Filter by Component Code or Serial No..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
                     autoFocus
                   />
                 </div>
                 <button
                   type="submit"
-                  className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+                  className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-xs"
                 >
                   Search
                 </button>
@@ -986,12 +1027,12 @@ export function ComponentHistory() {
 
             <div className="p-4 overflow-y-auto space-y-2 flex-1 min-h-0">
               {loadingComponents ? (
-                <div className="py-12 text-center text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2 text-xs">
-                  <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                <div className="py-12 text-center text-(--text-muted) flex items-center justify-center gap-2 text-xs">
+                  <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
                   <span>Loading active component records...</span>
                 </div>
               ) : componentList.length === 0 ? (
-                <div className="py-12 text-center text-slate-500 dark:text-slate-400 text-xs italic">
+                <div className="py-12 text-center text-(--text-muted) text-xs italic">
                   No active component records found.
                 </div>
               ) : (
@@ -1002,25 +1043,25 @@ export function ComponentHistory() {
                       setSelectedComponent(comp);
                       setShowPicker(false);
                     }}
-                    className="flex items-center justify-between bg-white dark:bg-slate-950 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-300 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-600/50 p-3 rounded-lg transition-colors cursor-pointer group"
+                    className="flex items-center justify-between bg-(--bg-elevated) hover:bg-(--accent-subtle) border border-(--border-main) p-3 rounded-lg transition-colors cursor-pointer group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-slate-100 dark:bg-slate-900 rounded-lg group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 transition-colors">
+                      <div className="p-2 bg-(--bg-surface) rounded-lg text-(--text-primary) transition-colors">
                         <Cpu className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="font-bold text-blue-600 dark:text-blue-400 text-xs">{comp.equipment_component_code}</div>
+                        <div className="font-bold text-(--text-primary) text-xs">{comp.equipment_component_code}</div>
                         {comp.equipment_component_desc && (
-                          <div className="text-xs text-slate-700 dark:text-slate-300">{comp.equipment_component_desc}</div>
+                          <div className="text-xs text-(--text-secondary)">{comp.equipment_component_desc}</div>
                         )}
                         {comp.serial_no && (
-                          <div className="text-xs text-slate-500 dark:text-slate-400 font-mono">S/N: {comp.serial_no}</div>
+                          <div className="text-xs text-(--text-muted) font-mono">S/N: {comp.serial_no}</div>
                         )}
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase block">Service Rdg</span>
-                      <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 font-mono">{comp.srv_rdg ?? '0'}</div>
+                      <span className="text-[10px] text-(--text-muted) uppercase block">Service Rdg</span>
+                      <div className="text-xs font-semibold text-(--text-secondary) font-mono">{comp.srv_rdg ?? '0'}</div>
                     </div>
                   </div>
                 ))
@@ -1033,15 +1074,15 @@ export function ComponentHistory() {
       {/* RECORD INSTALLATION / REMOVAL MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 shrink-0">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+          <div className="bg-(--bg-surface) border border-(--border-main) rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-(--border-main) bg-(--bg-elevated) shrink-0">
+              <h3 className="text-lg font-bold text-(--text-primary)">
                 {editingId ? 'Record Component Removal' : 'Record Component Installation'}
               </h3>
               <button 
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer"
+                className="text-(--text-muted) hover:text-(--text-primary) p-1 rounded-lg hover:bg-(--accent-subtle) cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1049,32 +1090,32 @@ export function ComponentHistory() {
 
             <form onSubmit={handleSubmitForm} className="flex flex-col flex-1 min-h-0 overflow-hidden">
               <div className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto flex-1 min-h-0">
-                <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
-                  <div className="text-slate-500 dark:text-slate-400 uppercase text-[10px] font-semibold">Active Component Target</div>
-                  <div className="font-bold text-blue-600 dark:text-blue-400 text-xs">
+                <div className="bg-(--bg-elevated) p-3 rounded-lg border border-(--border-main) space-y-1">
+                  <div className="text-(--text-muted) uppercase text-[10px] font-semibold">Active Component Target</div>
+                  <div className="font-bold text-(--text-primary) text-xs">
                     {selectedComponent?.equipment_component_code}
                     {selectedComponent?.serial_no && ` (S/N: ${selectedComponent.serial_no})`}
                   </div>
                   {selectedComponent?.equipment_component_desc && (
-                    <div className="text-slate-700 dark:text-slate-300 text-xs">{selectedComponent.equipment_component_desc}</div>
+                    <div className="text-(--text-secondary) text-xs">{selectedComponent.equipment_component_desc}</div>
                   )}
                 </div>
 
                 {/* Vehicle Selection */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">
+                  <label className="block text-xs font-semibold uppercase text-(--text-secondary)">
                     Vehicle {editingId ? '(Read-only)' : <span className="text-red-500">*</span>}
                   </label>
                   
                   {!editingId && (
                     <div className="relative">
-                      <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                      <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
                       <input
                         type="text"
                         placeholder="Type to filter vehicles by plate, make, model, or label..."
                         value={vehicleSearchQuery}
                         onChange={(e) => setVehicleSearchQuery(e.target.value)}
-                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                   )}
@@ -1084,7 +1125,7 @@ export function ComponentHistory() {
                     disabled={Boolean(editingId)}
                     value={historyForm.vehicle_id}
                     onChange={handleVehicleChange}
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500 disabled:opacity-75 disabled:cursor-not-allowed"
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary) disabled:opacity-75 disabled:cursor-not-allowed"
                   >
                     <option value="">-- Select Target Vehicle --</option>
                     {(editingId ? vehicles : filteredVehicles).map((v) => (
@@ -1097,33 +1138,33 @@ export function ComponentHistory() {
 
                 {/* Installed Status */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Installed Status</label>
+                  <label className="block text-xs font-semibold uppercase text-(--text-secondary)">Installed Status</label>
                   <input
                     type="text"
                     disabled
                     value={editingId ? 'Removed' : 'Installed'}
-                    className="w-full bg-slate-100 dark:bg-slate-950/60 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold rounded-lg px-3.5 py-2 text-xs cursor-not-allowed"
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-secondary) font-semibold rounded-lg px-3.5 py-2 text-xs cursor-not-allowed"
                   />
                 </div>
 
                 {/* Installation Information Section */}
-                <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-4 rounded-xl space-y-3">
-                  <h4 className="text-xs font-bold uppercase text-blue-600 dark:text-blue-400 tracking-wider flex items-center gap-1.5">
+                <div className="bg-(--bg-elevated) border border-(--border-main) p-4 rounded-xl space-y-3">
+                  <h4 className="text-xs font-bold uppercase text-(--text-primary) tracking-wider flex items-center gap-1.5">
                     <Calendar className="w-4 h-4" /> Installation Information
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Install Date</label>
+                      <label className="block text-xs font-semibold text-(--text-secondary) mb-1">Install Date</label>
                       <input
                         type="date"
                         disabled={Boolean(editingId)}
                         value={historyForm.install_date}
                         onChange={(e) => setHistoryForm({ ...historyForm, install_date: e.target.value })}
-                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) font-mono disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Install Service Reading (Read-only)</label>
+                      <label className="block text-xs font-semibold text-(--text-secondary) mb-1">Install Service Reading (Read-only)</label>
                       <input
                         type="number"
                         step="any"
@@ -1131,41 +1172,41 @@ export function ComponentHistory() {
                         value={historyForm.install_srv_rdg}
                         onChange={(e) => setHistoryForm({ ...historyForm, install_srv_rdg: e.target.value })}
                         placeholder="0"
-                        className="w-full bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-500 dark:text-slate-400 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 font-mono cursor-not-allowed opacity-75"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) font-mono cursor-not-allowed opacity-75"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Install Remarks</label>
+                    <label className="block text-xs font-semibold text-(--text-secondary) mb-1">Install Remarks</label>
                     <input
                       type="text"
                       disabled={Boolean(editingId)}
                       value={historyForm.install_remarks}
                       onChange={(e) => setHistoryForm({ ...historyForm, install_remarks: e.target.value })}
                       placeholder="Optional remarks on installation..."
-                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
 
                 {/* Removal Information Section */}
-                <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-4 rounded-xl space-y-3">
-                  <h4 className="text-xs font-bold uppercase text-amber-600 dark:text-amber-400 tracking-wider flex items-center gap-1.5">
+                <div className="bg-(--bg-elevated) border border-(--border-main) p-4 rounded-xl space-y-3">
+                  <h4 className="text-xs font-bold uppercase text-(--text-primary) tracking-wider flex items-center gap-1.5">
                     <FileText className="w-4 h-4" /> Removal Information
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Remove Date</label>
+                      <label className="block text-xs font-semibold text-(--text-secondary) mb-1">Remove Date</label>
                       <input
                         type="date"
                         disabled={!editingId}
                         value={historyForm.remove_date}
                         onChange={(e) => setHistoryForm({ ...historyForm, remove_date: e.target.value })}
-                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) font-mono disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Remove Service Reading (Read-only)</label>
+                      <label className="block text-xs font-semibold text-(--text-secondary) mb-1">Remove Service Reading (Read-only)</label>
                       <input
                         type="number"
                         step="any"
@@ -1173,36 +1214,36 @@ export function ComponentHistory() {
                         value={historyForm.remove_srv_rdg}
                         onChange={(e) => setHistoryForm({ ...historyForm, remove_srv_rdg: e.target.value })}
                         placeholder="0"
-                        className="w-full bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-500 dark:text-slate-400 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 font-mono cursor-not-allowed opacity-75"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) font-mono cursor-not-allowed opacity-75"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Removal Remarks</label>
+                    <label className="block text-xs font-semibold text-(--text-secondary) mb-1">Removal Remarks</label>
                     <input
                       type="text"
                       disabled={!editingId}
                       value={historyForm.remove_remarks}
                       onChange={(e) => setHistoryForm({ ...historyForm, remove_remarks: e.target.value })}
                       placeholder="Reason for removal or replacement..."
-                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-300 dark:border-slate-800 shrink-0 bg-slate-100 dark:bg-slate-900">
+              <div className="flex justify-end gap-3 px-6 py-4 border-t border-(--border-main) shrink-0 bg-(--bg-elevated)">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-(--accent-subtle) text-(--text-primary) hover:opacity-85 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   <span>{editingId ? 'Save Removal' : 'Save History'}</span>

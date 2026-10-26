@@ -43,10 +43,8 @@ export function MaintenanceForecast() {
           setData(result || []);
           setError(null);
         }
-      } catch (err: unknown) {
-        console.error('Error fetching maintenance forecast:', err);
-        const message = err instanceof Error ? err.message : 'Failed to load maintenance forecast schedule.';
-        if (isMounted) setError(message);
+      } catch {
+        if (isMounted) setError('Failed to load maintenance forecast schedule.');
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -70,10 +68,8 @@ export function MaintenanceForecast() {
 
       if (supabaseError) throw supabaseError;
       setData(result || []);
-    } catch (err: unknown) {
-      console.error('Error refreshing maintenance forecast:', err);
-      const message = err instanceof Error ? err.message : 'Failed to refresh maintenance forecast schedule.';
-      setError(message);
+    } catch {
+      setError('Failed to refresh maintenance forecast schedule.');
     } finally {
       setLoading(false);
     }
@@ -105,20 +101,20 @@ export function MaintenanceForecast() {
   return (
     <div className="h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 flex flex-col overflow-hidden">
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-300 dark:border-slate-800 pb-3 shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-(--border-main) pb-3 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-blue-100 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
+          <div className="bg-black text-white p-2 rounded-xl shadow-xs shrink-0">
             <Calendar className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Maintenance Forecast</h1>
-            <p className="text-xs text-slate-600 dark:text-slate-400">12-month rolling schedule projection based on daily logs and service thresholds.</p>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-(--text-primary)">Maintenance Forecast</h1>
+            <p className="text-xs sm:text-sm text-(--text-muted)">12-month rolling schedule projection based on daily logs and service thresholds.</p>
           </div>
         </div>
         <button
           onClick={handleRefresh}
           disabled={loading}
-          className="inline-flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg transition-colors cursor-pointer border border-slate-300 dark:border-slate-800 disabled:opacity-50 shadow-xs self-start sm:self-auto shrink-0"
+          className="inline-flex items-center gap-2 px-3 py-1.5 bg-(--bg-surface) hover:bg-(--accent-subtle) text-(--text-primary) text-xs font-semibold rounded-lg transition-colors cursor-pointer border border-(--border-main) disabled:opacity-50 shadow-xs self-start sm:self-auto shrink-0"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           <span>Refresh Data</span>
@@ -142,31 +138,31 @@ export function MaintenanceForecast() {
       )}
 
       {/* Main Content Body Container */}
-      <div className="bg-slate-50/90 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl p-4 shadow-xl overflow-hidden space-y-3 flex flex-col flex-1 min-h-0">
+      <div className="bg-(--bg-elevated) border border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3 flex flex-col flex-1 min-h-0">
         
         {/* Table Header & Collapsible Controls Toolbar */}
-        <div className="border-b border-slate-300 dark:border-slate-800 pb-3 space-y-3 shrink-0">
+        <div className="border-b border-(--border-main) pb-3 space-y-3 shrink-0">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div>
-              <h2 className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">Schedule Matrix</h2>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400">Equipment ID and projected service dates grouped by PM level.</p>
+              <h2 className="text-xs font-bold text-(--text-primary) uppercase tracking-wider">Schedule Matrix</h2>
+              <p className="text-[11px] text-(--text-muted)">Equipment ID and projected service dates grouped by PM level.</p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
               {/* Vehicle Search Input */}
               <div className="relative flex items-center">
-                <Car className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none" />
+                <Car className="w-3.5 h-3.5 text-(--text-muted) absolute left-2.5 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Search Equipment ID..."
                   value={vehicleSearchQuery}
                   onChange={(e) => setVehicleSearchQuery(e.target.value)}
-                  className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg pl-8 pr-7 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400 w-40 sm:w-48"
+                  className="bg-(--bg-elevated) border border-(--border-main) rounded-lg pl-8 pr-7 py-1.5 text-xs text-(--text-primary) focus:outline-none focus:border-(--text-primary) placeholder:text-(--text-muted) w-40 sm:w-48"
                 />
                 {vehicleSearchQuery && (
                   <button
                     onClick={() => setVehicleSearchQuery('')}
-                    className="absolute right-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                    className="absolute right-2 text-(--text-muted) hover:text-(--text-primary) cursor-pointer"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -175,11 +171,11 @@ export function MaintenanceForecast() {
 
               {/* PM Level Filter Dropdown */}
               <div className="flex items-center gap-1.5 shrink-0">
-                <Filter className="w-3.5 h-3.5 text-slate-400" />
+                <Filter className="w-3.5 h-3.5 text-(--text-muted)" />
                 <select
                   value={pmLevelFilter}
                   onChange={(e) => setPmLevelFilter(e.target.value)}
-                  className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  className="bg-(--bg-elevated) border border-(--border-main) rounded-lg px-2.5 py-1.5 text-xs text-(--text-primary) focus:outline-none focus:border-(--text-primary) cursor-pointer"
                 >
                   <option value="all">All PM Levels</option>
                   {uniquePmLevels.map((level) => (
@@ -191,10 +187,10 @@ export function MaintenanceForecast() {
               {/* Collapse / Expand Controls Toggle Button */}
               <button
                 onClick={() => setIsControlsCollapsed(!isControlsCollapsed)}
-                className="p-1.5 bg-white dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-800 rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                className="p-1.5 bg-(--bg-surface) hover:bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer"
                 title={isControlsCollapsed ? "Expand Controls" : "Collapse Controls"}
               >
-                <Sliders className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <Sliders className="w-3.5 h-3.5 text-(--text-primary)" />
                 <span className="hidden sm:inline font-semibold">{isControlsCollapsed ? 'Slider' : 'Hide'}</span>
                 {isControlsCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
               </button>
@@ -203,14 +199,14 @@ export function MaintenanceForecast() {
 
           {/* Collapsible Interactive Sliders Control Panel */}
           {!isControlsCollapsed && (
-            <div className="bg-slate-100/80 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-800 rounded-lg p-2.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 animate-in fade-in duration-200">
+            <div className="bg-(--bg-surface) border border-(--border-main) rounded-lg p-2.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 animate-in fade-in duration-200">
               <div className="flex items-center gap-2">
-                <div className="p-1 bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded">
+                <div className="p-1 bg-(--accent-subtle) text-(--text-primary) rounded">
                   <Sliders className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100">Forecast Horizon Slider</span>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Adjust the timeline window displayed in the matrix</p>
+                  <span className="text-xs font-bold text-(--text-primary)">Forecast Horizon Slider</span>
+                  <p className="text-[10px] text-(--text-muted)">Adjust the timeline window displayed in the matrix</p>
                 </div>
               </div>
 
@@ -222,9 +218,9 @@ export function MaintenanceForecast() {
                   step="1"
                   value={forecastMonths}
                   onChange={(e) => setForecastMonths(Number(e.target.value))}
-                  className="w-full h-1 bg-slate-300 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600 dark:accent-blue-500"
+                  className="w-full h-1 bg-(--border-main) rounded-lg appearance-none cursor-pointer accent-(--text-primary)"
                 />
-                <span className="text-[11px] font-semibold text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/50 px-2 py-0.5 rounded whitespace-nowrap min-w-18 text-center">
+                <span className="text-[11px] font-semibold text-(--text-primary) bg-(--accent-subtle) border border-(--border-main) px-2 py-0.5 rounded whitespace-nowrap min-w-18 text-center">
                   {forecastMonths} {forecastMonths === 1 ? 'Mo' : 'Mos'}
                 </span>
               </div>
@@ -235,40 +231,40 @@ export function MaintenanceForecast() {
         {/* Sub-tab content panel & Scrollable 2D Table Matrix */}
         <div className="flex flex-col flex-1 min-h-0 space-y-2">
           {loading ? (
-            <div className="flex-1 flex flex-col items-center justify-center py-12 gap-3 border border-slate-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-950">
-              <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Loading maintenance forecast matrix...</span>
+            <div className="flex-1 flex flex-col items-center justify-center py-12 gap-3 border border-(--border-main) rounded-lg bg-(--bg-surface)">
+              <Loader2 className="w-6 h-6 animate-spin text-(--text-primary)" />
+              <span className="text-xs text-(--text-muted) font-medium">Loading maintenance forecast matrix...</span>
             </div>
           ) : (
-            <div className="flex-1 min-h-0 overflow-auto border border-slate-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-950">
+            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="border-b border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 text-[11px] font-semibold uppercase tracking-wider">
+                  <tr className="border-b border-(--border-main) bg-(--bg-elevated) text-(--text-muted) text-[11px] font-semibold uppercase tracking-wider">
                     {/* Sticky top AND left for top-left header cell */}
-                    <th className="py-2 px-3 sticky top-0 left-0 z-30 bg-slate-100 dark:bg-slate-900 w-24 text-center border-r border-slate-300 dark:border-slate-800 shadow-xs">
+                    <th className="py-2 px-3 sticky top-0 left-0 z-30 bg-(--bg-elevated) w-24 text-center border-r border-(--border-main) shadow-xs">
                       PM Level
                     </th>
                     {/* Sticky top for all month columns */}
                     {visibleMonths.map((month) => (
-                      <th key={month} className="py-2 px-3 min-w-52 text-center border-r border-slate-200 dark:border-slate-800/50 last:border-r-0 sticky top-0 z-20 bg-slate-100 dark:bg-slate-900 shadow-xs">
+                      <th key={month} className="py-2 px-3 min-w-52 text-center border-r border-(--border-main) last:border-r-0 sticky top-0 z-20 bg-(--bg-elevated) shadow-xs">
                         {month}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
                   {filteredData.length === 0 ? (
                     <tr>
-                      <td colSpan={visibleMonths.length + 1} className="text-center py-12 text-slate-500 dark:text-slate-400 italic text-xs">
+                      <td colSpan={visibleMonths.length + 1} className="text-center py-12 text-(--text-muted) italic text-xs">
                         No maintenance forecast records found for the selected search or filters.
                       </td>
                     </tr>
                   ) : (
                     filteredData.map((row, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                      <tr key={idx} className="hover:bg-(--accent-subtle) transition-colors">
                         {/* Sticky left for first column in rows */}
-                        <td className="py-2 px-3 sticky left-0 bg-slate-50 dark:bg-slate-900 z-10 text-center font-bold text-slate-900 dark:text-slate-100 border-r border-slate-300 dark:border-slate-800 shadow-xs">
-                          <span className="inline-block px-2 py-0.5 bg-blue-100 dark:bg-blue-600/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800/40 rounded text-xs font-semibold">
+                        <td className="py-2 px-3 sticky left-0 bg-(--bg-elevated) z-10 text-center font-bold text-(--text-primary) border-r border-(--border-main) shadow-xs">
+                          <span className="inline-block px-2 py-0.5 bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) rounded text-xs font-semibold">
                             {row?.pm_level ?? '—'}
                           </span>
                         </td>
@@ -276,8 +272,8 @@ export function MaintenanceForecast() {
                           const cellValue = row?.[month];
                           if (!cellValue) {
                             return (
-                              <td key={month} className="py-2 px-3 align-top border-r border-slate-200 dark:border-slate-800/50 last:border-r-0">
-                                <span className="text-slate-400 dark:text-slate-600 italic">-</span>
+                              <td key={month} className="py-2 px-3 align-top border-r border-(--border-main) last:border-r-0">
+                                <span className="text-(--text-muted) italic">-</span>
                               </td>
                             );
                           }
@@ -311,7 +307,7 @@ export function MaintenanceForecast() {
                             : items.filter((item) => item.toLowerCase().includes(searchTrim));
 
                           return (
-                            <td key={month} className="py-2 px-3 align-top border-r border-slate-200 dark:border-slate-800/50 last:border-r-0">
+                            <td key={month} className="py-2 px-3 align-top border-r border-(--border-main) last:border-r-0">
                               {filteredItems.length > 0 ? (
                                 <div className="flex flex-wrap gap-1.5">
                                   {filteredItems.map((item, i) => {
@@ -321,8 +317,8 @@ export function MaintenanceForecast() {
                                         key={i}
                                         className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-medium whitespace-nowrap ${
                                           isMatch
-                                            ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-200 border border-blue-300 dark:border-blue-800/60 font-semibold'
-                                            : 'bg-slate-100 dark:bg-slate-950 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800'
+                                            ? 'bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) font-semibold'
+                                            : 'bg-(--bg-elevated) text-(--text-secondary) border border-(--border-main)'
                                         }`}
                                       >
                                         {item}
@@ -331,7 +327,7 @@ export function MaintenanceForecast() {
                                   })}
                                 </div>
                               ) : (
-                                <span className="text-slate-400 dark:text-slate-600 italic">-</span>
+                                <span className="text-(--text-muted) italic">-</span>
                               )}
                             </td>
                           );

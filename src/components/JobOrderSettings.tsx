@@ -76,8 +76,7 @@ export function JobOrderSettings() {
           if (error) throw error;
           if (isMounted) setStatuses(data || []);
         }
-      } catch (err: unknown) {
-        console.error(`Error fetching data for ${activeTab}:`, err);
+      } catch {
         if (isMounted) setErrorMsg(`Failed to load ${activeTab} data. Please check table permissions.`);
       }
     }
@@ -101,8 +100,8 @@ export function JobOrderSettings() {
         const { data } = await supabase.from('joborder_status').select('*').order('status_name');
         if (data) setStatuses(data);
       }
-    } catch (err) {
-      console.error('Error refreshing tab data:', err);
+    } catch {
+      // Ignored
     }
   };
 
@@ -141,8 +140,7 @@ export function JobOrderSettings() {
       setSuccessMsg('Record deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 3000);
       refreshTabData();
-    } catch (err: unknown) {
-      console.error('Error deleting record:', err);
+    } catch {
       setErrorMsg('Failed to delete record. Check foreign key constraints.');
     }
   };
@@ -188,8 +186,7 @@ export function JobOrderSettings() {
       setIsModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 4000);
       refreshTabData();
-    } catch (err: unknown) {
-      console.error('Error saving record:', err);
+    } catch {
       setErrorMsg('Failed to save record. Please check required fields or constraints.');
     } finally {
       setSubmitting(false);
@@ -199,13 +196,13 @@ export function JobOrderSettings() {
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-4">
       {/* Header */}
-      <div className="shrink-0 flex items-center gap-3 border-b border-slate-300 dark:border-slate-800 pb-4">
-        <div className="p-2.5 bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl">
+      <div className="shrink-0 flex items-center gap-3 border-b border-(--border-main) pb-4">
+        <div className="p-2.5 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-xl">
           <Wrench className="w-7 h-7" />
         </div>
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Job Order Configuration</h1>
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Configure job order types, priority levels, and workflow statuses.</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-(--text-primary)">Job Order Configuration</h1>
+          <p className="text-xs sm:text-sm text-(--text-muted)">Configure job order types, priority levels, and workflow statuses.</p>
         </div>
       </div>
 
@@ -224,13 +221,13 @@ export function JobOrderSettings() {
       )}
 
       {/* Clean Tab Navigation */}
-      <div className="shrink-0 flex border-b border-slate-300 dark:border-slate-800 gap-2 overflow-x-auto">
+      <div className="shrink-0 flex border-b border-(--border-main) gap-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('types')}
           className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'types'
-              ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20'
-              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900/50'
+              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
+              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
           }`}
         >
           <Wrench className="w-4 h-4" />
@@ -241,8 +238,8 @@ export function JobOrderSettings() {
           onClick={() => setActiveTab('priorities')}
           className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'priorities'
-              ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20'
-              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900/50'
+              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
+              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
           }`}
         >
           <Layers className="w-4 h-4" />
@@ -253,8 +250,8 @@ export function JobOrderSettings() {
           onClick={() => setActiveTab('statuses')}
           className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'statuses'
-              ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20'
-              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900/50'
+              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
+              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
           }`}
         >
           <CheckSquare className="w-4 h-4" />
@@ -263,46 +260,46 @@ export function JobOrderSettings() {
       </div>
 
       {/* Tab Content Container */}
-      <div className="flex flex-col flex-1 min-h-0 bg-slate-50/90 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 shadow-xs rounded-xl p-6 space-y-4">
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-(--border-main) shadow-xs rounded-xl p-6 space-y-4">
         <div className="shrink-0 flex justify-end">
           <button
             onClick={handleOpenAdd}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow"
+            className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow"
           >
             <Plus className="w-4 h-4" />
             <span>Add Record</span>
           </button>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-auto border border-slate-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-950">
+        <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
           {/* TAB 1: JOB ORDER TYPES */}
           {activeTab === 'types' && (
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 shadow-xs">
+                <tr className="border-b border-(--border-main) text-(--text-muted) text-xs uppercase bg-(--bg-surface) sticky top-0 z-10 shadow-xs">
                   <th className="p-3">Type Description</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
                 {types.length === 0 ? (
                   <tr>
-                    <td colSpan={2} className="p-8 text-center text-slate-500">No job order types found.</td>
+                    <td colSpan={2} className="p-8 text-center text-(--text-muted)">No job order types found.</td>
                   </tr>
                 ) : (
                   types.map((item) => (
-                    <tr key={item.type_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                      <td className="p-3 font-semibold text-slate-900 dark:text-slate-100">{item.type_desc}</td>
+                    <tr key={item.type_id} className="hover:bg-(--accent-subtle) transition-colors">
+                      <td className="p-3 font-semibold text-(--text-primary)">{item.type_desc}</td>
                       <td className="p-3 text-right space-x-3">
                         <button
                           onClick={() => handleOpenEdit(item)}
-                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
                         >
                           <Edit2 className="w-3.5 h-3.5" /> Edit
                         </button>
                         <button
                           onClick={() => handleDelete(item.type_id, 'joborder_type', 'type_id')}
-                          className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Delete
                         </button>
@@ -318,30 +315,30 @@ export function JobOrderSettings() {
           {activeTab === 'priorities' && (
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 shadow-xs">
+                <tr className="border-b border-(--border-main) text-(--text-muted) text-xs uppercase bg-(--bg-surface) sticky top-0 z-10 shadow-xs">
                   <th className="p-3">Priority Description</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
                 {priorities.length === 0 ? (
                   <tr>
-                    <td colSpan={2} className="p-8 text-center text-slate-500">No job order priorities found.</td>
+                    <td colSpan={2} className="p-8 text-center text-(--text-muted)">No job order priorities found.</td>
                   </tr>
                 ) : (
                   priorities.map((item) => (
-                    <tr key={item.priority_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                      <td className="p-3 font-semibold text-slate-900 dark:text-slate-100">{item.priority_desc}</td>
+                    <tr key={item.priority_id} className="hover:bg-(--accent-subtle) transition-colors">
+                      <td className="p-3 font-semibold text-(--text-primary)">{item.priority_desc}</td>
                       <td className="p-3 text-right space-x-3">
                         <button
                           onClick={() => handleOpenEdit(item)}
-                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
                         >
                           <Edit2 className="w-3.5 h-3.5" /> Edit
                         </button>
                         <button
                           onClick={() => handleDelete(item.priority_id, 'joborder_priority', 'priority_id')}
-                          className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Delete
                         </button>
@@ -357,30 +354,30 @@ export function JobOrderSettings() {
           {activeTab === 'statuses' && (
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 shadow-xs">
+                <tr className="border-b border-(--border-main) text-(--text-muted) text-xs uppercase bg-(--bg-surface) sticky top-0 z-10 shadow-xs">
                   <th className="p-3">Status Name</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
                 {statuses.length === 0 ? (
                   <tr>
-                    <td colSpan={2} className="p-8 text-center text-slate-500">No job order statuses found.</td>
+                    <td colSpan={2} className="p-8 text-center text-(--text-muted)">No job order statuses found.</td>
                   </tr>
                 ) : (
                   statuses.map((item) => (
-                    <tr key={item.status_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                      <td className="p-3 font-semibold text-slate-900 dark:text-slate-100">{item.status_name}</td>
+                    <tr key={item.status_id} className="hover:bg-(--accent-subtle) transition-colors">
+                      <td className="p-3 font-semibold text-(--text-primary)">{item.status_name}</td>
                       <td className="p-3 text-right space-x-3">
                         <button
                           onClick={() => handleOpenEdit(item)}
-                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
                         >
                           <Edit2 className="w-3.5 h-3.5" /> Edit
                         </button>
                         <button
                           onClick={() => handleDelete(item.status_id, 'joborder_status', 'status_id')}
-                          className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Delete
                         </button>
@@ -397,14 +394,14 @@ export function JobOrderSettings() {
       {/* FORM MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 max-h-[92vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-800 pb-4 shrink-0">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+          <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-(--border-main) pb-4 shrink-0">
+              <h3 className="text-lg font-bold text-(--text-primary)">
                 {editingId ? 'Edit Record' : 'Add New Record'}
               </h3>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-100 cursor-pointer"
+                className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -414,59 +411,59 @@ export function JobOrderSettings() {
               <div className="overflow-y-auto space-y-4 p-1 flex-1">
                 {activeTab === 'types' && (
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Type Description</label>
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Type Description</label>
                     <input
                       type="text"
                       required
                       value={typeForm.type_desc}
                       onChange={(e) => setTypeForm({ ...typeForm, type_desc: e.target.value })}
                       placeholder="e.g. Corrective, Preventive"
-                      className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                      className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
                     />
                   </div>
                 )}
 
                 {activeTab === 'priorities' && (
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Priority Description</label>
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Priority Description</label>
                     <input
                       type="text"
                       required
                       value={priorityForm.priority_desc}
                       onChange={(e) => setPriorityForm({ ...priorityForm, priority_desc: e.target.value })}
                       placeholder="e.g. High, Medium, Low"
-                      className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                      className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
                     />
                   </div>
                 )}
 
                 {activeTab === 'statuses' && (
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Status Name</label>
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Status Name</label>
                     <input
                       type="text"
                       required
                       value={statusForm.status_name}
                       onChange={(e) => setStatusForm({ ...statusForm, status_name: e.target.value })}
                       placeholder="e.g. Open, In Progress, Closed"
-                      className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                      className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
                     />
                   </div>
                 )}
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-300 dark:border-slate-800 shrink-0 mt-4">
+              <div className="flex justify-end gap-3 pt-4 border-t border-(--border-main) shrink-0 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-(--accent-subtle) hover:opacity-80 text-(--text-primary) rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow disabled:opacity-50"
+                  className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow disabled:opacity-50"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   <span>Save Changes</span>

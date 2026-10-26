@@ -17,7 +17,6 @@ import {
   Car, 
   Calendar, 
   User, 
-  FileText,
   UserCheck2,
   ChevronDown,
   ChevronUp,
@@ -287,8 +286,8 @@ export function IncidentReport() {
       } else {
         setEquipmentList(data || []);
       }
-    } catch (err: unknown) {
-      console.error('Error loading equipment:', err);
+    } catch {
+      // Handled silently
     } finally {
       setLoadingEquipment(false);
     }
@@ -355,8 +354,7 @@ export function IncidentReport() {
       });
 
       setIncidents(formatted);
-    } catch (err: unknown) {
-      console.error('Error fetching incident_report:', err);
+    } catch {
       setErrorMsg('Failed to load incident reports from database.');
     } finally {
       setLoadingIncidents(false);
@@ -437,8 +435,8 @@ export function IncidentReport() {
           description: String(r.description || '')
         })));
       }
-    } catch (err) {
-      console.error('Error loading taxonomy options:', err);
+    } catch {
+      // Handled silently
     }
   }, []);
 
@@ -517,8 +515,8 @@ export function IncidentReport() {
         };
       }));
 
-    } catch (err: unknown) {
-      console.error('Error fetching child records:', err);
+    } catch {
+      // Handled silently
     } finally {
       setLoadingChild(false);
     }
@@ -667,7 +665,6 @@ export function IncidentReport() {
       setTimeout(() => setSuccessMsg(null), 3000);
       await fetchIncidentList();
     } catch (err: unknown) {
-      console.error('Error saving incident report:', err);
       const msg = err instanceof Error ? err.message : 'Failed to save Incident Report.';
       setErrorMsg(msg);
     }
@@ -690,8 +687,7 @@ export function IncidentReport() {
       setTimeout(() => setSuccessMsg(null), 3000);
       if (selectedIncidentId === id) setSelectedIncidentId(null);
       await fetchIncidentList();
-    } catch (err: unknown) {
-      console.error('Error deleting incident report:', err);
+    } catch {
       setErrorMsg('Failed to delete incident report.');
     }
   };
@@ -839,7 +835,6 @@ export function IncidentReport() {
       setTimeout(() => setSuccessMsg(null), 3000);
       await fetchChildRecords(selectedIncidentId);
     } catch (err: unknown) {
-      console.error('Error saving child record:', err);
       const msg = err instanceof Error ? err.message : 'Failed to save record.';
       setErrorMsg(msg);
     }
@@ -878,8 +873,7 @@ export function IncidentReport() {
       setSuccessMsg('Analysis record removed successfully.');
       setTimeout(() => setSuccessMsg(null), 3000);
       if (selectedIncidentId) await fetchChildRecords(selectedIncidentId);
-    } catch (err: unknown) {
-      console.error('Error deleting child record:', err);
+    } catch {
       setErrorMsg('Failed to remove analysis record.');
     }
   };
@@ -957,16 +951,16 @@ export function IncidentReport() {
   return (
     <div className="flex flex-col h-full max-h-[calc(100vh-100px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-2.5 overflow-hidden">
       {/* Main Header */}
-      <div className="shrink-0 flex items-center justify-between border-b border-slate-300 dark:border-slate-800 pb-2.5">
+      <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-2.5">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-red-100 dark:bg-red-600/20 text-red-600 dark:text-red-400 rounded-xl">
+          <div className="p-2 bg-black text-white rounded-xl shadow-xs">
             <AlertTriangle className="w-6 h-6 sm:w-7 sm:h-7" />
           </div>
           <div>
-            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-(--text-primary)">
               Incident Reports & Cause Analysis
             </h1>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
+            <p className="text-xs sm:text-sm text-(--text-muted)">
               Log equipment incidents and analyze root causes across unsafe conditions, acts, factors, and causes.
             </p>
           </div>
@@ -975,7 +969,7 @@ export function IncidentReport() {
 
       {/* Messages */}
       {successMsg && (
-        <div className="shrink-0 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-3.5 py-2 rounded-lg flex items-center gap-3 text-xs shadow-xs">
+        <div className="shrink-0 bg-(--accent-subtle) border border-(--border-main) text-(--text-primary) px-3.5 py-2 rounded-lg flex items-center gap-3 text-xs shadow-xs">
           <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>{successMsg}</span>
         </div>
@@ -989,22 +983,22 @@ export function IncidentReport() {
       )}
 
       {/* AREA 2: COLLAPSIBLE SINGLE INCIDENT RECORD DISPLAY */}
-      <div className="shrink-0 bg-slate-50/90 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 shadow-xs rounded-xl p-3.5 space-y-2.5">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-300 dark:border-slate-800 pb-2.5">
+      <div className="shrink-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-3.5 space-y-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-(--border-main) pb-2.5">
           <div className="flex items-center gap-3">
             {/* Dynamic Incident Ref Number & Severity */}
             <div className="text-xs font-semibold whitespace-nowrap">
               {selectedIncidentRecord ? (
                 <span className="flex items-center gap-1.5">
-                  <span className="text-blue-600 dark:text-blue-400 font-mono font-bold">
+                  <span className="text-(--text-primary) font-mono font-bold">
                     {selectedIncidentRecord.incident_refno}
                   </span>
-                  <span className="text-slate-600 dark:text-slate-400 font-normal">
+                  <span className="text-(--text-muted) font-normal">
                     ({selectedIncidentRecord.incident_severity} Severity)
                   </span>
                 </span>
               ) : (
-                <span className="text-slate-500 font-normal">No Incident Selected</span>
+                <span className="text-(--text-muted) font-normal">No Incident Selected</span>
               )}
             </div>
 
@@ -1013,9 +1007,9 @@ export function IncidentReport() {
                 setIncidentSearchQuery('');
                 setIsIncidentSearchOpen(true);
               }}
-              className="bg-white dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="bg-(--bg-elevated) hover:opacity-80 text-(--text-primary) border border-(--border-main) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
             >
-              <Search className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <Search className="w-3.5 h-3.5 text-(--text-primary)" />
               <span>Search Incident Reports...</span>
             </button>
           </div>
@@ -1023,7 +1017,7 @@ export function IncidentReport() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleOpenCreateModal}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
+              className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>New Incident Report</span>
@@ -1031,10 +1025,20 @@ export function IncidentReport() {
 
             <button
               onClick={() => setIsSecondAreaOpen(!isSecondAreaOpen)}
-              className="p-1.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg transition-colors cursor-pointer"
+              className="px-2.5 py-1.5 bg-(--accent-subtle) hover:opacity-80 text-(--text-primary) border border-(--border-main) rounded-lg transition-colors cursor-pointer text-xs font-semibold flex items-center gap-1.5"
               title={isSecondAreaOpen ? "Collapse Incident Record Display" : "Expand Incident Record Display"}
             >
-              {isSecondAreaOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              {isSecondAreaOpen ? (
+                <>
+                  <ChevronUp className="w-4 h-4" />
+                  <span>Collapse</span>
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-4 h-4" />
+                  <span>Expand</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -1043,15 +1047,15 @@ export function IncidentReport() {
         {isSecondAreaOpen && (
           <div className="max-h-[25vh] overflow-y-auto pr-1 space-y-2.5">
             {loadingIncidents ? (
-              <div className="py-4 text-center text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2 text-xs">
-                <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+              <div className="py-4 text-center text-(--text-muted) flex items-center justify-center gap-2 text-xs">
+                <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
                 <span>Loading incident report details...</span>
               </div>
             ) : !selectedIncidentRecord ? (
-              <div className="py-3 text-center text-slate-500 dark:text-slate-400 space-y-1">
-                <FolderSearch className="w-6 h-6 text-slate-400 dark:text-slate-600 mx-auto" />
+              <div className="py-3 text-center text-(--text-muted) space-y-1">
+                <FolderSearch className="w-6 h-6 text-(--text-muted) mx-auto" />
                 <p className="text-xs">No Incident Report selected.</p>
-                <p className="text-[11px] text-slate-500 max-w-md mx-auto">
+                <p className="text-[11px] text-(--text-muted) max-w-md mx-auto">
                   Use the search button above to load an incident record or click &quot;New Incident Report&quot; to create a record.
                 </p>
                 <button
@@ -1059,24 +1063,24 @@ export function IncidentReport() {
                     setIncidentSearchQuery('');
                     setIsIncidentSearchOpen(true);
                   }}
-                  className="mt-1 bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1 cursor-pointer"
+                  className="mt-1 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1 cursor-pointer"
                 >
                   <Search className="w-3.5 h-3.5" />
                   <span>Browse & Select Incident</span>
                 </button>
               </div>
             ) : (
-              <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl p-3 space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-2">
+              <div className="bg-(--bg-elevated) border border-(--border-main) rounded-xl p-3 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-(--border-main) pb-2">
                   <div>
-                    <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">Incident Ref #</span>
-                    <div className="text-sm font-bold text-blue-600 dark:text-blue-400 font-mono flex items-center gap-2">
+                    <span className="text-[10px] uppercase font-semibold text-(--text-muted) block">Incident Ref #</span>
+                    <div className="text-sm font-bold text-(--text-primary) font-mono flex items-center gap-2">
                       {selectedIncidentRecord.incident_refno}
                       <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
                         selectedIncidentRecord.incident_severity === 'Critical' ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400 border border-red-300 dark:border-red-800' :
                         selectedIncidentRecord.incident_severity === 'High' ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-800' :
                         selectedIncidentRecord.incident_severity === 'Medium' ? 'bg-yellow-100 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-800' :
-                        'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
+                        'bg-(--accent-subtle) text-(--text-secondary) border border-(--border-main)'
                       }`}>
                         {selectedIncidentRecord.incident_severity} Severity
                       </span>
@@ -1089,8 +1093,8 @@ export function IncidentReport() {
                       onClick={() => handleOpenEditModal(selectedIncidentRecord)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors ${
                         isLockedRecord 
-                          ? 'bg-slate-100 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60' 
-                          : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 border border-slate-300 dark:border-slate-700 cursor-pointer'
+                          ? 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main) cursor-not-allowed opacity-60' 
+                          : 'bg-(--accent-subtle) hover:opacity-80 text-(--text-primary) border border-(--border-main) cursor-pointer'
                       }`}
                       title={isLockedRecord ? `Cannot edit because status is "${selectedIncidentRecord.status_name}"` : 'Edit Record'}
                     >
@@ -1102,8 +1106,8 @@ export function IncidentReport() {
                       onClick={() => handleDeleteMaster(selectedIncidentRecord.incident_id, selectedIncidentRecord.status_name)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors ${
                         isLockedRecord 
-                          ? 'bg-slate-100 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60' 
-                          : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-red-600 dark:text-red-400 border border-slate-300 dark:border-slate-700 cursor-pointer'
+                          ? 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main) cursor-not-allowed opacity-60' 
+                          : 'bg-(--accent-subtle) hover:opacity-80 text-red-600 dark:text-red-400 border border-(--border-main) cursor-pointer'
                       }`}
                       title={isLockedRecord ? `Cannot delete because status is "${selectedIncidentRecord.status_name}"` : 'Delete'}
                     >
@@ -1116,68 +1120,68 @@ export function IncidentReport() {
                 {/* Top Row Grid details */}
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
                   <div>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase block">Incident Date</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">{selectedIncidentRecord.incident_date}</span>
+                    <span className="text-[11px] text-(--text-muted) uppercase block">Incident Date</span>
+                    <span className="font-semibold text-(--text-primary) font-mono">{selectedIncidentRecord.incident_date}</span>
                   </div>
                   <div>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase block">Equipment Vehicle</span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100">{selectedIncidentRecord.vehicle_plate}</span>
+                    <span className="text-[11px] text-(--text-muted) uppercase block">Equipment Vehicle</span>
+                    <span className="font-bold text-(--text-primary)">{selectedIncidentRecord.vehicle_plate}</span>
                   </div>
                   <div>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase block">Estimated Loss</span>
+                    <span className="text-[11px] text-(--text-muted) uppercase block">Estimated Loss</span>
                     <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
                       ₱{(selectedIncidentRecord.incident_loss || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase block">Status</span>
-                    <span className="font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900 inline-block">
+                    <span className="text-[11px] text-(--text-muted) uppercase block">Status</span>
+                    <span className="font-semibold text-(--text-primary) bg-(--accent-subtle) px-2 py-0.5 rounded border border-(--border-main) inline-block">
                       {selectedIncidentRecord.status_name || '—'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase block">Completed Date</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">
+                    <span className="text-[11px] text-(--text-muted) uppercase block">Completed Date</span>
+                    <span className="font-semibold text-(--text-primary) font-mono">
                       {selectedIncidentRecord.reportcompleted_date || '—'}
                     </span>
                   </div>
                 </div>
 
                 {/* Description Block */}
-                <div className="pt-2 border-t border-slate-200 dark:border-slate-800/60">
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase block mb-1">Description</span>
-                  <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800/80">
+                <div className="pt-2 border-t border-(--border-main)">
+                  <span className="text-[11px] text-(--text-muted) uppercase block mb-1">Description</span>
+                  <p className="text-xs text-(--text-secondary) leading-relaxed bg-(--bg-surface) p-2.5 rounded-lg border border-(--border-main)">
                     {selectedIncidentRecord.incident_description || 'No description provided.'}
                   </p>
                 </div>
 
                 {/* Separate Reported By and Validated By Below Description */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200 dark:border-slate-800/60">
-                  <div className="bg-slate-50 dark:bg-slate-900/40 p-2 rounded-lg border border-slate-200 dark:border-slate-800/80 flex items-center gap-2.5">
-                    <div className="p-1.5 bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-lg shrink-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-(--border-main)">
+                  <div className="bg-(--bg-surface) p-2 rounded-lg border border-(--border-main) flex items-center gap-2.5">
+                    <div className="p-1.5 bg-black text-white rounded-lg shrink-0">
                       <User className="w-3.5 h-3.5" />
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold block">Reported By</span>
-                      <span className="text-xs font-bold text-slate-900 dark:text-slate-100">{selectedIncidentRecord.reported_by || '—'}</span>
+                      <span className="text-[10px] text-(--text-muted) uppercase font-semibold block">Reported By</span>
+                      <span className="text-xs font-bold text-(--text-primary)">{selectedIncidentRecord.reported_by || '—'}</span>
                     </div>
                   </div>
 
-                  <div className="bg-slate-50 dark:bg-slate-900/40 p-2 rounded-lg border border-slate-200 dark:border-slate-800/80 flex items-center gap-2.5">
-                    <div className="p-1.5 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-lg shrink-0">
+                  <div className="bg-(--bg-surface) p-2 rounded-lg border border-(--border-main) flex items-center gap-2.5">
+                    <div className="p-1.5 bg-black text-white rounded-lg shrink-0">
                       <UserCheck2 className="w-3.5 h-3.5" />
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold block">Validated By</span>
-                      <span className="text-xs font-bold text-slate-900 dark:text-slate-100">{selectedIncidentRecord.validated_by || '—'}</span>
+                      <span className="text-[10px] text-(--text-muted) uppercase font-semibold block">Validated By</span>
+                      <span className="text-xs font-bold text-(--text-primary)">{selectedIncidentRecord.validated_by || '—'}</span>
                     </div>
                   </div>
                 </div>
 
                 {selectedIncidentRecord.incident_impact && (
                   <div>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase block mb-1">Impact Summary</span>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">{selectedIncidentRecord.incident_impact}</p>
+                    <span className="text-[11px] text-(--text-muted) uppercase block mb-1">Impact Summary</span>
+                    <p className="text-xs text-(--text-secondary)">{selectedIncidentRecord.incident_impact}</p>
                   </div>
                 )}
               </div>
@@ -1187,19 +1191,19 @@ export function IncidentReport() {
       </div>
 
       {/* Child Analysis Tabs Section */}
-      <div className="flex flex-col flex-1 min-h-0 bg-slate-50/90 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl p-3 shadow-xs overflow-hidden space-y-2">
-        <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-b border-slate-300 dark:border-slate-800 pb-2">
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) border border-(--border-main) rounded-xl p-3 shadow-xs overflow-hidden space-y-2">
+        <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-b border-(--border-main) pb-2">
           <div>
-            <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <h2 className="text-sm sm:text-base font-bold text-(--text-primary) flex items-center gap-2">
+              <Layers className="w-4 h-4 text-(--text-primary)" />
               Incident Cause Breakdown & Analysis
               {selectedIncidentRecord && (
-                <span className="text-xs text-blue-600 dark:text-blue-400 font-mono">
+                <span className="text-xs text-(--text-primary) font-mono">
                   ({selectedIncidentRecord.incident_refno})
                 </span>
               )}
             </h2>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
+            <p className="text-xs sm:text-sm text-(--text-muted)">
               {selectedIncidentRecord 
                 ? `List down incident causes.`
                 : 'Select an incident report using search above to view and assign root cause items.'}
@@ -1211,8 +1215,8 @@ export function IncidentReport() {
             onClick={handleOpenAddChild}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs shrink-0 ${
               !selectedIncidentId || isLockedRecord 
-                ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 opacity-50 cursor-not-allowed' 
-                : 'bg-blue-600 hover:bg-blue-500 text-white cursor-pointer'
+                ? 'bg-(--accent-subtle) text-(--text-muted) opacity-50 cursor-not-allowed' 
+                : 'bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) cursor-pointer'
             }`}
             title={isLockedRecord ? 'Analysis items cannot be added because the incident is Completed or Cancelled' : 'Add Analysis Item'}
           >
@@ -1222,13 +1226,13 @@ export function IncidentReport() {
         </div>
 
         {/* 4 Child Breakdown Tabs */}
-        <div className="shrink-0 flex gap-2 border-b border-slate-300 dark:border-slate-800 pb-2 overflow-x-auto">
+        <div className="shrink-0 flex gap-2 border-b border-(--border-main) pb-2 overflow-x-auto">
           <button
             onClick={() => setActiveAnalysisTab('conditions')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap border ${
               activeAnalysisTab === 'conditions'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                : 'bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-300 dark:border-slate-800'
+                ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
+                : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
             }`}
           >
             <AlertTriangle className="w-3.5 h-3.5" />
@@ -1237,10 +1241,10 @@ export function IncidentReport() {
 
           <button
             onClick={() => setActiveAnalysisTab('acts')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap border ${
               activeAnalysisTab === 'acts'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                : 'bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-300 dark:border-slate-800'
+                ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
+                : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
             }`}
           >
             <ShieldAlert className="w-3.5 h-3.5" />
@@ -1249,10 +1253,10 @@ export function IncidentReport() {
 
           <button
             onClick={() => setActiveAnalysisTab('personal')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap border ${
               activeAnalysisTab === 'personal'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                : 'bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-300 dark:border-slate-800'
+                ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
+                : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
             }`}
           >
             <UserCheck className="w-3.5 h-3.5" />
@@ -1261,10 +1265,10 @@ export function IncidentReport() {
 
           <button
             onClick={() => setActiveAnalysisTab('workrelated')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap border ${
               activeAnalysisTab === 'workrelated'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                : 'bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-300 dark:border-slate-800'
+                ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
+                : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
             }`}
           >
             <Briefcase className="w-3.5 h-3.5" />
@@ -1273,14 +1277,14 @@ export function IncidentReport() {
         </div>
 
         {/* Scrollable Container for Child Tables */}
-        <div className="flex-1 min-h-0 overflow-y-auto border border-slate-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-950">
+        <div className="flex-1 min-h-0 overflow-y-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
           {loadingChild ? (
-            <div className="p-8 text-center text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2 text-xs">
-              <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+            <div className="p-8 text-center text-(--text-muted) flex items-center justify-center gap-2 text-xs">
+              <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
               <span>Loading cause analysis items...</span>
             </div>
           ) : !selectedIncidentId ? (
-            <div className="p-12 text-center text-slate-500 dark:text-slate-400 text-xs">
+            <div className="p-12 text-center text-(--text-muted) text-xs">
               Select or search an Incident Report to view or add root cause items.
             </div>
           ) : (
@@ -1289,7 +1293,7 @@ export function IncidentReport() {
               {activeAnalysisTab === 'conditions' && (
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 uppercase border-b border-slate-300 dark:border-slate-800 sticky top-0 z-10 shadow-xs">
+                    <tr className="bg-(--accent-subtle) text-(--text-muted) uppercase border-b border-(--border-main) sticky top-0 z-10 shadow-xs">
                       <th className="py-2 px-3 w-32">Condition Code</th>
                       <th className="py-2 px-3">Category</th>
                       <th className="py-2 px-3">Condition Detail</th>
@@ -1297,23 +1301,23 @@ export function IncidentReport() {
                       <th className="py-2 px-3 text-right w-24">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
                     {incidentConditions.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="py-6 text-center text-slate-500 dark:text-slate-400 text-xs">No unsafe conditions recorded for this incident.</td>
+                        <td colSpan={5} className="py-6 text-center text-(--text-muted) text-xs">No unsafe conditions recorded for this incident.</td>
                       </tr>
                     ) : (
                       incidentConditions.map((row) => (
-                        <tr key={row.incident_conditions_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                        <tr key={row.incident_conditions_id} className="hover:bg-(--accent-subtle) transition-colors">
                           <td className="py-2 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">{row.detail_code || row.code || '—'}</td>
-                          <td className="py-2 px-3 text-slate-800 dark:text-slate-200">{row.description || '—'}</td>
-                          <td className="py-2 px-3 text-slate-700 dark:text-slate-300 font-medium">{row.detail_description || '—'}</td>
-                          <td className="py-2 px-3 text-slate-600 dark:text-slate-400">{row.remarks || '—'}</td>
+                          <td className="py-2 px-3 text-(--text-primary)">{row.description || '—'}</td>
+                          <td className="py-2 px-3 text-(--text-secondary) font-medium">{row.detail_description || '—'}</td>
+                          <td className="py-2 px-3 text-(--text-muted)">{row.remarks || '—'}</td>
                           <td className="py-2 px-3 text-right space-x-2 shrink-0">
                             <button
                               disabled={isLockedRecord}
                               onClick={() => handleOpenEditChild(row.incident_conditions_id, row.condition_id, row.remarks, row.detail_id)}
-                              className={`p-1 rounded ${isLockedRecord ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-blue-600 dark:text-blue-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer'}`}
+                              className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-(--text-primary) hover:bg-(--accent-subtle) cursor-pointer'}`}
                               title={isLockedRecord ? 'Locked' : 'Edit'}
                             >
                               <Edit2 className="w-3.5 h-3.5" />
@@ -1321,7 +1325,7 @@ export function IncidentReport() {
                             <button
                               disabled={isLockedRecord}
                               onClick={() => handleDeleteChild(row.incident_conditions_id)}
-                              className={`p-1 rounded ${isLockedRecord ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer'}`}
+                              className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:bg-(--accent-subtle) cursor-pointer'}`}
                               title={isLockedRecord ? 'Locked' : 'Delete'}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -1338,7 +1342,7 @@ export function IncidentReport() {
               {activeAnalysisTab === 'acts' && (
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 uppercase border-b border-slate-300 dark:border-slate-800 sticky top-0 z-10 shadow-xs">
+                    <tr className="bg-(--accent-subtle) text-(--text-muted) uppercase border-b border-(--border-main) sticky top-0 z-10 shadow-xs">
                       <th className="py-2 px-3 w-32">Act Code</th>
                       <th className="py-2 px-3">Category</th>
                       <th className="py-2 px-3">Act Detail</th>
@@ -1346,23 +1350,23 @@ export function IncidentReport() {
                       <th className="py-2 px-3 text-right w-24">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
                     {incidentActs.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="py-6 text-center text-slate-500 dark:text-slate-400 text-xs">No unsafe acts recorded for this incident.</td>
+                        <td colSpan={5} className="py-6 text-center text-(--text-muted) text-xs">No unsafe acts recorded for this incident.</td>
                       </tr>
                     ) : (
                       incidentActs.map((row) => (
-                        <tr key={row.incident_act_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                        <tr key={row.incident_act_id} className="hover:bg-(--accent-subtle) transition-colors">
                           <td className="py-2 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">{row.detail_code || row.code || '—'}</td>
-                          <td className="py-2 px-3 text-slate-800 dark:text-slate-200">{row.description || '—'}</td>
-                          <td className="py-2 px-3 text-slate-700 dark:text-slate-300 font-medium">{row.detail_description || '—'}</td>
-                          <td className="py-2 px-3 text-slate-600 dark:text-slate-400">{row.remarks || '—'}</td>
+                          <td className="py-2 px-3 text-(--text-primary)">{row.description || '—'}</td>
+                          <td className="py-2 px-3 text-(--text-secondary) font-medium">{row.detail_description || '—'}</td>
+                          <td className="py-2 px-3 text-(--text-muted)">{row.remarks || '—'}</td>
                           <td className="py-2 px-3 text-right space-x-2 shrink-0">
                             <button
                               disabled={isLockedRecord}
                               onClick={() => handleOpenEditChild(row.incident_act_id, row.act_id, row.remarks, row.detail_id)}
-                              className={`p-1 rounded ${isLockedRecord ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-blue-600 dark:text-blue-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer'}`}
+                              className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-(--text-primary) hover:bg-(--accent-subtle) cursor-pointer'}`}
                               title={isLockedRecord ? 'Locked' : 'Edit'}
                             >
                               <Edit2 className="w-3.5 h-3.5" />
@@ -1370,7 +1374,7 @@ export function IncidentReport() {
                             <button
                               disabled={isLockedRecord}
                               onClick={() => handleDeleteChild(row.incident_act_id)}
-                              className={`p-1 rounded ${isLockedRecord ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer'}`}
+                              className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:bg-(--accent-subtle) cursor-pointer'}`}
                               title={isLockedRecord ? 'Locked' : 'Delete'}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -1387,7 +1391,7 @@ export function IncidentReport() {
               {activeAnalysisTab === 'personal' && (
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 uppercase border-b border-slate-300 dark:border-slate-800 sticky top-0 z-10 shadow-xs">
+                    <tr className="bg-(--accent-subtle) text-(--text-muted) uppercase border-b border-(--border-main) sticky top-0 z-10 shadow-xs">
                       <th className="py-2 px-3 w-32">Factor Code</th>
                       <th className="py-2 px-3">Category</th>
                       <th className="py-2 px-3">Factor Detail</th>
@@ -1395,23 +1399,23 @@ export function IncidentReport() {
                       <th className="py-2 px-3 text-right w-24">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
                     {incidentPersonal.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="py-6 text-center text-slate-500 dark:text-slate-400 text-xs">No personal factors recorded for this incident.</td>
+                        <td colSpan={5} className="py-6 text-center text-(--text-muted) text-xs">No personal factors recorded for this incident.</td>
                       </tr>
                     ) : (
                       incidentPersonal.map((row) => (
-                        <tr key={row.incident_personal_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                        <tr key={row.incident_personal_id} className="hover:bg-(--accent-subtle) transition-colors">
                           <td className="py-2 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">{row.detail_code || row.code || '—'}</td>
-                          <td className="py-2 px-3 text-slate-800 dark:text-slate-200">{row.description || '—'}</td>
-                          <td className="py-2 px-3 text-slate-700 dark:text-slate-300 font-medium">{row.detail_description || '—'}</td>
-                          <td className="py-2 px-3 text-slate-600 dark:text-slate-400">{row.remarks || '—'}</td>
+                          <td className="py-2 px-3 text-(--text-primary)">{row.description || '—'}</td>
+                          <td className="py-2 px-3 text-(--text-secondary) font-medium">{row.detail_description || '—'}</td>
+                          <td className="py-2 px-3 text-(--text-muted)">{row.remarks || '—'}</td>
                           <td className="py-2 px-3 text-right space-x-2 shrink-0">
                             <button
                               disabled={isLockedRecord}
                               onClick={() => handleOpenEditChild(row.incident_personal_id, row.factor_id, row.remarks, row.detail_id)}
-                              className={`p-1 rounded ${isLockedRecord ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-blue-600 dark:text-blue-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer'}`}
+                              className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-(--text-primary) hover:bg-(--accent-subtle) cursor-pointer'}`}
                               title={isLockedRecord ? 'Locked' : 'Edit'}
                             >
                               <Edit2 className="w-3.5 h-3.5" />
@@ -1419,7 +1423,7 @@ export function IncidentReport() {
                             <button
                               disabled={isLockedRecord}
                               onClick={() => handleDeleteChild(row.incident_personal_id)}
-                              className={`p-1 rounded ${isLockedRecord ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer'}`}
+                              className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:bg-(--accent-subtle) cursor-pointer'}`}
                               title={isLockedRecord ? 'Locked' : 'Delete'}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -1436,7 +1440,7 @@ export function IncidentReport() {
               {activeAnalysisTab === 'workrelated' && (
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 uppercase border-b border-slate-300 dark:border-slate-800 sticky top-0 z-10 shadow-xs">
+                    <tr className="bg-(--accent-subtle) text-(--text-muted) uppercase border-b border-(--border-main) sticky top-0 z-10 shadow-xs">
                       <th className="py-2 px-3 w-32">Cause Code</th>
                       <th className="py-2 px-3">Category</th>
                       <th className="py-2 px-3">Cause Detail</th>
@@ -1444,23 +1448,23 @@ export function IncidentReport() {
                       <th className="py-2 px-3 text-right w-24">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
                     {incidentWorkRelated.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="py-6 text-center text-slate-500 dark:text-slate-400 text-xs">No work-related causes recorded for this incident.</td>
+                        <td colSpan={5} className="py-6 text-center text-(--text-muted) text-xs">No work-related causes recorded for this incident.</td>
                       </tr>
                     ) : (
                       incidentWorkRelated.map((row) => (
-                        <tr key={row.incident_workrelated_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                        <tr key={row.incident_workrelated_id} className="hover:bg-(--accent-subtle) transition-colors">
                           <td className="py-2 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">{row.detail_code || row.code || '—'}</td>
-                          <td className="py-2 px-3 text-slate-800 dark:text-slate-200">{row.description || '—'}</td>
-                          <td className="py-2 px-3 text-slate-700 dark:text-slate-300 font-medium">{row.detail_description || '—'}</td>
-                          <td className="py-2 px-3 text-slate-600 dark:text-slate-400">{row.remarks || '—'}</td>
+                          <td className="py-2 px-3 text-(--text-primary)">{row.description || '—'}</td>
+                          <td className="py-2 px-3 text-(--text-secondary) font-medium">{row.detail_description || '—'}</td>
+                          <td className="py-2 px-3 text-(--text-muted)">{row.remarks || '—'}</td>
                           <td className="py-2 px-3 text-right space-x-2 shrink-0">
                             <button
                               disabled={isLockedRecord}
                               onClick={() => handleOpenEditChild(row.incident_workrelated_id, row.cause_id, row.remarks, row.detail_id)}
-                              className={`p-1 rounded ${isLockedRecord ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-blue-600 dark:text-blue-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer'}`}
+                              className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-(--text-primary) hover:bg-(--accent-subtle) cursor-pointer'}`}
                               title={isLockedRecord ? 'Locked' : 'Edit'}
                             >
                               <Edit2 className="w-3.5 h-3.5" />
@@ -1468,7 +1472,7 @@ export function IncidentReport() {
                             <button
                               disabled={isLockedRecord}
                               onClick={() => handleDeleteChild(row.incident_workrelated_id)}
-                              className={`p-1 rounded ${isLockedRecord ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer'}`}
+                              className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:bg-(--accent-subtle) cursor-pointer'}`}
                               title={isLockedRecord ? 'Locked' : 'Delete'}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -1487,35 +1491,35 @@ export function IncidentReport() {
 
       {/* INCIDENT REPORT SEARCH MODAL */}
       {isIncidentSearchOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-60">
-          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-800 px-6 py-4 bg-slate-100 dark:bg-slate-900 shrink-0">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <Search className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-60">
+          <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 bg-(--accent-subtle) shrink-0">
+              <h3 className="text-lg font-bold text-(--text-primary) flex items-center gap-2">
+                <Search className="w-4 h-4 text-(--text-primary)" />
                 Search & Select Incident Report
               </h3>
-              <button onClick={() => setIsIncidentSearchOpen(false)} className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 cursor-pointer">
+              <button onClick={() => setIsIncidentSearchOpen(false)} className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-3 border-b border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 shrink-0">
+            <div className="p-3 border-b border-(--border-main) bg-(--bg-surface) shrink-0">
               <div className="relative">
-                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
                 <input
                   type="text"
                   autoFocus
                   placeholder="Filter ref #, plate, reporter name, or description..."
                   value={incidentSearchQuery}
                   onChange={(e) => setIncidentSearchQuery(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500"
+                  className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
                 />
               </div>
             </div>
 
             <div className="p-4 overflow-y-auto flex-1 space-y-2">
               {filteredIncidents.length === 0 ? (
-                <div className="text-center text-slate-500 dark:text-slate-400 text-xs py-8">
+                <div className="text-center text-(--text-muted) text-xs py-8">
                   No incident reports match your query.
                 </div>
               ) : (
@@ -1528,40 +1532,40 @@ export function IncidentReport() {
                     }}
                     className={`p-3 border rounded-xl cursor-pointer transition-all flex items-center justify-between group ${
                       inc.incident_id === selectedIncidentId
-                        ? 'bg-blue-50 dark:bg-blue-950/80 border-blue-500 text-slate-900 dark:text-slate-100'
-                        : 'bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900/80 border-slate-300 dark:border-slate-800'
+                        ? 'bg-(--accent-subtle) border-(--text-primary) text-(--text-primary)'
+                        : 'bg-(--bg-elevated) hover:bg-(--accent-subtle) border-(--border-main)'
                     }`}
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-blue-600 dark:text-blue-400 text-xs">{inc.incident_refno}</span>
-                        <span className="text-[11px] text-slate-500 dark:text-slate-400">({inc.incident_date})</span>
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                        <span className="font-mono font-bold text-(--text-primary) text-xs">{inc.incident_refno}</span>
+                        <span className="text-[11px] text-(--text-muted)">({inc.incident_date})</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-(--accent-subtle) text-(--text-secondary)">
                           {inc.incident_severity}
                         </span>
                         {inc.status_name && (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-(--accent-subtle) text-(--text-primary) border border-(--border-main)">
                             {inc.status_name}
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-slate-800 dark:text-slate-200">
+                      <div className="text-xs text-(--text-secondary)">
                         Equipment: <strong>{inc.vehicle_plate}</strong> | Reported by: {inc.reported_by || '—'}
                       </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-lg">
+                      <div className="text-[11px] text-(--text-muted) truncate max-w-lg">
                         {inc.incident_description}
                       </div>
                     </div>
-                    <span className="text-xs text-blue-600 dark:text-blue-400 group-hover:underline font-semibold shrink-0">Select</span>
+                    <span className="text-xs text-(--text-primary) group-hover:underline font-semibold shrink-0">Select</span>
                   </div>
                 ))
               )}
             </div>
 
-            <div className="p-3 border-t border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 text-right shrink-0">
+            <div className="p-3 border-t border-(--border-main) bg-(--accent-subtle) text-right shrink-0">
               <button
                 onClick={() => setIsIncidentSearchOpen(false)}
-                className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
+                className="px-4 py-1.5 bg-(--accent-subtle) text-(--text-primary) hover:opacity-80 rounded-lg text-xs font-semibold cursor-pointer"
               >
                 Close
               </button>
@@ -1572,14 +1576,16 @@ export function IncidentReport() {
 
       {/* MASTER FORM MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-800 px-6 py-4 bg-slate-100 dark:bg-slate-900 shrink-0">
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 bg-(--accent-subtle) shrink-0">
+              <h3 className="text-lg font-bold text-(--text-primary) flex items-center gap-2">
+                <div className="p-2 bg-black text-white rounded-xl shadow-xs">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
                 {editingId ? 'Edit Incident Report' : 'Create Incident Report'}
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 cursor-pointer">
+              <button onClick={() => setIsModalOpen(false)} className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1588,28 +1594,28 @@ export function IncidentReport() {
               <div className="p-6 overflow-y-auto flex-1 space-y-4">
                 {/* Equipment Selector Section */}
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  <label className="text-xs font-semibold text-(--text-muted) uppercase tracking-wider">
                     Selected Equipment <span className="text-red-500">*</span>
                   </label>
                   
                   {selectedEquipment ? (
-                    <div className="flex items-center justify-between bg-white dark:bg-slate-950 border border-blue-300 dark:border-blue-900/60 p-3.5 rounded-xl">
+                    <div className="flex items-center justify-between bg-(--bg-surface) border border-(--border-main) p-3.5 rounded-xl">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full text-xs">
                         <div>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase block">Plate Number / ID</span>
-                          <div className="font-bold text-blue-600 dark:text-blue-400 text-sm font-mono">{selectedEquipment.plate_no}</div>
+                          <span className="text-[11px] text-(--text-muted) uppercase block">Plate Number / ID</span>
+                          <div className="font-bold text-(--text-primary) text-sm font-mono">{selectedEquipment.plate_no}</div>
                         </div>
                         <div>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase block">Current Reading</span>
-                          <div className="font-semibold text-slate-900 dark:text-slate-100">{selectedEquipment.service_rdg ?? '0'}</div>
+                          <span className="text-[11px] text-(--text-muted) uppercase block">Current Reading</span>
+                          <div className="font-semibold text-(--text-primary)">{selectedEquipment.service_rdg ?? '0'}</div>
                         </div>
                         <div>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase block">Make / Model</span>
-                          <div className="font-semibold text-slate-900 dark:text-slate-100">{selectedEquipment.make_name || 'N/A'} {selectedEquipment.model_name ? `/ ${selectedEquipment.model_name}` : ''}</div>
+                          <span className="text-[11px] text-(--text-muted) uppercase block">Make / Model</span>
+                          <div className="font-semibold text-(--text-primary)">{selectedEquipment.make_name || 'N/A'} {selectedEquipment.model_name ? `/ ${selectedEquipment.model_name}` : ''}</div>
                         </div>
                         <div>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase block">Type</span>
-                          <div className="font-semibold text-slate-900 dark:text-slate-100">{selectedEquipment.type_description || 'N/A'}</div>
+                          <span className="text-[11px] text-(--text-muted) uppercase block">Type</span>
+                          <div className="font-semibold text-(--text-primary)">{selectedEquipment.type_description || 'N/A'}</div>
                         </div>
                       </div>
                       <button
@@ -1618,7 +1624,7 @@ export function IncidentReport() {
                           setSelectedEquipment(null);
                           setFormData(prev => ({ ...prev, vehicle_id: '', vehicle_plate: '' }));
                         }}
-                        className="text-slate-400 hover:text-red-500 p-2 transition-colors cursor-pointer shrink-0"
+                        className="text-(--text-muted) hover:text-red-500 p-2 transition-colors cursor-pointer shrink-0"
                         title="Change equipment"
                       >
                         <X className="w-5 h-5" />
@@ -1631,20 +1637,20 @@ export function IncidentReport() {
                         setShowEquipmentPicker(true);
                         fetchEquipmentList();
                       }}
-                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 hover:border-blue-500 text-slate-700 dark:text-slate-300 px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer"
+                      className="w-full bg-(--bg-elevated) border border-(--border-main) hover:border-(--text-primary) text-(--text-secondary) px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer"
                     >
                       <span className="flex items-center gap-2">
-                        <Search className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        <Search className="w-4 h-4 text-(--text-primary)" />
                         {equipmentList.length > 0 ? `Click here to select an equipment (${equipmentList.length} loaded)...` : 'Click here to select an equipment...'}
                       </span>
-                      <span className="text-xs bg-blue-100 dark:bg-blue-600/20 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded font-medium">Browse</span>
+                      <span className="text-xs bg-(--accent-subtle) text-(--text-primary) px-2 py-0.5 rounded font-medium">Browse</span>
                     </button>
                   )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
                       Incident Ref # <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -1652,22 +1658,22 @@ export function IncidentReport() {
                       required
                       value={formData.incident_refno}
                       onChange={(e) => setFormData({ ...formData, incident_refno: e.target.value })}
-                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-blue-500"
+                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-(--text-primary)"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
                       Incident Date <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <Calendar className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                      <Calendar className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
                       <input
                         type="date"
                         required
                         value={formData.incident_date}
                         onChange={(e) => setFormData({ ...formData, incident_date: e.target.value })}
-                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg pl-9 pr-3.5 py-2 text-xs focus:outline-none focus:border-blue-500"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-9 pr-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                   </div>
@@ -1675,13 +1681,13 @@ export function IncidentReport() {
 
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
                       Incident Severity Level
                     </label>
                     <select
                       value={formData.incident_severity}
                       onChange={(e) => setFormData({ ...formData, incident_severity: e.target.value as IncidentRecord['incident_severity'] })}
-                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500"
+                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                     >
                       <option value="Low">Low</option>
                       <option value="Medium">Medium</option>
@@ -1691,29 +1697,29 @@ export function IncidentReport() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
                       Estimated Loss (₱)
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-2 text-xs font-mono font-bold text-slate-400">₱</span>
+                      <span className="absolute left-3 top-2 text-xs font-mono font-bold text-(--text-muted)">₱</span>
                       <input
                         type="number"
                         step="0.01"
                         value={formData.incident_loss}
                         onChange={(e) => setFormData({ ...formData, incident_loss: parseFloat(e.target.value) || 0 })}
-                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg pl-8 pr-3 py-2 text-xs font-mono focus:outline-none focus:border-blue-500"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-2 text-xs font-mono focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
                       Status
                     </label>
                     <select
                       value={formData.status_id}
                       onChange={(e) => handleStatusChange(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500"
+                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                     >
                       <option value="">Select Status...</option>
                       {statuses.map(st => (
@@ -1725,23 +1731,23 @@ export function IncidentReport() {
 
                 {/* Read Only Completed Date Field */}
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
                     Completed Date (Read-only)
                   </label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                    <Calendar className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
                     <input
                       type="date"
                       readOnly
                       value={formData.reportcompleted_date}
                       placeholder="Automatically set when status is Completed"
-                      className="w-full bg-slate-100 dark:bg-slate-950/60 border border-slate-300 dark:border-slate-800/80 rounded-lg pl-9 pr-3.5 py-2 text-xs font-mono text-slate-500 dark:text-slate-400 cursor-not-allowed focus:outline-none"
+                      className="w-full bg-(--bg-surface) border border-(--border-main) rounded-lg pl-9 pr-3.5 py-2 text-xs font-mono text-(--text-muted) cursor-not-allowed focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
                     Incident Description
                   </label>
                   <textarea
@@ -1750,12 +1756,12 @@ export function IncidentReport() {
                     value={formData.incident_description}
                     onChange={(e) => setFormData({ ...formData, incident_description: e.target.value })}
                     placeholder="Describe what occurred during the equipment incident..."
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500"
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
                     Incident Impact Summary
                   </label>
                   <input
@@ -1763,31 +1769,31 @@ export function IncidentReport() {
                     value={formData.incident_impact}
                     onChange={(e) => setFormData({ ...formData, incident_impact: e.target.value })}
                     placeholder="e.g. Downtime 4 hrs, minor bumper damage"
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500"
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   {/* Reported By Employee Picker */}
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
                       Reported By
                     </label>
                     <div className="flex gap-2">
                       <div className="relative flex-1">
-                        <User className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                        <User className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
                         <input
                           type="text"
                           value={formData.reported_by}
                           onChange={(e) => setFormData({ ...formData, reported_by: e.target.value })}
                           placeholder="Select or enter reporter name..."
-                          className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-blue-500"
+                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                         />
                       </div>
                       <button
                         type="button"
                         onClick={() => handleOpenEmployeeModal('reported_by')}
-                        className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 border border-slate-300 dark:border-slate-700 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                        className="bg-(--accent-subtle) hover:opacity-80 text-(--text-primary) border border-(--border-main) px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
                       >
                         <Search className="w-3.5 h-3.5" />
                       </button>
@@ -1796,24 +1802,24 @@ export function IncidentReport() {
 
                   {/* Validated By Employee Picker */}
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
                       Validated By
                     </label>
                     <div className="flex gap-2">
                       <div className="relative flex-1">
-                        <UserCheck2 className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                        <UserCheck2 className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
                         <input
                           type="text"
                           value={formData.validated_by}
                           onChange={(e) => setFormData({ ...formData, validated_by: e.target.value })}
                           placeholder="Select or enter validator name..."
-                          className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-blue-500"
+                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                         />
                       </div>
                       <button
                         type="button"
                         onClick={() => handleOpenEmployeeModal('validated_by')}
-                        className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 border border-slate-300 dark:border-slate-700 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                        className="bg-(--accent-subtle) hover:opacity-80 text-(--text-primary) border border-(--border-main) px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
                       >
                         <Search className="w-3.5 h-3.5" />
                       </button>
@@ -1822,17 +1828,17 @@ export function IncidentReport() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-300 dark:border-slate-800 shrink-0 bg-slate-100 dark:bg-slate-900">
+              <div className="flex justify-end gap-3 px-6 py-4 border-t border-(--border-main) shrink-0 bg-(--accent-subtle)">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
+                  className="px-4 py-2 bg-(--accent-subtle) text-(--text-primary) hover:opacity-80 rounded-lg text-xs font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs"
+                  className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold cursor-pointer shadow-xs"
                 >
                   Save Incident Report
                 </button>
@@ -1844,17 +1850,17 @@ export function IncidentReport() {
 
       {/* EQUIPMENT PICKER MODAL */}
       {showEquipmentPicker && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 dark:bg-black/80 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 shrink-0">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <Car className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
+          <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-(--border-main) bg-(--accent-subtle) shrink-0">
+              <h3 className="text-lg font-bold text-(--text-primary) flex items-center gap-2">
+                <Car className="w-4 h-4 text-(--text-primary)" />
                 Select Equipment
               </h3>
               <button
                 type="button"
                 onClick={() => setShowEquipmentPicker(false)}
-                className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer"
+                className="text-(--text-muted) hover:text-(--text-primary) p-1 rounded-lg hover:bg-(--accent-subtle) cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1865,21 +1871,21 @@ export function IncidentReport() {
                 e.preventDefault();
                 fetchEquipmentList(equipmentSearchQuery);
               }}
-              className="p-3 border-b border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex gap-2 shrink-0"
+              className="p-3 border-b border-(--border-main) bg-(--bg-surface) flex gap-2 shrink-0"
             >
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-(--text-muted)" />
                 <input
                   type="text"
                   placeholder="Filter by Equipment Plate / ID..."
                   value={equipmentSearchQuery}
                   onChange={(e) => setEquipmentSearchQuery(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg pl-9 pr-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-9 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
                 />
               </div>
               <button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
               >
                 Search
               </button>
@@ -1887,12 +1893,12 @@ export function IncidentReport() {
 
             <div className="p-4 overflow-y-auto flex-1 space-y-2">
               {loadingEquipment ? (
-                <div className="py-12 text-center text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2 text-xs">
-                  <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                <div className="py-12 text-center text-(--text-muted) flex items-center justify-center gap-2 text-xs">
+                  <Loader2 className="w-5 h-5 animate-spin text-(--text-primary)" />
                   <span>Loading equipment records...</span>
                 </div>
               ) : equipmentList.length === 0 ? (
-                <div className="py-12 text-center text-slate-500 dark:text-slate-400 text-xs">
+                <div className="py-12 text-center text-(--text-muted) text-xs">
                   No equipment records found.
                 </div>
               ) : (
@@ -1910,22 +1916,22 @@ export function IncidentReport() {
                         }));
                         setShowEquipmentPicker(false);
                       }}
-                      className="flex items-center justify-between bg-white dark:bg-slate-950 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-300 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-600/50 p-2.5 rounded-lg transition-colors cursor-pointer group"
+                      className="flex items-center justify-between bg-(--bg-elevated) hover:bg-(--accent-subtle) border border-(--border-main) p-2.5 rounded-lg transition-colors cursor-pointer group"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-slate-100 dark:bg-slate-900 rounded-lg group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 transition-colors">
+                        <div className="p-2 bg-black text-white rounded-lg transition-colors">
                           <Car className="w-4 h-4" />
                         </div>
                         <div>
-                          <div className="font-bold text-blue-600 dark:text-blue-400 text-xs font-mono">{eq.plate_no}</div>
-                          <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                          <div className="font-bold text-(--text-primary) text-xs font-mono">{eq.plate_no}</div>
+                          <div className="text-[11px] text-(--text-muted)">
                             {eq.make_name || 'N/A'} {eq.model_name ? `/ ${eq.model_name}` : ''} ({eq.type_description || 'N/A'})
                           </div>
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase block">Service Rdg</span>
-                        <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">{eq.service_rdg ?? '0'}</div>
+                        <span className="text-[10px] text-(--text-muted) uppercase block">Service Rdg</span>
+                        <div className="text-xs font-semibold text-(--text-secondary)">{eq.service_rdg ?? '0'}</div>
                       </div>
                     </div>
                   );
@@ -1938,35 +1944,35 @@ export function IncidentReport() {
 
       {/* EMPLOYEE SEARCH MODAL */}
       {isEmployeeModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-60">
-          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-800 px-6 py-4 bg-slate-100 dark:bg-slate-900 shrink-0">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-60">
+          <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 bg-(--accent-subtle) shrink-0">
+              <h3 className="text-lg font-bold text-(--text-primary) flex items-center gap-2">
+                <User className="w-4 h-4 text-(--text-primary)" />
                 Select Employee ({employeeModalTarget === 'reported_by' ? 'Reported By' : 'Validated By'})
               </h3>
-              <button onClick={() => setIsEmployeeModalOpen(false)} className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 cursor-pointer">
+              <button onClick={() => setIsEmployeeModalOpen(false)} className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-3 border-b border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 shrink-0">
+            <div className="p-3 border-b border-(--border-main) bg-(--bg-surface) shrink-0">
               <div className="relative">
-                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
                 <input
                   type="text"
                   autoFocus
                   placeholder="Search employee name, ID, or department..."
                   value={employeeSearchQuery}
                   onChange={(e) => setEmployeeSearchQuery(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500"
+                  className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
                 />
               </div>
             </div>
 
             <div className="p-4 overflow-y-auto flex-1">
               {filteredEmployees.length === 0 ? (
-                <div className="text-center text-slate-500 dark:text-slate-400 text-xs py-8">
+                <div className="text-center text-(--text-muted) text-xs py-8">
                   No employee records found matching your query.
                 </div>
               ) : (
@@ -1975,32 +1981,32 @@ export function IncidentReport() {
                     <div
                       key={emp.employee_id}
                       onClick={() => handleSelectEmployee(emp)}
-                      className="p-3 bg-white dark:bg-slate-950 hover:bg-blue-50 dark:hover:bg-blue-950/60 border border-slate-300 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-600/50 rounded-xl cursor-pointer transition-all flex items-center justify-between group"
+                      className="p-3 bg-(--bg-elevated) hover:bg-(--accent-subtle) border border-(--border-main) rounded-xl cursor-pointer transition-all flex items-center justify-between group"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-slate-100 dark:bg-slate-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-600/20 text-slate-700 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 rounded-lg">
+                        <div className="p-2 bg-black text-white rounded-lg">
                           <User className="w-4 h-4" />
                         </div>
                         <div>
-                          <div className="text-xs font-bold text-slate-900 dark:text-slate-100">{emp.full_name}</div>
-                          <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                            {emp.employee_no && <span className="font-mono text-blue-600 dark:text-blue-400 mr-2">{emp.employee_no}</span>}
+                          <div className="text-xs font-bold text-(--text-primary)">{emp.full_name}</div>
+                          <div className="text-[11px] text-(--text-muted)">
+                            {emp.employee_no && <span className="font-mono text-(--text-primary) mr-2">{emp.employee_no}</span>}
                             {emp.position && <span>{emp.position}</span>}
-                            {emp.department && <span className="text-slate-400 dark:text-slate-500"> ({emp.department})</span>}
+                            {emp.department && <span className="text-(--text-muted)"> ({emp.department})</span>}
                           </div>
                         </div>
                       </div>
-                      <span className="text-xs text-blue-600 dark:text-blue-400 group-hover:underline font-semibold">Select</span>
+                      <span className="text-xs text-(--text-primary) group-hover:underline font-semibold">Select</span>
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-            <div className="p-3 border-t border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 text-right shrink-0">
+            <div className="p-3 border-t border-(--border-main) bg-(--accent-subtle) text-right shrink-0">
               <button
                 onClick={() => setIsEmployeeModalOpen(false)}
-                className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
+                className="px-4 py-1.5 bg-(--accent-subtle) text-(--text-primary) hover:opacity-80 rounded-lg text-xs font-semibold cursor-pointer"
               >
                 Close
               </button>
@@ -2011,17 +2017,17 @@ export function IncidentReport() {
 
       {/* CHILD ANALYSIS FORM MODAL */}
       {isChildModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 z-50">
-          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-800 px-5 py-3 bg-slate-100 dark:bg-slate-900 shrink-0">
-              <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wide">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 z-50">
+          <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b border-(--border-main) px-5 py-3 bg-(--accent-subtle) shrink-0">
+              <h3 className="text-lg font-bold text-(--text-primary) uppercase tracking-wide">
                 {childEditingId ? 'Edit' : 'Add'} {
                   activeAnalysisTab === 'conditions' ? 'Unsafe Condition' :
                   activeAnalysisTab === 'acts' ? 'Unsafe Act' :
                   activeAnalysisTab === 'personal' ? 'Personal Factor' : 'Work Related Cause'
                 }
               </h3>
-              <button onClick={() => setIsChildModalOpen(false)} className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 cursor-pointer">
+              <button onClick={() => setIsChildModalOpen(false)} className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -2029,14 +2035,14 @@ export function IncidentReport() {
             <form onSubmit={handleSubmitChild} className="flex flex-col flex-1 overflow-hidden">
               <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-3">
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
                     Incident Ref
                   </label>
                   <input
                     type="text"
                     readOnly
                     value={`${selectedIncidentRecord?.incident_refno} (${selectedIncidentRecord?.vehicle_plate})`}
-                    className="w-full bg-slate-100 dark:bg-slate-950/60 border border-slate-300 dark:border-slate-800/80 rounded-lg px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400 cursor-not-allowed focus:outline-none"
+                    className="w-full bg-(--bg-surface) border border-(--border-main) rounded-lg px-3 py-1.5 text-xs text-(--text-muted) cursor-not-allowed focus:outline-none"
                   />
                 </div>
 
@@ -2044,7 +2050,7 @@ export function IncidentReport() {
                 {activeAnalysisTab === 'conditions' && (
                   <>
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
+                      <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
                         Unsafe Condition Category <span className="text-red-500">*</span>
                       </label>
                       <select
@@ -2059,7 +2065,7 @@ export function IncidentReport() {
                             selectedDetailId: matchingDetails[0]?.detail_id || ''
                           }));
                         }}
-                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
                       >
                         <option value="">Select Condition Category...</option>
                         {conditionOptions.map(opt => (
@@ -2069,23 +2075,23 @@ export function IncidentReport() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-[11px] font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
-                        Search Condition Detail (<span className="text-blue-600 dark:text-blue-400 font-mono">condition_details</span>)
+                      <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
+                        Search Condition Detail (<span className="text-(--text-primary) font-mono">condition_details</span>)
                       </label>
                       <div className="relative">
-                        <Search className="absolute left-3 top-2 w-3.5 h-3.5 text-slate-400" />
+                        <Search className="absolute left-3 top-2 w-3.5 h-3.5 text-(--text-muted)" />
                         <input
                           type="text"
                           placeholder="Search detail code or description..."
                           value={conditionDetailSearchQuery}
                           onChange={(e) => setConditionDetailSearchQuery(e.target.value)}
-                          className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500"
+                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
                         />
                       </div>
 
-                      <div className="border border-slate-300 dark:border-slate-800 rounded-xl max-h-32 overflow-y-auto bg-white dark:bg-slate-950 divide-y divide-slate-200 dark:divide-slate-800/60">
+                      <div className="border border-(--border-main) rounded-xl max-h-32 overflow-y-auto bg-(--bg-elevated) divide-y divide-(--border-main)">
                         {filteredConditionDetails.length === 0 ? (
-                          <div className="p-2.5 text-center text-slate-500 dark:text-slate-400 text-xs">
+                          <div className="p-2.5 text-center text-(--text-muted) text-xs">
                             No matching condition details found.
                           </div>
                         ) : (
@@ -2102,14 +2108,14 @@ export function IncidentReport() {
                                   }));
                                 }}
                                 className={`p-2 cursor-pointer text-xs transition-colors flex items-center justify-between ${
-                                  isSelected ? 'bg-blue-50 dark:bg-blue-950/80 border-l-2 border-blue-500 text-blue-900 dark:text-blue-200' : 'hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300'
+                                  isSelected ? 'bg-(--accent-subtle) border-l-2 border-(--text-primary) text-(--text-primary)' : 'hover:bg-(--accent-subtle) text-(--text-secondary)'
                                 }`}
                               >
                                 <div>
                                   <span className="font-mono font-bold text-amber-600 dark:text-amber-400 mr-2">[{det.code}]</span>
                                   <span>{det.description}</span>
                                 </div>
-                                {isSelected && <CheckCircle className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />}
+                                {isSelected && <CheckCircle className="w-3.5 h-3.5 text-(--text-primary) shrink-0" />}
                               </div>
                             );
                           })
@@ -2123,7 +2129,7 @@ export function IncidentReport() {
                 {activeAnalysisTab === 'acts' && (
                   <>
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
+                      <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
                         Unsafe Act Category <span className="text-red-500">*</span>
                       </label>
                       <select
@@ -2138,7 +2144,7 @@ export function IncidentReport() {
                             selectedDetailId: matchingDetails[0]?.detail_id || ''
                           }));
                         }}
-                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
                       >
                         <option value="">Select Unsafe Act Category...</option>
                         {actOptions.map(opt => (
@@ -2148,23 +2154,23 @@ export function IncidentReport() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-[11px] font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
-                        Search Act Detail (<span className="text-blue-600 dark:text-blue-400 font-mono">act_details</span>)
+                      <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
+                        Search Act Detail (<span className="text-(--text-primary) font-mono">act_details</span>)
                       </label>
                       <div className="relative">
-                        <Search className="absolute left-3 top-2 w-3.5 h-3.5 text-slate-400" />
+                        <Search className="absolute left-3 top-2 w-3.5 h-3.5 text-(--text-muted)" />
                         <input
                           type="text"
                           placeholder="Search detail code or description..."
                           value={actDetailSearchQuery}
                           onChange={(e) => setActDetailSearchQuery(e.target.value)}
-                          className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500"
+                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
                         />
                       </div>
 
-                      <div className="border border-slate-300 dark:border-slate-800 rounded-xl max-h-32 overflow-y-auto bg-white dark:bg-slate-950 divide-y divide-slate-200 dark:divide-slate-800/60">
+                      <div className="border border-(--border-main) rounded-xl max-h-32 overflow-y-auto bg-(--bg-elevated) divide-y divide-(--border-main)">
                         {filteredActDetails.length === 0 ? (
-                          <div className="p-2.5 text-center text-slate-500 dark:text-slate-400 text-xs">
+                          <div className="p-2.5 text-center text-(--text-muted) text-xs">
                             No matching act details found.
                           </div>
                         ) : (
@@ -2181,14 +2187,14 @@ export function IncidentReport() {
                                   }));
                                 }}
                                 className={`p-2 cursor-pointer text-xs transition-colors flex items-center justify-between ${
-                                  isSelected ? 'bg-blue-50 dark:bg-blue-950/80 border-l-2 border-blue-500 text-blue-900 dark:text-blue-200' : 'hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300'
+                                  isSelected ? 'bg-(--accent-subtle) border-l-2 border-(--text-primary) text-(--text-primary)' : 'hover:bg-(--accent-subtle) text-(--text-secondary)'
                                 }`}
                               >
                                 <div>
                                   <span className="font-mono font-bold text-amber-600 dark:text-amber-400 mr-2">[{det.code}]</span>
                                   <span>{det.description}</span>
                                 </div>
-                                {isSelected && <CheckCircle className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />}
+                                {isSelected && <CheckCircle className="w-3.5 h-3.5 text-(--text-primary) shrink-0" />}
                               </div>
                             );
                           })
@@ -2202,7 +2208,7 @@ export function IncidentReport() {
                 {activeAnalysisTab === 'personal' && (
                   <>
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
+                      <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
                         Personal Factor Category <span className="text-red-500">*</span>
                       </label>
                       <select
@@ -2217,7 +2223,7 @@ export function IncidentReport() {
                             selectedDetailId: matchingDetails[0]?.detail_id || ''
                           }));
                         }}
-                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
                       >
                         <option value="">Select Personal Factor Category...</option>
                         {factorOptions.map(opt => (
@@ -2227,23 +2233,23 @@ export function IncidentReport() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-[11px] font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
-                        Search Factor Detail (<span className="text-blue-600 dark:text-blue-400 font-mono">factor_details</span>)
+                      <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
+                        Search Factor Detail (<span className="text-(--text-primary) font-mono">factor_details</span>)
                       </label>
                       <div className="relative">
-                        <Search className="absolute left-3 top-2 w-3.5 h-3.5 text-slate-400" />
+                        <Search className="absolute left-3 top-2 w-3.5 h-3.5 text-(--text-muted)" />
                         <input
                           type="text"
                           placeholder="Search detail code or description..."
                           value={factorDetailSearchQuery}
                           onChange={(e) => setFactorDetailSearchQuery(e.target.value)}
-                          className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500"
+                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
                         />
                       </div>
 
-                      <div className="border border-slate-300 dark:border-slate-800 rounded-xl max-h-32 overflow-y-auto bg-white dark:bg-slate-950 divide-y divide-slate-200 dark:divide-slate-800/60">
+                      <div className="border border-(--border-main) rounded-xl max-h-32 overflow-y-auto bg-(--bg-elevated) divide-y divide-(--border-main)">
                         {filteredFactorDetails.length === 0 ? (
-                          <div className="p-2.5 text-center text-slate-500 dark:text-slate-400 text-xs">
+                          <div className="p-2.5 text-center text-(--text-muted) text-xs">
                             No matching factor details found.
                           </div>
                         ) : (
@@ -2260,14 +2266,14 @@ export function IncidentReport() {
                                   }));
                                 }}
                                 className={`p-2 cursor-pointer text-xs transition-colors flex items-center justify-between ${
-                                  isSelected ? 'bg-blue-50 dark:bg-blue-950/80 border-l-2 border-blue-500 text-blue-900 dark:text-blue-200' : 'hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300'
+                                  isSelected ? 'bg-(--accent-subtle) border-l-2 border-(--text-primary) text-(--text-primary)' : 'hover:bg-(--accent-subtle) text-(--text-secondary)'
                                 }`}
                               >
                                 <div>
                                   <span className="font-mono font-bold text-amber-600 dark:text-amber-400 mr-2">[{det.code}]</span>
                                   <span>{det.description}</span>
                                 </div>
-                                {isSelected && <CheckCircle className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />}
+                                {isSelected && <CheckCircle className="w-3.5 h-3.5 text-(--text-primary) shrink-0" />}
                               </div>
                             );
                           })
@@ -2281,7 +2287,7 @@ export function IncidentReport() {
                 {activeAnalysisTab === 'workrelated' && (
                   <>
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
+                      <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
                         Work Related Cause Category <span className="text-red-500">*</span>
                       </label>
                       <select
@@ -2296,7 +2302,7 @@ export function IncidentReport() {
                             selectedDetailId: matchingDetails[0]?.detail_id || ''
                           }));
                         }}
-                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
                       >
                         <option value="">Select Work Cause Category...</option>
                         {causeOptions.map(opt => (
@@ -2306,23 +2312,23 @@ export function IncidentReport() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-[11px] font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
-                        Search Cause Detail (<span className="text-blue-600 dark:text-blue-400 font-mono">cause_details</span>)
+                      <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
+                        Search Cause Detail (<span className="text-(--text-primary) font-mono">cause_details</span>)
                       </label>
                       <div className="relative">
-                        <Search className="absolute left-3 top-2 w-3.5 h-3.5 text-slate-400" />
+                        <Search className="absolute left-3 top-2 w-3.5 h-3.5 text-(--text-muted)" />
                         <input
                           type="text"
                           placeholder="Search detail code or description..."
                           value={causeDetailSearchQuery}
                           onChange={(e) => setCauseDetailSearchQuery(e.target.value)}
-                          className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500"
+                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
                         />
                       </div>
 
-                      <div className="border border-slate-300 dark:border-slate-800 rounded-xl max-h-32 overflow-y-auto bg-white dark:bg-slate-950 divide-y divide-slate-200 dark:divide-slate-800/60">
+                      <div className="border border-(--border-main) rounded-xl max-h-32 overflow-y-auto bg-(--bg-elevated) divide-y divide-(--border-main)">
                         {filteredCauseDetails.length === 0 ? (
-                          <div className="p-2.5 text-center text-slate-500 dark:text-slate-400 text-xs">
+                          <div className="p-2.5 text-center text-(--text-muted) text-xs">
                             No matching cause details found.
                           </div>
                         ) : (
@@ -2339,14 +2345,14 @@ export function IncidentReport() {
                                   }));
                                 }}
                                 className={`p-2 cursor-pointer text-xs transition-colors flex items-center justify-between ${
-                                  isSelected ? 'bg-blue-50 dark:bg-blue-950/80 border-l-2 border-blue-500 text-blue-900 dark:text-blue-200' : 'hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300'
+                                  isSelected ? 'bg-(--accent-subtle) border-l-2 border-(--text-primary) text-(--text-primary)' : 'hover:bg-(--accent-subtle) text-(--text-secondary)'
                                 }`}
                               >
                                 <div>
                                   <span className="font-mono font-bold text-amber-600 dark:text-amber-400 mr-2">[{det.code}]</span>
                                   <span>{det.description}</span>
                                 </div>
-                                {isSelected && <CheckCircle className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />}
+                                {isSelected && <CheckCircle className="w-3.5 h-3.5 text-(--text-primary) shrink-0" />}
                               </div>
                             );
                           })
@@ -2357,7 +2363,7 @@ export function IncidentReport() {
                 )}
 
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
                     Investigation Remarks
                   </label>
                   <textarea
@@ -2365,22 +2371,22 @@ export function IncidentReport() {
                     value={childForm.remarks}
                     onChange={(e) => setChildForm({ ...childForm, remarks: e.target.value })}
                     placeholder="Enter specific investigation notes or observations..."
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500"
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 px-5 py-3 border-t border-slate-300 dark:border-slate-800 shrink-0 bg-slate-100 dark:bg-slate-900">
+              <div className="flex justify-end gap-3 px-5 py-3 border-t border-(--border-main) shrink-0 bg-(--accent-subtle)">
                 <button
                   type="button"
                   onClick={() => setIsChildModalOpen(false)}
-                  className="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
+                  className="px-3.5 py-1.5 bg-(--accent-subtle) text-(--text-primary) hover:opacity-80 rounded-lg text-xs font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs"
+                  className="px-3.5 py-1.5 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold cursor-pointer shadow-xs"
                 >
                   Save Item
                 </button>

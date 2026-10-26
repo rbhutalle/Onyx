@@ -90,8 +90,7 @@ export function VehicleModels() {
         const modelsRes = await supabase.from('vehicle_models').select('*').order('name');
         if (modelsRes.error) throw modelsRes.error;
         if (isMounted) setModels(modelsRes.data || []);
-      } catch (err: unknown) {
-        console.error(`Error fetching equipment data:`, err);
+      } catch {
         if (isMounted) setErrorMsg(`Failed to load data. Please check table permissions.`);
       }
     }
@@ -113,8 +112,8 @@ export function VehicleModels() {
 
       const modelsRes = await supabase.from('vehicle_models').select('*').order('name');
       if (modelsRes.data) setModels(modelsRes.data);
-    } catch (err) {
-      console.error('Error refreshing data:', err);
+    } catch {
+      // Ignored
     }
   };
 
@@ -170,8 +169,7 @@ export function VehicleModels() {
       setSuccessMsg('Record deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 3000);
       refreshData();
-    } catch (err: unknown) {
-      console.error('Error deleting record:', err);
+    } catch {
       setErrorMsg('Failed to delete record. Check foreign key dependencies.');
     }
   };
@@ -229,8 +227,7 @@ export function VehicleModels() {
       setIsModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 4000);
       refreshData();
-    } catch (err: unknown) {
-      console.error('Error saving record:', err);
+    } catch {
       setErrorMsg('Failed to save record. Please check unique constraints or required fields.');
     } finally {
       setSubmitting(false);
@@ -244,13 +241,13 @@ export function VehicleModels() {
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-4">
       {/* Header */}
-      <div className="shrink-0 flex items-center gap-3 border-b border-slate-300 dark:border-slate-800 pb-4">
-        <div className="p-2.5 bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-xl">
+      <div className="shrink-0 flex items-center gap-3 border-b border-(--border-main) pb-4">
+        <div className="p-2.5 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-xl">
           <Car className="w-7 h-7" />
         </div>
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Equipment Models & Configurations</h1>
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">Manage manufacturers (makes), equipment models, and equipment classifications (types).</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-(--text-primary)">Equipment Models & Configurations</h1>
+          <p className="text-xs sm:text-sm text-(--text-muted)">Manage manufacturers (makes), equipment models, and equipment classifications (types).</p>
         </div>
       </div>
 
@@ -269,13 +266,13 @@ export function VehicleModels() {
       )}
 
       {/* Clean Tab Navigation */}
-      <div className="shrink-0 flex border-b border-slate-300 dark:border-slate-800 gap-2 overflow-x-auto">
+      <div className="shrink-0 flex border-b border-(--border-main) gap-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('makes')}
           className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'makes'
-              ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20'
-              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900/50'
+              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
+              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
           }`}
         >
           <Tag className="w-4 h-4" />
@@ -286,8 +283,8 @@ export function VehicleModels() {
           onClick={() => setActiveTab('models')}
           className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'models'
-              ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20'
-              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900/50'
+              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
+              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
           }`}
         >
           <Car className="w-4 h-4" />
@@ -298,8 +295,8 @@ export function VehicleModels() {
           onClick={() => setActiveTab('types')}
           className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'types'
-              ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20'
-              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900/50'
+              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
+              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
           }`}
         >
           <Layers className="w-4 h-4" />
@@ -308,16 +305,16 @@ export function VehicleModels() {
       </div>
 
       {/* Tab Content Container */}
-      <div className="flex flex-col flex-1 min-h-0 bg-slate-50/90 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 shadow-xs rounded-xl p-6 space-y-4">
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-(--border-main) shadow-xs rounded-xl p-6 space-y-4">
         <div className="shrink-0 flex flex-wrap justify-between items-center gap-4">
           <div>
             {activeTab === 'models' && (
               <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                <Filter className="w-4 h-4 text-(--text-muted)" />
                 <select
                   value={selectedMakeFilter}
                   onChange={(e) => setSelectedMakeFilter(e.target.value)}
-                  className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 cursor-pointer"
+                  className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
                 >
                   <option value="all">All Makes (Filter by Make)</option>
                   {makes.map((make) => (
@@ -332,7 +329,7 @@ export function VehicleModels() {
 
           <button
             onClick={handleOpenAdd}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow ml-auto"
+            className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow ml-auto"
           >
             <Plus className="w-4 h-4" />
             <span>Add Record</span>
@@ -340,41 +337,41 @@ export function VehicleModels() {
         </div>
 
         {/* Scrollable Container with Sticky Table Headers */}
-        <div className="flex-1 min-h-0 overflow-auto border border-slate-300 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-950">
+        <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
           {/* TAB 1: VEHICLE MAKES */}
           {activeTab === 'makes' && (
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 shadow-xs">
+                <tr className="border-b border-(--border-main) text-(--text-muted) text-xs uppercase bg-(--bg-surface) sticky top-0 z-10 shadow-xs">
                   <th className="p-3">Make Name</th>
                   <th className="p-3">Status</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
                 {makes.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="p-8 text-center text-slate-500">No Equipment makes found.</td>
+                    <td colSpan={3} className="p-8 text-center text-(--text-muted)">No Equipment makes found.</td>
                   </tr>
                 ) : (
                   makes.map((item) => (
-                    <tr key={item.make_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                      <td className="p-3 font-semibold text-slate-900 dark:text-slate-100">{item.name}</td>
+                    <tr key={item.make_id} className="hover:bg-(--accent-subtle) transition-colors">
+                      <td className="p-3 font-semibold text-(--text-primary)">{item.name}</td>
                       <td className="p-3">
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${item.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700'}`}>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${item.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main)'}`}>
                           {item.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td className="p-3 text-right space-x-3">
                         <button
                           onClick={() => handleOpenEdit(item)}
-                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
                         >
                           <Edit2 className="w-3.5 h-3.5" /> Edit
                         </button>
                         <button
                           onClick={() => handleDelete(item.make_id, 'vehicle_makes', 'make_id')}
-                          className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Delete
                         </button>
@@ -390,7 +387,7 @@ export function VehicleModels() {
           {activeTab === 'models' && (
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 shadow-xs">
+                <tr className="border-b border-(--border-main) text-(--text-muted) text-xs uppercase bg-(--bg-surface) sticky top-0 z-10 shadow-xs">
                   <th className="p-3">Model Name</th>
                   <th className="p-3">Make</th>
                   <th className="p-3">Type</th>
@@ -398,35 +395,35 @@ export function VehicleModels() {
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
                 {filteredModels.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-slate-500">No equipment models found.</td>
+                    <td colSpan={5} className="p-8 text-center text-(--text-muted)">No equipment models found.</td>
                   </tr>
                 ) : (
                   filteredModels.map((item) => {
                     const matchedMake = makes.find((m) => m.make_id === item.make_id);
                     const matchedType = types.find((t) => t.type_id === item.type_id);
                     return (
-                      <tr key={item.model_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                        <td className="p-3 font-semibold text-slate-900 dark:text-slate-100">{item.name}</td>
-                        <td className="p-3 text-blue-600 dark:text-blue-400">{matchedMake ? matchedMake.name : '—'}</td>
-                        <td className="p-3 text-emerald-600 dark:text-emerald-400">{matchedType ? `${matchedType.code} - ${matchedType.description}` : '—'}</td>
+                      <tr key={item.model_id} className="hover:bg-(--accent-subtle) transition-colors">
+                        <td className="p-3 font-semibold text-(--text-primary)">{item.name}</td>
+                        <td className="p-3 text-(--text-primary) font-medium">{matchedMake ? matchedMake.name : '—'}</td>
+                        <td className="p-3 text-(--text-secondary) font-medium">{matchedType ? `${matchedType.code} - ${matchedType.description}` : '—'}</td>
                         <td className="p-3">
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${item.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700'}`}>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${item.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main)'}`}>
                             {item.is_active ? 'Active' : 'Inactive'}
                           </span>
                         </td>
                         <td className="p-3 text-right space-x-3">
                           <button
                             onClick={() => handleOpenEdit(item)}
-                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            className="text-xs text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
                           >
                             <Edit2 className="w-3.5 h-3.5" /> Edit
                           </button>
                           <button
                             onClick={() => handleDelete(item.model_id, 'vehicle_models', 'model_id')}
-                            className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
                           >
                             <Trash2 className="w-3.5 h-3.5" /> Delete
                           </button>
@@ -443,38 +440,38 @@ export function VehicleModels() {
           {activeTab === 'types' && (
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs uppercase bg-slate-100 dark:bg-slate-900 sticky top-0 z-10 shadow-xs">
+                <tr className="border-b border-(--border-main) text-(--text-muted) text-xs uppercase bg-(--bg-surface) sticky top-0 z-10 shadow-xs">
                   <th className="p-3">Type Code</th>
                   <th className="p-3">Description</th>
                   <th className="p-3">Status</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
                 {types.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="p-8 text-center text-slate-500">No Equipment types found.</td>
+                    <td colSpan={4} className="p-8 text-center text-(--text-muted)">No Equipment types found.</td>
                   </tr>
                 ) : (
                   types.map((item) => (
-                    <tr key={item.type_id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                      <td className="p-3 font-semibold text-slate-900 dark:text-slate-100">{item.code}</td>
-                      <td className="p-3 text-slate-600 dark:text-slate-400">{item.description}</td>
+                    <tr key={item.type_id} className="hover:bg-(--accent-subtle) transition-colors">
+                      <td className="p-3 font-semibold text-(--text-primary)">{item.code}</td>
+                      <td className="p-3 text-(--text-muted)">{item.description}</td>
                       <td className="p-3">
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${item.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700'}`}>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${item.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main)'}`}>
                           {item.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td className="p-3 text-right space-x-3">
                         <button
                           onClick={() => handleOpenEdit(item)}
-                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
                         >
                           <Edit2 className="w-3.5 h-3.5" /> Edit
                         </button>
                         <button
                           onClick={() => handleDelete(item.type_id, 'vehicle_types', 'type_id')}
-                          className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                          className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Delete
                         </button>
@@ -491,14 +488,14 @@ export function VehicleModels() {
       {/* FORM MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 max-h-[92vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-800 pb-4 shrink-0">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+          <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-(--border-main) pb-4 shrink-0">
+              <h3 className="text-lg font-bold text-(--text-primary)">
                 {editingId ? 'Edit Record' : 'Add New Record'}
               </h3>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-100 cursor-pointer"
+                className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -509,14 +506,14 @@ export function VehicleModels() {
                 {activeTab === 'makes' && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Make Name</label>
+                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Make Name</label>
                       <input
                         type="text"
                         required
                         value={makeForm.name}
                         onChange={(e) => setMakeForm({ ...makeForm, name: e.target.value })}
                         placeholder="e.g. Toyota, Ford"
-                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                     <div className="flex items-center gap-2 pt-2">
@@ -525,9 +522,9 @@ export function VehicleModels() {
                         id="make_active_chk"
                         checked={makeForm.is_active}
                         onChange={(e) => setMakeForm({ ...makeForm, is_active: e.target.checked })}
-                        className="rounded bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-0 w-4 h-4 cursor-pointer"
+                        className="rounded bg-(--bg-elevated) border border-(--border-main) text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
                       />
-                      <label htmlFor="make_active_chk" className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 cursor-pointer">Is Active</label>
+                      <label htmlFor="make_active_chk" className="text-xs font-semibold uppercase text-(--text-muted) cursor-pointer">Is Active</label>
                     </div>
                   </>
                 )}
@@ -535,12 +532,12 @@ export function VehicleModels() {
                 {activeTab === 'models' && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Equipment Make</label>
+                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Equipment Make</label>
                       <select
                         required
                         value={modelForm.make_id}
                         onChange={(e) => setModelForm({ ...modelForm, make_id: e.target.value })}
-                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
                       >
                         <option value="">Select Equipment Make</option>
                         {makes.map((make) => (
@@ -551,11 +548,11 @@ export function VehicleModels() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Equipment Type (Optional)</label>
+                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Equipment Type (Optional)</label>
                       <select
                         value={modelForm.type_id}
                         onChange={(e) => setModelForm({ ...modelForm, type_id: e.target.value })}
-                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
                       >
                         <option value="">Select Equipment Type</option>
                         {types.map((type) => (
@@ -566,14 +563,14 @@ export function VehicleModels() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Model Name</label>
+                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Model Name</label>
                       <input
                         type="text"
                         required
                         value={modelForm.name}
                         onChange={(e) => setModelForm({ ...modelForm, name: e.target.value })}
                         placeholder="e.g. Hilux, Ranger"
-                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                     <div className="flex items-center gap-2 pt-2">
@@ -582,9 +579,9 @@ export function VehicleModels() {
                         id="model_active_chk"
                         checked={modelForm.is_active}
                         onChange={(e) => setModelForm({ ...modelForm, is_active: e.target.checked })}
-                        className="rounded bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-0 w-4 h-4 cursor-pointer"
+                        className="rounded bg-(--bg-elevated) border border-(--border-main) text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
                       />
-                      <label htmlFor="model_active_chk" className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 cursor-pointer">Is Active</label>
+                      <label htmlFor="model_active_chk" className="text-xs font-semibold uppercase text-(--text-muted) cursor-pointer">Is Active</label>
                     </div>
                   </>
                 )}
@@ -592,25 +589,25 @@ export function VehicleModels() {
                 {activeTab === 'types' && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Type Code</label>
+                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Type Code</label>
                       <input
                         type="text"
                         required
                         value={typeForm.code}
                         onChange={(e) => setTypeForm({ ...typeForm, code: e.target.value })}
                         placeholder="e.g. SUV, Pickup"
-                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Description</label>
+                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Description</label>
                       <textarea
                         rows={3}
                         required
                         value={typeForm.description}
                         onChange={(e) => setTypeForm({ ...typeForm, description: e.target.value })}
                         placeholder="Describe Equipment classification..."
-                        className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                     <div className="flex items-center gap-2 pt-2">
@@ -619,26 +616,26 @@ export function VehicleModels() {
                         id="type_active_chk"
                         checked={typeForm.is_active}
                         onChange={(e) => setTypeForm({ ...typeForm, is_active: e.target.checked })}
-                        className="rounded bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-0 w-4 h-4 cursor-pointer"
+                        className="rounded bg-(--bg-elevated) border border-(--border-main) text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
                       />
-                      <label htmlFor="type_active_chk" className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 cursor-pointer">Is Active</label>
+                      <label htmlFor="type_active_chk" className="text-xs font-semibold uppercase text-(--text-muted) cursor-pointer">Is Active</label>
                     </div>
                   </>
                 )}
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-300 dark:border-slate-800 shrink-0 mt-4">
+              <div className="flex justify-end gap-3 pt-4 border-t border-(--border-main) shrink-0 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-(--accent-subtle) hover:opacity-80 text-(--text-primary) rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow disabled:opacity-50"
+                  className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow disabled:opacity-50"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   <span>Save Changes</span>
