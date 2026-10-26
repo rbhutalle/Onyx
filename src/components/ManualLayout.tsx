@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, Printer, Cpu, ArrowLeft, FileText, BookOpen, PlayCircle, Download, ExternalLink } from 'lucide-react';
+import { Search, Printer, ExternalLink, Cpu, ArrowLeft, FileText, BookOpen, PlayCircle, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import localManualPdf from '@/assets/documents/RCMRO_User_Manual.pdf';
 
@@ -111,8 +111,8 @@ export function Manual() {
       </header>
 
       <div className="flex min-h-0 flex-1 pt-16">
-        {/* Sidebar Navigation */}
-        <aside className="shrink-0 w-80 fixed top-16 bottom-0 left-0 bg-(--bg-surface)/90 backdrop-blur-2xl border-r border-(--border-main) overflow-y-auto p-6 z-40 hidden lg:block shadow-xl">
+        {/* Sidebar Navigation — Visible on Tablets & Desktops (md:block) */}
+        <aside className="shrink-0 w-80 fixed top-16 bottom-0 left-0 bg-(--bg-surface)/90 backdrop-blur-2xl border-r border-(--border-main) overflow-y-auto p-6 z-40 hidden md:block shadow-xl">
           <div className="text-[0.7rem] font-extrabold uppercase tracking-widest text-(--text-muted) mb-3 px-2">Official Manuals &amp; Guides</div>
           <ul className="list-none flex flex-col gap-1.5">
             <li>
@@ -131,8 +131,8 @@ export function Manual() {
           </ul>
         </aside>
 
-        {/* Main Content Body */}
-        <main className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) backdrop-blur-md border border-(--border-main) rounded-2xl p-6 shadow-2xl overflow-y-auto space-y-6 lg:ml-80 scroll-smooth">
+        {/* Main Content Body — Adjusted left margin for tablet/desktop sidebar (md:ml-80) */}
+        <main className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) backdrop-blur-md border border-(--border-main) rounded-2xl p-6 shadow-2xl overflow-y-auto space-y-6 md:ml-80 scroll-smooth">
           {activeSection === 'maintenance-manual' && (
             <div className="space-y-6 manual-content-card">
               {/* Document Hero */}
@@ -175,29 +175,18 @@ export function Manual() {
                       className="inline-flex items-center gap-1.5 bg-(--btn-primary-bg) text-(--btn-primary-text) px-3 py-2 rounded-xl text-xs font-semibold shadow-md transition-all duration-200 no-underline cursor-pointer"
                     >
                       <Download className="w-4 h-4" />
-                      Download PDF
+                      Download
                     </a>
                   </div>
                 </div>
 
-                {/* Local PDF Object/Embed Preview Frame */}
+                {/* Inline Web PDF Viewer (Iframe) */}
                 <div className="w-full h-125 bg-(--bg-elevated) rounded-xl border border-(--border-main) overflow-hidden relative flex flex-col items-center justify-center">
-                  <object
-                    data={localManualPdf}
-                    type="application/pdf"
-                    className="w-full h-full"
-                  >
-                    <div className="flex flex-col items-center justify-center p-6 text-center space-y-3">
-                      <p className="text-xs text-(--text-muted)">Your browser does not support inline PDF viewing.</p>
-                      <a
-                        href={localManualPdf}
-                        download="RCMRO_User_Manual.pdf"
-                        className="bg-(--btn-primary-bg) text-(--btn-primary-text) px-4 py-2 rounded-xl text-xs font-semibold"
-                      >
-                        Download PDF Instead
-                      </a>
-                    </div>
-                  </object>
+                  <iframe
+                    src={`${localManualPdf}#view=FitH`}
+                    title="RCMRO User Manual PDF"
+                    className="w-full h-full border-0"
+                  ></iframe>
                 </div>
               </div>
 
