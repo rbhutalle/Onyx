@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, Printer, ExternalLink, Cpu, ArrowLeft, FileText, BookOpen, PlayCircle, Download } from 'lucide-react';
+import { Search, Printer, Cpu, ArrowLeft, FileText, BookOpen, PlayCircle, Download, ExternalLink, Menu, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import localManualPdf from '@/assets/documents/RCMRO_User_Manual.pdf';
 
@@ -7,6 +7,7 @@ type ManualSection = 'maintenance-manual';
 
 export function Manual() {
   const [activeSection, setActiveSection] = useState<ManualSection>('maintenance-manual');
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
 
   // Scroll progress bar & Keyboard navigation setup
   useEffect(() => {
@@ -80,15 +81,26 @@ export function Manual() {
 
       {/* Top Fixed Header */}
       <header className="shrink-0 fixed top-0 left-0 right-0 h-16 bg-(--bg-surface)/90 backdrop-blur-xl border-b border-(--border-main) z-50 flex items-center justify-between px-7 shadow-lg">
-        <Link to="/" className="flex items-center gap-3 no-underline opacity-90 hover:opacity-100 transition-all hover:scale-[1.02]">
-          <div className="w-9.5 h-9.5 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(37,99,235,0.45)] border border-white/20 transition-transform duration-300 hover:rotate-6">
-            <Cpu className="w-5.5 h-5.5" />
-          </div>
-          <div>
-            <div className="text-lg font-extrabold tracking-tight text-(--text-primary)">Reliability-Centered MRO</div>
-            <div className="text-[0.72rem] font-bold text-cyan-400 uppercase tracking-widest">Documentation Hub</div>
-          </div>
-        </Link>
+        <div className="flex items-center gap-3">
+          {/* Floating Sidebar Toggle Button for Tablet/Mobile */}
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            title={isSidebarOpen ? "Hide Sidebar" : "Show Sidebar"}
+            className="p-2 bg-(--bg-elevated) hover:bg-(--bg-card-hover) text-(--text-secondary) border border-(--border-main) rounded-xl transition-colors cursor-pointer flex items-center justify-center shadow-xs"
+          >
+            {isSidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </button>
+
+          <Link to="/" className="flex items-center gap-3 no-underline opacity-90 hover:opacity-100 transition-all hover:scale-[1.02]">
+            <div className="w-9.5 h-9.5 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(37,99,235,0.45)] border border-white/20 transition-transform duration-300 hover:rotate-6">
+              <Cpu className="w-5.5 h-5.5" />
+            </div>
+            <div>
+              <div className="text-lg font-extrabold tracking-tight text-(--text-primary)">Reliability-Centered MRO</div>
+              <div className="text-[0.72rem] font-bold text-cyan-400 uppercase tracking-widest">Documentation Hub</div>
+            </div>
+          </Link>
+        </div>
 
         <div className="flex items-center gap-3">
           <div className="relative flex items-center">
@@ -111,8 +123,8 @@ export function Manual() {
       </header>
 
       <div className="flex min-h-0 flex-1 pt-16">
-        {/* Sidebar Navigation — Visible on Tablets & Desktops (md:block) */}
-        <aside className="shrink-0 w-80 fixed top-16 bottom-0 left-0 bg-(--bg-surface)/90 backdrop-blur-2xl border-r border-(--border-main) overflow-y-auto p-6 z-40 hidden md:block shadow-xl">
+        {/* Collapsible Sidebar Navigation */}
+        <aside className={`shrink-0 w-80 fixed top-16 bottom-0 left-0 bg-(--bg-surface)/95 backdrop-blur-2xl border-r border-(--border-main) overflow-y-auto p-6 z-45 transition-transform duration-300 shadow-xl ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="text-[0.7rem] font-extrabold uppercase tracking-widest text-(--text-muted) mb-3 px-2">Official Manuals &amp; Guides</div>
           <ul className="list-none flex flex-col gap-1.5">
             <li>
@@ -131,8 +143,8 @@ export function Manual() {
           </ul>
         </aside>
 
-        {/* Main Content Body — Adjusted left margin for tablet/desktop sidebar (md:ml-80) */}
-        <main className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) backdrop-blur-md border border-(--border-main) rounded-2xl p-6 shadow-2xl overflow-y-auto space-y-6 md:ml-80 scroll-smooth">
+        {/* Main Content Body — Dynamic margin based on sidebar state */}
+        <main className={`flex flex-col flex-1 min-h-0 bg-(--bg-surface) backdrop-blur-md border border-(--border-main) rounded-2xl p-6 shadow-2xl overflow-y-auto space-y-6 transition-all duration-300 ${isSidebarOpen ? 'lg:ml-80' : 'ml-0'} scroll-smooth`}>
           {activeSection === 'maintenance-manual' && (
             <div className="space-y-6 manual-content-card">
               {/* Document Hero */}
@@ -180,13 +192,30 @@ export function Manual() {
                   </div>
                 </div>
 
-                {/* Inline Web PDF Viewer (Iframe) */}
+                {/* Inline Web PDF Viewer using Object tag with type enforcement */}
                 <div className="w-full h-125 bg-(--bg-elevated) rounded-xl border border-(--border-main) overflow-hidden relative flex flex-col items-center justify-center">
-                  <iframe
-                    src={`${localManualPdf}#view=FitH`}
-                    title="RCMRO User Manual PDF"
-                    className="w-full h-full border-0"
-                  ></iframe>
+                  <object
+                    data={`${localManualPdf}#view=FitH&toolbar=1`}
+                    type="application/pdf"
+                    className="w-full h-full"
+                  >
+                    <iframe
+                      src={`${localManualPdf}#view=FitH`}
+                      title="RCMRO User Manual PDF"
+                      className="w-full h-full border-0"
+                    >
+                      <div className="flex flex-col items-center justify-center p-6 text-center space-y-3">
+                        <p className="text-xs text-(--text-muted)">Your browser does not support inline PDF viewing.</p>
+                        <a
+                          href={localManualPdf}
+                          download="RCMRO_User_Manual.pdf"
+                          className="bg-(--btn-primary-bg) text-(--btn-primary-text) px-4 py-2 rounded-xl text-xs font-semibold"
+                        >
+                          Download PDF Instead
+                        </a>
+                      </div>
+                    </iframe>
+                  </object>
                 </div>
               </div>
 
