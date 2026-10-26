@@ -49,7 +49,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
   }, []);
 
   return (
-    <aside className={`relative bg-(--sidebar-bg) border-r border-(--sidebar-border) text-(--sidebar-text-primary) flex flex-col h-screen select-none transition-all duration-300 ${isMinimized ? 'w-20' : 'w-64'}`}>
+    <aside className={`relative bg-(--sidebar-bg) border-r border-(--sidebar-border) text-(--sidebar-text-primary) flex flex-col h-screen min-h-0 select-none transition-all duration-300 ${isMinimized ? 'w-20' : 'w-64'}`}>
       {/* Edge Toggle Button */}
       <button
         onClick={() => setIsMinimized(!isMinimized)}
@@ -60,7 +60,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
       </button>
 
       {/* Brand Header */}
-      <div className={`p-6 border-b border-(--sidebar-border) flex items-center ${isMinimized ? 'justify-center p-4' : 'gap-3'}`}>
+      <div className={`shrink-0 p-6 border-b border-(--sidebar-border) flex items-center ${isMinimized ? 'justify-center p-4' : 'gap-3'}`}>
         <div className="p-2 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-xl shrink-0">
           <Car className="w-6 h-6" />
         </div>
@@ -72,8 +72,8 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
         )}
       </div>
 
-      {/* Navigation Links */}
-      <nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto overflow-x-hidden">
+      {/* Navigation Links — Fully Scrollable Body */}
+      <nav className="flex-1 min-h-0 px-3 py-4 space-y-2 overflow-y-auto overflow-x-hidden">
         {/* Dashboard */}
         <button
           onClick={() => navigate('/dashboard')}
@@ -364,8 +364,8 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
         </div>
       </nav>
 
-      {/* Database Status Footer */}
-      <div className="p-3 border-t border-(--sidebar-border)">
+      {/* Database Status Footer — Always Docked & Pinned */}
+      <div className="shrink-0 p-3 border-t border-(--sidebar-border) bg-(--sidebar-bg)">
         <div className="bg-(--sidebar-hover-bg) border border-(--sidebar-border) rounded-lg p-2.5 flex items-center justify-center text-xs">
           {isMinimized ? (
             <div title={`Database Status: ${dbStatus}`}>
