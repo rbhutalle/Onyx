@@ -48,8 +48,20 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
     return () => { isMounted = false; clearInterval(interval); };
   }, []);
 
+  const toggleFullScreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  };
+
   return (
-    <aside className={`relative bg-(--sidebar-bg) border-r border-(--sidebar-border) text-(--sidebar-text-primary) flex flex-col h-full max-h-screen min-h-0 select-none transition-all duration-300 ${isMinimized ? 'w-20' : 'w-64'}`}>
+    <aside className={`relative bg-(--sidebar-bg) border-r border-(--sidebar-border) text-(--sidebar-text-primary) flex flex-col h-screen max-h-screen select-none transition-all duration-300 ${isMinimized ? 'w-20' : 'w-64'}`}>
       {/* Edge Toggle Button */}
       <button
         onClick={() => setIsMinimized(!isMinimized)}
@@ -59,21 +71,25 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
         {isMinimized ? <ChevronRightIcon className="w-3.5 h-3.5 text-(--sidebar-text-primary)" /> : <ChevronLeft className="w-3.5 h-3.5 text-(--sidebar-text-primary)" />}
       </button>
 
-      {/* Brand Header */}
-      <div className={`shrink-0 p-5 border-b border-(--sidebar-border) flex items-center ${isMinimized ? 'justify-center p-3' : 'gap-3'}`}>
+      {/* Brand Header — Clickable to Toggle Fullscreen */}
+      <div 
+        onClick={toggleFullScreen}
+        title="Click to toggle fullscreen"
+        className={`shrink-0 p-4 border-b border-(--sidebar-border) flex items-center cursor-pointer hover:bg-(--sidebar-hover-bg) transition-colors ${isMinimized ? 'justify-center p-3' : 'gap-3'}`}
+      >
         <div className="p-2 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-xl shrink-0">
           <Car className="w-5 h-5" />
         </div>
         {!isMinimized && (
           <div className="overflow-hidden whitespace-nowrap">
-            <h1 className="font-bold text-(--sidebar-text-primary) tracking-tight text-sm truncate">RC-MRO</h1>
+            <h1 className="font-extrabold text-(--sidebar-text-primary) tracking-tight text-lg truncate">RC-MRO</h1>
             <p className="text-[11px] text-(--sidebar-text-muted) truncate">Reliability-Centered MRO</p>
           </div>
         )}
       </div>
 
-      {/* Navigation Links — Scrollable Container with Custom Scrollbar for Tablets */}
-      <nav className="flex-1 min-h-0 px-3 py-3 space-y-1.5 overflow-y-auto overscroll-contain [scrollbar-width:thin]">
+      {/* Navigation Links — Strict Scrollable Body Container */}
+      <nav className="flex-1 min-h-0 px-3 py-3 space-y-1.5 overflow-y-scroll overscroll-auto">
         {/* Dashboard */}
         <button
           onClick={() => navigate('/dashboard')}
@@ -325,7 +341,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
         </div>
 
         {/* Help Menu Accordion */}
-        <div className="space-y-1">
+        <div className="space-y-1 pb-4">
           <button
             onClick={() => isMinimized ? (setIsMinimized(false), setIsHelpOpen(true)) : setIsHelpOpen(!isHelpOpen)}
             className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2' : 'justify-between px-3 py-2'} rounded-xl text-xs sm:text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
@@ -352,6 +368,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
                   </span>
                 </button>
               )}
+
               <button
                 onClick={() => window.open('/manual', '_blank')}
                 className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer"
@@ -364,7 +381,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
         </div>
       </nav>
 
-      {/* Database Status Footer — Fixed at the bottom */}
+      {/* Database Status Footer — Always Docked & Pinned */}
       <div className="shrink-0 p-2.5 border-t border-(--sidebar-border) bg-(--sidebar-bg)">
         <div className="bg-(--sidebar-hover-bg) border border-(--sidebar-border) rounded-lg p-2 flex items-center justify-center text-[11px]">
           {isMinimized ? (
