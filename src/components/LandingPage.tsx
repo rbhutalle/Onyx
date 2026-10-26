@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   Play, 
   CheckCircle2, 
@@ -9,7 +9,8 @@ import {
   Activity, 
   Layers, 
   Wrench, 
-  BarChart3 
+  BarChart3, 
+  BookOpen 
 } from 'lucide-react';
 
 import explainerImg from '@/assets/RC_MRO_Explainer.png';
@@ -70,6 +71,15 @@ export function LandingPage() {
                   <span>Launch RC-MRO App</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
+
+                {/* Read Documentation Button */}
+                <Link
+                  to="/manual"
+                  className="flex items-center gap-2 px-6 py-3.5 bg-(--bg-elevated) hover:bg-(--bg-card-hover) text-(--text-primary) border border-(--border-color) rounded-xl font-medium shadow-sm transition-all no-underline cursor-pointer"
+                >
+                  <BookOpen className="w-4 h-4 text-blue-400" />
+                  <span>Read Documentation</span>
+                </Link>
               </div>
             </div>
 

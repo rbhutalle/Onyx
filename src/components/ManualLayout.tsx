@@ -96,8 +96,8 @@ export function Manual() {
               <Cpu className="w-5.5 h-5.5" />
             </div>
             <div>
-              <div className="text-lg font-extrabold tracking-tight text-(--text-primary)">Reliability-Centered MRO</div>
-              <div className="text-[0.72rem] font-bold text-cyan-400 uppercase tracking-widest">Documentation Hub</div>
+              <div className="text-lg font-extrabold tracking-tight text-(--text-primary)">RC-MRO</div>
+              <div className="text-[0.72rem] font-bold text-cyan-400 uppercase tracking-widest">Documentation</div>
             </div>
           </Link>
         </div>
@@ -125,7 +125,7 @@ export function Manual() {
       <div className="flex min-h-0 flex-1 pt-16">
         {/* Collapsible Sidebar Navigation */}
         <aside className={`shrink-0 w-80 fixed top-16 bottom-0 left-0 bg-(--bg-surface)/95 backdrop-blur-2xl border-r border-(--border-main) overflow-y-auto p-6 z-45 transition-transform duration-300 shadow-xl ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="text-[0.7rem] font-extrabold uppercase tracking-widest text-(--text-muted) mb-3 px-2">Official Manuals &amp; Guides</div>
+          <div className="text-[0.7rem] font-extrabold uppercase tracking-widest text-(--text-muted) mb-3 px-2">Manuals &amp; Guides</div>
           <ul className="list-none flex flex-col gap-1.5">
             <li>
               <button
@@ -151,7 +151,7 @@ export function Manual() {
               <section className="bg-(--bg-card) border border-(--border-main) rounded-3xl p-8 relative overflow-hidden shadow-xl">
                 <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-(--accent-subtle) border border-(--border-main) text-(--text-primary) rounded-full text-[0.72rem] font-bold uppercase tracking-wider mb-4 shadow-xs">
-                  Official Documentation • PDF &amp; Video Walkthroughs
+                  Documentation • PDF &amp; Video Walkthroughs
                 </div>
                 <h1 className="text-4xl font-extrabold tracking-tight text-(--text-primary) mb-3 leading-tight">RC-MRO Maintenance Manual</h1>
                 <p className="text-(--text-muted) text-base max-w-4xl leading-relaxed">
