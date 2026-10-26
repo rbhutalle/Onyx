@@ -1,6 +1,6 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Sidebar } from '@/components/Sidebar';
+import { Sidebar, ThemeMode } from '@/components/Sidebar';
 import LandingPage from '@/components/LandingPage';
 import { VehiclePmViewer } from '@/components/VehiclePmViewer';
 import { DailyInspection } from '@/components/DailyInspection';
@@ -21,7 +21,7 @@ import { IncidentReport } from '@/components/IncidentReport';
 import { FmeaSettings } from '@/components/FmeaSettings';
 import { RcaSettings } from '@/components/RcaSettings';
 import { Smartphone, Monitor } from 'lucide-react';
-import { Manual } from './components/ManualLayout'; // Updated to point directly to your layout/component export
+import { Manual } from './components/ManualLayout';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const hasAccess = sessionStorage.getItem('rcmro-access') === 'granted';
@@ -55,23 +55,31 @@ const MobileBlockNotice = () => {
 };
 
 export function App() {
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const saved = localStorage.getItem('theme');
-    return saved ? saved === 'dark' : true;
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    const saved = localStorage.getItem('theme') as ThemeMode;
+    return saved || 'dark';
   });
 
   useEffect(() => {
     const root = document.documentElement;
-    if (isDarkMode) {
-      root.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      root.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
+    root.classList.remove('dark', 'mixed');
 
-  const toggleTheme = () => setIsDarkMode(prev => !prev);
+    if (themeMode === 'dark') {
+      root.classList.add('dark');
+    } else if (themeMode === 'mixed') {
+      root.classList.add('mixed');
+    }
+
+    localStorage.setItem('theme', themeMode);
+  }, [themeMode]);
+
+  const cycleTheme = () => {
+    setThemeMode((prev) => {
+      if (prev === 'light') return 'dark';
+      if (prev === 'dark') return 'mixed';
+      return 'light';
+    });
+  };
 
   return (
     <BrowserRouter>
@@ -79,10 +87,10 @@ export function App() {
         {/* Landing Page: Accessible on both Mobile and Desktop */}
         <Route path="/" element={<LandingPage />} />
 
-        {/* Manual Route: Accessible globally (matching mobile support policy) */}
+        {/* Manual Route: Accessible globally */}
         <Route path="/manual" element={<Manual />} />
 
-        {/* Protected App Routes: Hidden on mobile (shows mobile block notification), visible on md+ screens */}
+        {/* Protected App Routes: Desktop view */}
         <Route
           path="/*"
           element={
@@ -93,7 +101,7 @@ export function App() {
               {/* Desktop App View */}
               <ProtectedRoute>
                 <div className="hidden md:flex bg-(--bg-app) text-(--text-secondary) h-screen w-screen overflow-hidden">
-                  <Sidebar toggleTheme={toggleTheme} isDarkMode={isDarkMode} />
+                  <Sidebar cycleTheme={cycleTheme} themeMode={themeMode} />
                   <main className="flex-1 overflow-y-auto bg-(--bg-app)">
                     <Routes>
                       <Route path="/dashboard" element={<div className="p-6 text-xl font-bold text-(--text-primary)">Dashboard Home</div>} />

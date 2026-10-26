@@ -1,50 +1,92 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
+/* -------------------------------------------------------------
+   DEFAULT / LIGHT MODE (Root)
+------------------------------------------------------------- */
+:root {
+  --bg-app: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --border-main: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --accent-subtle: #f1f5f9;
+  --btn-primary-bg: #2563eb;
+  --btn-primary-text: #ffffff;
 
-@layer base {
-  :root {
-    /* 🍎 Apple-Inspired Light Mode Palette (Black Control Theme) */
-    --bg-app: #f5f5f7;         /* Signature Apple soft off-white canvas */
-    --bg-surface: #f5f5f7;     /* Seamless background for sidebar and wrappers */
-    --bg-elevated: #ffffff;    /* Pure crisp white for cards, sheets, and inset tables */
-    --border-main: #d2d2d7;    /* Subtle Apple cool-grey border lines */
-    
-    /* Typography */
-    --text-primary: #1d1d1f;   /* Apple crisp high-contrast black-grey headings */
-    --text-secondary: #424245; /* Clean dark grey body text */
-    --text-muted: #86868b;     /* Caption and muted icon grey */
+  /* Dedicated Sidebar Tokens (Light Mode) */
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #e2e8f0;
+  --sidebar-text-primary: #0f172a;
+  --sidebar-text-secondary: #334155;
+  --sidebar-text-muted: #64748b;
+  --sidebar-hover-bg: #f1f5f9;
+}
 
-    /* 🖤 Apple Black Accent Control Tokens */
-    --btn-primary-bg: #000000;       /* Pure black for primary buttons & active state */
-    --btn-primary-text: #ffffff;     /* White text on primary controls */
-    --btn-hover-bg: #1d1d1f;         /* Deep charcoal on button hover */
-    --accent-subtle: #f0f0f2;        /* Soft neutral highlight background */
-  }
+/* -------------------------------------------------------------
+   DARK MODE (.dark on html/root)
+------------------------------------------------------------- */
+.dark {
+  --bg-app: #090d16;
+  --bg-surface: #0f172a;
+  --bg-elevated: #1e293b;
+  --bg-card: #1e293b;
+  --bg-card-hover: #334155;
+  --border-main: #1e293b;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --accent-subtle: #1e293b;
+  --btn-primary-bg: #2563eb;
+  --btn-primary-text: #ffffff;
 
-  .dark {
-    /* 🌙 Dark Mode Benchmark (Unchanged) */
-    --bg-app: #020617;         /* Slate-950 base */
-    --bg-surface: #020617;     /* Slate-950 sidebar & wrapper backdrop */
-    --bg-elevated: #0f172a;    /* Slate-900 cards & table insets */
-    --border-main: #1e293b;    /* Slate-800 borders */
-    
-    --text-primary: #f8fafc;   /* Slate-50 headings */
-    --text-secondary: #cbd5e1; /* Slate-300 body text */
-    --text-muted: #94a3b8;     /* Slate-400 captions */
+  /* Dedicated Sidebar Tokens (Dark Mode) */
+  --sidebar-bg: #0f172a;
+  --sidebar-border: #1e293b;
+  --sidebar-text-primary: #f8fafc;
+  --sidebar-text-secondary: #cbd5e1;
+  --sidebar-text-muted: #94a3b8;
+  --sidebar-hover-bg: #1e293b;
+}
 
-    --btn-primary-bg: #2563eb;       /* Blue accent in dark mode benchmark */
-    --btn-primary-text: #ffffff;
-    --btn-hover-bg: #1d4ed8;
-    --accent-subtle: #1e293b;
-  }
+/* -------------------------------------------------------------
+   MIXED MODE (.mixed on html/root: Light Web + Dark Sidebar)
+------------------------------------------------------------- */
+.mixed {
+  /* Main Canvas Tokens (Light Mode) */
+  --bg-app: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --border-main: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --accent-subtle: #f1f5f9;
+  --btn-primary-bg: #2563eb;
+  --btn-primary-text: #ffffff;
 
-  /* Global Body Styles */
-  html, body, #root {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    background-color: var(--bg-app);
-    color: var(--text-secondary);
-  }
+  /* Dedicated Sidebar Tokens (Dark Mode) */
+  --sidebar-bg: #0f172a;
+  --sidebar-border: #1e293b;
+  --sidebar-text-primary: #f8fafc;
+  --sidebar-text-secondary: #cbd5e1;
+  --sidebar-text-muted: #94a3b8;
+  --sidebar-hover-bg: #1e293b;
+}
+
+/* Base Body & App Container Layout Fix */
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  overflow: hidden;
 }
