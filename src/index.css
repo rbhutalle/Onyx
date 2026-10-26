@@ -1,8 +1,5 @@
 @import "tailwindcss";
 
-/* -------------------------------------------------------------
-   DEFAULT / LIGHT MODE (Root)
-------------------------------------------------------------- */
 :root {
   --bg-app: #f8fafc;
   --bg-surface: #ffffff;
@@ -17,7 +14,6 @@
   --btn-primary-bg: #2563eb;
   --btn-primary-text: #ffffff;
 
-  /* Dedicated Sidebar Tokens (Light Mode) */
   --sidebar-bg: #ffffff;
   --sidebar-border: #e2e8f0;
   --sidebar-text-primary: #0f172a;
@@ -26,9 +22,6 @@
   --sidebar-hover-bg: #f1f5f9;
 }
 
-/* -------------------------------------------------------------
-   DARK MODE (.dark on html/root)
-------------------------------------------------------------- */
 .dark {
   --bg-app: #090d16;
   --bg-surface: #0f172a;
@@ -43,7 +36,6 @@
   --btn-primary-bg: #2563eb;
   --btn-primary-text: #ffffff;
 
-  /* Dedicated Sidebar Tokens (Dark Mode) */
   --sidebar-bg: #0f172a;
   --sidebar-border: #1e293b;
   --sidebar-text-primary: #f8fafc;
@@ -52,11 +44,7 @@
   --sidebar-hover-bg: #1e293b;
 }
 
-/* -------------------------------------------------------------
-   MIXED MODE (.mixed on html/root: Light Web + Dark Sidebar)
-------------------------------------------------------------- */
 .mixed {
-  /* Main Canvas Tokens (Light Mode) */
   --bg-app: #f8fafc;
   --bg-surface: #ffffff;
   --bg-elevated: #f1f5f9;
@@ -70,7 +58,6 @@
   --btn-primary-bg: #2563eb;
   --btn-primary-text: #ffffff;
 
-  /* Dedicated Sidebar Tokens (Dark Mode) */
   --sidebar-bg: #0f172a;
   --sidebar-border: #1e293b;
   --sidebar-text-primary: #f8fafc;
@@ -79,14 +66,13 @@
   --sidebar-hover-bg: #1e293b;
 }
 
-/* Base Body & App Container Layout Fix */
 html, body, #root {
-  height: 100%;
-  width: 100%;
+  height: 100vh;
+  width: 100vw;
   margin: 0;
   padding: 0;
+  overflow: hidden;
   background-color: var(--bg-app);
   color: var(--text-primary);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  overflow: hidden;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }

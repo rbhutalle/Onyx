@@ -29,7 +29,6 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   return <>{children}</>;
 };
 
-// Mobile Device Block Notification Component
 const MobileBlockNotice = () => {
   return (
     <div className="md:hidden flex flex-col items-center justify-center min-h-screen bg-(--bg-surface) text-(--text-primary) p-6 text-center">
@@ -84,25 +83,17 @@ export function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Landing Page: Accessible on both Mobile and Desktop */}
         <Route path="/" element={<LandingPage />} />
-
-        {/* Manual Route: Accessible globally */}
         <Route path="/manual" element={<Manual />} />
-
-        {/* Protected App Routes: Desktop view */}
         <Route
           path="/*"
           element={
             <>
-              {/* Mobile Notification View */}
               <MobileBlockNotice />
-
-              {/* Desktop App View */}
               <ProtectedRoute>
                 <div className="hidden md:flex bg-(--bg-app) text-(--text-secondary) h-screen w-screen overflow-hidden">
                   <Sidebar cycleTheme={cycleTheme} themeMode={themeMode} />
-                  <main className="flex-1 overflow-y-auto bg-(--bg-app)">
+                  <main className="flex-1 h-full overflow-y-auto bg-(--bg-app)">
                     <Routes>
                       <Route path="/dashboard" element={<div className="p-6 text-xl font-bold text-(--text-primary)">Dashboard Home</div>} />
                       <Route path="/vehicles" element={<VehiclePmViewer />} />
@@ -112,13 +103,10 @@ export function App() {
                       <Route path="/maintenance-forecast" element={<MaintenanceForecast />} />
                       <Route path="/job-orders" element={<JobOrder />} />
                       <Route path="/job-orders/dashboard" element={<JobOrderDashboard />} />
-                      
                       <Route path="/incident-management/incident-report" element={<IncidentReport />} />
-
                       <Route path="/global-settings/vehicle-registry" element={<VehicleRegistry />} />
                       <Route path="/global-settings/employee-registry" element={<EmployeeRegistry />} />
                       <Route path="/global-settings/component-registry" element={<ComponentRegistry />} />
-
                       <Route path="/settings" element={<div className="p-6 text-xl font-bold text-(--text-primary)">Settings</div>} />
                       <Route path="/settings/service-standards" element={<ServiceStandards />} />
                       <Route path="/settings/operations-standards" element={<OperationsStandards />} />
@@ -136,7 +124,6 @@ export function App() {
             </>
           }
         />
-
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter> 

@@ -28,7 +28,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
   const [isIncidentManagementOpen, setIsIncidentManagementOpen] = useState<boolean>(currentPath.startsWith('/incident-management'));
   const [isAppRegistryOpen, setIsAppRegistryOpen] = useState<boolean>(currentPath.startsWith('/global-settings'));
   const [isAppSettingsOpen, setIsAppSettingsOpen] = useState<boolean>(currentPath.startsWith('/settings'));
-  const [isHelpOpen, setIsHelpOpen] = useState<boolean>(true);
+  const [isHelpOpen, setIsHelpOpen] = useState<boolean>(false);
 
   const [dbStatus, setDbStatus] = useState<'checking' | 'connected' | 'error'>('checking');
 
@@ -49,7 +49,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
   }, []);
 
   return (
-    <aside className={`relative bg-(--sidebar-bg) border-r border-(--sidebar-border) text-(--sidebar-text-primary) flex flex-col h-screen min-h-0 select-none transition-all duration-300 ${isMinimized ? 'w-20' : 'w-64'}`}>
+    <aside className={`relative bg-(--sidebar-bg) border-r border-(--sidebar-border) text-(--sidebar-text-primary) flex flex-col h-full max-h-screen min-h-0 select-none transition-all duration-300 ${isMinimized ? 'w-20' : 'w-64'}`}>
       {/* Edge Toggle Button */}
       <button
         onClick={() => setIsMinimized(!isMinimized)}
@@ -60,24 +60,24 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
       </button>
 
       {/* Brand Header */}
-      <div className={`shrink-0 p-6 border-b border-(--sidebar-border) flex items-center ${isMinimized ? 'justify-center p-4' : 'gap-3'}`}>
+      <div className={`shrink-0 p-5 border-b border-(--sidebar-border) flex items-center ${isMinimized ? 'justify-center p-3' : 'gap-3'}`}>
         <div className="p-2 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-xl shrink-0">
-          <Car className="w-6 h-6" />
+          <Car className="w-5 h-5" />
         </div>
         {!isMinimized && (
           <div className="overflow-hidden whitespace-nowrap">
-            <h1 className="font-bold text-(--sidebar-text-primary) tracking-tight text-base truncate">RC-MRO</h1>
-            <p className="text-xs text-(--sidebar-text-muted) truncate">Reliability-Centered MRO</p>
+            <h1 className="font-bold text-(--sidebar-text-primary) tracking-tight text-sm truncate">RC-MRO</h1>
+            <p className="text-[11px] text-(--sidebar-text-muted) truncate">Reliability-Centered MRO</p>
           </div>
         )}
       </div>
 
-      {/* Navigation Links — Fully Scrollable Body */}
-      <nav className="flex-1 min-h-0 px-3 py-4 space-y-2 overflow-y-auto overflow-x-hidden">
+      {/* Navigation Links — Scrollable Container with Custom Scrollbar for Tablets */}
+      <nav className="flex-1 min-h-0 px-3 py-3 space-y-1.5 overflow-y-auto overscroll-contain [scrollbar-width:thin]">
         {/* Dashboard */}
         <button
           onClick={() => navigate('/dashboard')}
-          className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2.5' : 'gap-3 px-3.5 py-2.5'} rounded-xl text-sm font-medium transition-all cursor-pointer ${
+          className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2'} rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer ${
             currentPath === '/dashboard'
               ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) shadow-md shadow-black/10 font-semibold'
               : 'text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
@@ -91,7 +91,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
         <div className="space-y-1">
           <button
             onClick={() => isMinimized ? (setIsMinimized(false), setIsMaintenanceOpen(true)) : setIsMaintenanceOpen(!isMaintenanceOpen)}
-            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2.5' : 'justify-between px-3.5 py-2.5'} rounded-xl text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
+            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2' : 'justify-between px-3 py-2'} rounded-xl text-xs sm:text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
           >
             <div className={`flex items-center ${isMinimized ? '' : 'gap-3'}`}>
               <Wrench className="w-4 h-4 text-(--sidebar-text-primary) shrink-0" />
@@ -104,7 +104,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
             <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-(--sidebar-border)">
               <button
                 onClick={() => navigate('/daily-inspection')}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   currentPath === '/daily-inspection'
                     ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
                     : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
@@ -115,7 +115,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
               </button>
               <button
                 onClick={() => navigate('/vehicles')}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   currentPath === '/vehicles'
                     ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
                     : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
@@ -126,7 +126,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
               </button>
               <button
                 onClick={() => navigate('/component-history')}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   currentPath === '/component-history'
                     ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
                     : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
@@ -137,7 +137,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
               </button>
               <button
                 onClick={() => navigate('/maintenance-forecast')}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   currentPath === '/maintenance-forecast'
                     ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
                     : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
@@ -154,7 +154,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
         <div className="space-y-1">
           <button
             onClick={() => isMinimized ? (setIsMinimized(false), setIsJobOrderOpen(true)) : setIsJobOrderOpen(!isJobOrderOpen)}
-            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2.5' : 'justify-between px-3.5 py-2.5'} rounded-xl text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
+            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2' : 'justify-between px-3 py-2'} rounded-xl text-xs sm:text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
           >
             <div className={`flex items-center ${isMinimized ? '' : 'gap-3'}`}>
               <ClipboardCheck className="w-4 h-4 text-(--sidebar-text-primary) shrink-0" />
@@ -167,7 +167,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
             <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-(--sidebar-border)">
               <button
                 onClick={() => navigate('/job-orders/dashboard')}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   currentPath === '/job-orders/dashboard'
                     ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
                     : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
@@ -178,7 +178,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
               </button>
               <button
                 onClick={() => navigate('/job-orders')}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   currentPath === '/job-orders'
                     ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
                     : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
@@ -195,7 +195,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
         <div className="space-y-1">
           <button
             onClick={() => isMinimized ? (setIsMinimized(false), setIsIncidentManagementOpen(true)) : setIsIncidentManagementOpen(!isIncidentManagementOpen)}
-            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2.5' : 'justify-between px-3.5 py-2.5'} rounded-xl text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
+            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2' : 'justify-between px-3 py-2'} rounded-xl text-xs sm:text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
           >
             <div className={`flex items-center ${isMinimized ? '' : 'gap-3'}`}>
               <AlertTriangle className="w-4 h-4 text-(--sidebar-text-primary) shrink-0" />
@@ -208,7 +208,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
             <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-(--sidebar-border)">
               <button
                 onClick={() => navigate('/incident-management/incident-report')}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   currentPath === '/incident-management/incident-report'
                     ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
                     : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
@@ -225,7 +225,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
         <div className="space-y-1">
           <button
             onClick={() => isMinimized ? (setIsMinimized(false), setIsAppRegistryOpen(true)) : setIsAppRegistryOpen(!isAppRegistryOpen)}
-            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2.5' : 'justify-between px-3.5 py-2.5'} rounded-xl text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
+            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2' : 'justify-between px-3 py-2'} rounded-xl text-xs sm:text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
           >
             <div className={`flex items-center ${isMinimized ? '' : 'gap-3'}`}>
               <Globe className="w-4 h-4 text-(--sidebar-text-primary) shrink-0" />
@@ -238,7 +238,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
             <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-(--sidebar-border)">
               <button
                 onClick={() => navigate('/global-settings/vehicle-registry')}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   currentPath === '/global-settings/vehicle-registry'
                     ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
                     : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
@@ -249,7 +249,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
               </button>
               <button
                 onClick={() => navigate('/global-settings/employee-registry')}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   currentPath === '/global-settings/employee-registry'
                     ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
                     : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
@@ -260,7 +260,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
               </button>
               <button
                 onClick={() => navigate('/global-settings/component-registry')}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   currentPath === '/global-settings/component-registry'
                     ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
                     : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
@@ -277,7 +277,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
         <div className="space-y-1">
           <button
             onClick={() => isMinimized ? (setIsMinimized(false), setIsAppSettingsOpen(true)) : setIsAppSettingsOpen(!isAppSettingsOpen)}
-            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2.5' : 'justify-between px-3.5 py-2.5'} rounded-xl text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
+            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2' : 'justify-between px-3 py-2'} rounded-xl text-xs sm:text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
           >
             <div className={`flex items-center ${isMinimized ? '' : 'gap-3'}`}>
               <Settings className="w-4 h-4 text-(--sidebar-text-primary) shrink-0" />
@@ -288,35 +288,35 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
 
           {isAppSettingsOpen && !isMinimized && (
             <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-(--sidebar-border)">
-              <button onClick={() => navigate('/settings/service-standards')} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/service-standards' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
+              <button onClick={() => navigate('/settings/service-standards')} className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/service-standards' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
                 <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">Service Standards</span>
               </button>
-              <button onClick={() => navigate('/settings/operations-standards')} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/operations-standards' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
+              <button onClick={() => navigate('/settings/operations-standards')} className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/operations-standards' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
                 <Activity className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">Operations Standards</span>
               </button>
-              <button onClick={() => navigate('/settings/vehicle-models')} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/vehicle-models' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
+              <button onClick={() => navigate('/settings/vehicle-models')} className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/vehicle-models' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
                 <Car className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">Equipment Models</span>
               </button>
-              <button onClick={() => navigate('/settings/system-components')} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/system-components' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
+              <button onClick={() => navigate('/settings/system-components')} className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/system-components' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
                 <Cpu className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">System & Components</span>
               </button>
-              <button onClick={() => navigate('/settings/task-standards')} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/task-standards' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
+              <button onClick={() => navigate('/settings/task-standards')} className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/task-standards' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
                 <CheckSquare className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">Task Standards</span>
               </button>
-              <button onClick={() => navigate('/settings/job-order-config')} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/job-order-config' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
+              <button onClick={() => navigate('/settings/job-order-config')} className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/job-order-config' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
                 <WrenchIcon className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">Job Order Config</span>
               </button>
-              <button onClick={() => navigate('/settings/rca')} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/rca' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
+              <button onClick={() => navigate('/settings/rca')} className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/rca' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
                 <GitFork className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">RCA</span>
               </button>
-              <button onClick={() => navigate('/settings/fmea')} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/fmea' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
+              <button onClick={() => navigate('/settings/fmea')} className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/fmea' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">FMEA</span>
               </button>
@@ -328,7 +328,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
         <div className="space-y-1">
           <button
             onClick={() => isMinimized ? (setIsMinimized(false), setIsHelpOpen(true)) : setIsHelpOpen(!isHelpOpen)}
-            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2.5' : 'justify-between px-3.5 py-2.5'} rounded-xl text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
+            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2' : 'justify-between px-3 py-2'} rounded-xl text-xs sm:text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
           >
             <div className={`flex items-center ${isMinimized ? '' : 'gap-3'}`}>
               <HelpCircle className="w-4 h-4 text-(--sidebar-text-primary) shrink-0" />
@@ -342,7 +342,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
               {cycleTheme && (
                 <button
                   onClick={cycleTheme}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer"
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer"
                 >
                   {themeMode === 'light' && <Sun className="w-3.5 h-3.5 shrink-0 text-amber-500" />}
                   {themeMode === 'dark' && <Moon className="w-3.5 h-3.5 shrink-0 text-blue-400" />}
@@ -354,7 +354,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
               )}
               <button
                 onClick={() => window.open('/manual', '_blank')}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer"
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer"
               >
                 <BookOpen className="w-3.5 h-3.5 shrink-0 text-(--sidebar-text-primary)" />
                 <span className="truncate">User Manual</span>
@@ -364,9 +364,9 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
         </div>
       </nav>
 
-      {/* Database Status Footer — Always Docked & Pinned */}
-      <div className="shrink-0 p-3 border-t border-(--sidebar-border) bg-(--sidebar-bg)">
-        <div className="bg-(--sidebar-hover-bg) border border-(--sidebar-border) rounded-lg p-2.5 flex items-center justify-center text-xs">
+      {/* Database Status Footer — Fixed at the bottom */}
+      <div className="shrink-0 p-2.5 border-t border-(--sidebar-border) bg-(--sidebar-bg)">
+        <div className="bg-(--sidebar-hover-bg) border border-(--sidebar-border) rounded-lg p-2 flex items-center justify-center text-[11px]">
           {isMinimized ? (
             <div title={`Database Status: ${dbStatus}`}>
               {dbStatus === 'checking' && <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse block" />}
@@ -376,7 +376,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
           ) : (
             <div className="w-full flex items-center justify-between">
               <span className="text-(--sidebar-text-muted) font-medium">Database Status</span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 {dbStatus === 'checking' && (
                   <>
                     <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
