@@ -72,6 +72,7 @@ export function VehicleModels() {
     is_active: true 
   });
 
+  // Load all reference data together on mount (matching OperationsStandards pattern)
   useEffect(() => {
     let isMounted = true;
 
@@ -79,19 +80,25 @@ export function VehicleModels() {
       try {
         setErrorMsg(null);
         
-        const makesRes = await supabase.from('vehicle_makes').select('*').order('name');
+        const [makesRes, typesRes, modelsRes] = await Promise.all([
+          supabase.from('vehicle_makes').select('*').order('name', { ascending: true }),
+          supabase.from('vehicle_types').select('*').order('code', { ascending: true }),
+          supabase.from('vehicle_models').select('*').order('name', { ascending: true })
+        ]);
+
         if (makesRes.error) throw makesRes.error;
-        if (isMounted) setMakes(makesRes.data || []);
-
-        const typesRes = await supabase.from('vehicle_types').select('*').order('code');
         if (typesRes.error) throw typesRes.error;
-        if (isMounted) setTypes(typesRes.data || []);
-
-        const modelsRes = await supabase.from('vehicle_models').select('*').order('name');
         if (modelsRes.error) throw modelsRes.error;
-        if (isMounted) setModels(modelsRes.data || []);
+
+        if (isMounted) {
+          setMakes(makesRes.data || []);
+          setTypes(typesRes.data || []);
+          setModels(modelsRes.data || []);
+        }
       } catch {
-        if (isMounted) setErrorMsg(`Failed to load data. Please check table permissions.`);
+        if (isMounted) {
+          setErrorMsg('Failed to load vehicle configuration data. Please check table permissions and RLS policies.');
+        }
       }
     }
 
@@ -100,17 +107,18 @@ export function VehicleModels() {
     return () => {
       isMounted = false;
     };
-  }, [activeTab]);
+  }, []);
 
   const refreshData = async () => {
     try {
-      const makesRes = await supabase.from('vehicle_makes').select('*').order('name');
+      const [makesRes, typesRes, modelsRes] = await Promise.all([
+        supabase.from('vehicle_makes').select('*').order('name', { ascending: true }),
+        supabase.from('vehicle_types').select('*').order('code', { ascending: true }),
+        supabase.from('vehicle_models').select('*').order('name', { ascending: true })
+      ]);
+
       if (makesRes.data) setMakes(makesRes.data);
-
-      const typesRes = await supabase.from('vehicle_types').select('*').order('code');
       if (typesRes.data) setTypes(typesRes.data);
-
-      const modelsRes = await supabase.from('vehicle_models').select('*').order('name');
       if (modelsRes.data) setModels(modelsRes.data);
     } catch {
       // Ignored
@@ -123,7 +131,7 @@ export function VehicleModels() {
     setTypeForm({ code: '', description: '', is_active: true });
     setModelForm({ 
       make_id: makes[0]?.make_id || '', 
-      type_id: types[0]?.type_id || '', 
+      type_id: '', 
       name: '', 
       is_active: true 
     });
@@ -182,7 +190,7 @@ export function VehicleModels() {
     try {
       if (activeTab === 'makes') {
         const payload = {
-          name: makeForm.name,
+          name: makeForm.name.trim(),
           is_active: makeForm.is_active,
         };
         if (editingId) {
@@ -196,8 +204,8 @@ export function VehicleModels() {
       } else if (activeTab === 'models') {
         const payload = {
           make_id: modelForm.make_id,
-          type_id: modelForm.type_id !== '' ? modelForm.type_id : null,
-          name: modelForm.name,
+          type_id: modelForm.type_id && modelForm.type_id.trim() !== '' ? modelForm.type_id : null,
+          name: modelForm.name.trim(),
           is_active: modelForm.is_active,
         };
         if (editingId) {
@@ -210,8 +218,8 @@ export function VehicleModels() {
         setSuccessMsg('Equipment Model saved successfully!');
       } else if (activeTab === 'types') {
         const payload = {
-          code: typeForm.code,
-          description: typeForm.description,
+          code: typeForm.code.trim(),
+          description: typeForm.description.trim(),
           is_active: typeForm.is_active,
         };
         if (editingId) {
@@ -227,8 +235,10 @@ export function VehicleModels() {
       setIsModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 4000);
       refreshData();
-    } catch {
-      setErrorMsg('Failed to save record. Please check unique constraints or required fields.');
+    } catch (err: unknown) {
+      const errObj = err as Record<string, unknown>;
+      const errorDetail = (errObj?.message as string) || (errObj?.details as string) || JSON.stringify(err);
+      setErrorMsg(`Failed to save record: ${errorDetail}`);
     } finally {
       setSubmitting(false);
     }
@@ -408,7 +418,9 @@ export function VehicleModels() {
                       <tr key={item.model_id} className="hover:bg-(--accent-subtle) transition-colors">
                         <td className="p-3 font-semibold text-(--text-primary)">{item.name}</td>
                         <td className="p-3 text-(--text-primary) font-medium">{matchedMake ? matchedMake.name : '—'}</td>
-                        <td className="p-3 text-(--text-secondary) font-medium">{matchedType ? `${matchedType.code} - ${matchedType.description}` : '—'}</td>
+                        <td className="p-3 text-(--text-secondary) font-medium">
+                          {matchedType ? `${matchedType.code} - ${matchedType.description}` : '—'}
+                        </td>
                         <td className="p-3">
                           <span className={`px-2 py-0.5 rounded text-xs font-medium ${item.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main)'}`}>
                             {item.is_active ? 'Active' : 'Inactive'}

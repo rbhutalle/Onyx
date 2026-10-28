@@ -1375,7 +1375,7 @@ export function JobOrder() {
                 <Search className="absolute left-3 top-3 w-4 h-4 text-(--text-muted)" />
                 <input
                   type="text"
-                  placeholder="Search Job Order No or Plate Number..."
+                  placeholder="Search Job Order No or Equipment ID..."
                   value={jobOrderSearchQuery}
                   onChange={(e) => setJobOrderSearchQuery(e.target.value)}
                   className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
@@ -1484,7 +1484,7 @@ export function JobOrder() {
                     <div className="flex items-center justify-between bg-(--bg-elevated) border border-(--border-main) p-3 rounded-xl">
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full text-xs">
                         <div>
-                          <span className="text-(--text-muted) uppercase text-[10px]">Plate Number</span>
+                          <span className="text-(--text-muted) uppercase text-[10px]">Equipment ID</span>
                           <div className="font-bold text-(--text-primary) text-xs">{selectedPickerVehicle.plate_no}</div>
                         </div>
                         <div>
@@ -1746,7 +1746,7 @@ export function JobOrder() {
                 <Search className="absolute left-3 top-3 w-4 h-4 text-(--text-muted)" />
                 <input
                   type="text"
-                  placeholder="Filter by Plate Number..."
+                  placeholder="Filter by Equipment ID..."
                   value={vehicleSearchQuery}
                   onChange={(e) => setVehicleSearchQuery(e.target.value)}
                   className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"

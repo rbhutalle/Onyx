@@ -545,7 +545,7 @@ export function VehicleRegistry() {
     setErrorMsg(null);
 
     if (!vehicleForm.plate_no.trim() || !vehicleForm.customer_id || !vehicleForm.model_id || !vehicleForm.service_standard_id) {
-      setErrorMsg('Plate number, customer, model, and service standard are required.');
+      setErrorMsg('Equipment ID, customer, model, and service standard are required.');
       return;
     }
 
@@ -687,7 +687,7 @@ export function VehicleRegistry() {
               <div className="flex items-center justify-between bg-(--bg-elevated) border border-(--border-main) p-3 rounded-xl">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full text-xs">
                   <div>
-                    <span className="text-[11px] text-(--text-muted) uppercase">Plate Number</span>
+                    <span className="text-[11px] text-(--text-muted) uppercase">Equipment ID</span>
                     <div className="font-bold text-(--text-primary) text-sm">{selectedVehicle.plate_no}</div>
                   </div>
                   <div>
@@ -1225,7 +1225,7 @@ export function VehicleRegistry() {
                 <Search className="absolute left-3 top-2.5 w-4 h-4 text-(--text-muted)" />
                 <input
                   type="text"
-                  placeholder="Filter by Plate Number..."
+                  placeholder="Filter by Equipment ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-9 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"

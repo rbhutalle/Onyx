@@ -22,6 +22,7 @@ import { FmeaSettings } from '@/components/FmeaSettings';
 import { RcaSettings } from '@/components/RcaSettings';
 import { Smartphone, Monitor } from 'lucide-react';
 import { Manual } from './components/ManualLayout';
+import { Dashboard } from '@/components/Dashboard';
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const hasAccess = sessionStorage.getItem('rcmro-access') === 'granted';
@@ -95,7 +96,7 @@ export function App() {
                   <Sidebar cycleTheme={cycleTheme} themeMode={themeMode} />
                   <main className="flex-1 h-full overflow-y-auto bg-(--bg-app)">
                     <Routes>
-                      <Route path="/dashboard" element={<div className="p-6 text-xl font-bold text-(--text-primary)">Dashboard Home</div>} />
+                      <Route path="/" element={<Dashboard />} /> <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/vehicles" element={<VehiclePmViewer />} />
                       <Route path="/daily-inspection" element={<DailyInspection />} />
                       <Route path="/maintenance-plan" element={<div className="p-6 text-xl font-bold text-(--text-primary)">Maintenance Plan</div>} />

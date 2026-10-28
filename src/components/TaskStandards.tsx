@@ -11,7 +11,8 @@ import {
   Trash2,
   Filter,
   Save,
-  Loader2
+  Loader2,
+  Search
 } from 'lucide-react';
 
 interface EquipmentTaskRecord {
@@ -61,8 +62,9 @@ export function TaskStandards() {
   const [systems, setSystems] = useState<EquipmentSystemRecord[]>([]);
   const [components, setComponents] = useState<EquipmentComponentRecord[]>([]);
 
-  // Filter state for Standards tab
+  // Filter & Search state for Standards tab
   const [selectedTaskFilter, setSelectedTaskFilter] = useState<string>('all');
+  const [standardSearchQuery, setStandardSearchQuery] = useState<string>('');
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -143,7 +145,7 @@ export function TaskStandards() {
     setStandardForm({ 
       task_id: tasks[0]?.task_id || '', 
       system_id: systems[0]?.system_id || '', 
-      component_id: components[0]?.component_id || '', 
+      component_id: '', 
       task_standard_desc: '', 
       standard_time: '0', 
       item: '', 
@@ -202,8 +204,8 @@ export function TaskStandards() {
     try {
       if (activeTab === 'tasks') {
         const payload = {
-          task_name: taskForm.task_name,
-          task_description: taskForm.task_description || null,
+          task_name: taskForm.task_name.trim(),
+          task_description: taskForm.task_description.trim() || null,
         };
         if (editingId) {
           const { error } = await supabase.from('equipment_tasks').update(payload).eq('task_id', editingId);
@@ -214,13 +216,19 @@ export function TaskStandards() {
         }
         setSuccessMsg('Equipment Task saved successfully!');
       } else if (activeTab === 'standards') {
+        if (!standardForm.component_id) {
+          setErrorMsg('Equipment Component is required.');
+          setSubmitting(false);
+          return;
+        }
+
         const payload = {
           task_id: standardForm.task_id,
           system_id: standardForm.system_id,
           component_id: standardForm.component_id,
-          task_standard_desc: standardForm.task_standard_desc,
+          task_standard_desc: standardForm.task_standard_desc.trim(),
           standard_time: Number(standardForm.standard_time) || 0,
-          item: standardForm.item || null,
+          item: standardForm.item ? standardForm.item.trim() : null,
           est_labor_cost: Number(standardForm.est_labor_cost) || 0,
           est_materials_cost: Number(standardForm.est_materials_cost) || 0,
         };
@@ -245,9 +253,14 @@ export function TaskStandards() {
     }
   };
 
-  const filteredStandards = selectedTaskFilter === 'all'
-    ? standards
-    : standards.filter((s) => s.task_id === selectedTaskFilter);
+  // Filter & Search logic for Standards tab
+  const filteredStandards = standards.filter((s) => {
+    const matchesTask = selectedTaskFilter === 'all' || s.task_id === selectedTaskFilter;
+    const q = standardSearchQuery.toLowerCase();
+    const matchesDesc = (s.task_standard_desc || '').toLowerCase().includes(q);
+    const matchesItem = (s.item || '').toLowerCase().includes(q);
+    return matchesTask && (matchesDesc || matchesItem);
+  });
 
   const availableComponents = components.filter(c => c.system_id === standardForm.system_id);
 
@@ -309,23 +322,36 @@ export function TaskStandards() {
       {/* Tab Content Container */}
       <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-(--border-main) shadow-xs rounded-xl p-6 space-y-4">
         <div className="shrink-0 flex flex-wrap justify-between items-center gap-4">
-          <div>
+          <div className="flex flex-wrap items-center gap-3 flex-1">
             {activeTab === 'standards' && (
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-(--text-muted)" />
-                <select
-                  value={selectedTaskFilter}
-                  onChange={(e) => setSelectedTaskFilter(e.target.value)}
-                  className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
-                >
-                  <option value="all">All Tasks (Filter by Task)</option>
-                  {tasks.map((t) => (
-                    <option key={t.task_id} value={t.task_id}>
-                      {t.task_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <>
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-(--text-muted)" />
+                  <select
+                    value={selectedTaskFilter}
+                    onChange={(e) => setSelectedTaskFilter(e.target.value)}
+                    className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
+                  >
+                    <option value="all">All Tasks (Filter by Task)</option>
+                    {tasks.map((t) => (
+                      <option key={t.task_id} value={t.task_id}>
+                        {t.task_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="relative max-w-xs flex-1">
+                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-(--text-muted)" />
+                  <input
+                    type="text"
+                    placeholder="Search by description or item..."
+                    value={standardSearchQuery}
+                    onChange={(e) => setStandardSearchQuery(e.target.value)}
+                    className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
+                  />
+                </div>
+              </>
             )}
           </div>
 
@@ -387,7 +413,7 @@ export function TaskStandards() {
                   <th className="p-3">Task</th>
                   <th className="p-3">System / Component</th>
                   <th className="p-3">Description</th>
-                  <th className="p-3">Std Time</th>
+                  <th className="p-3">Std. Time (HR)</th>
                   <th className="p-3">Labor Cost</th>
                   <th className="p-3">Materials Cost</th>
                   <th className="p-3 text-right">Actions</th>
@@ -411,9 +437,9 @@ export function TaskStandards() {
                           <div className="text-[11px] text-(--text-muted)">{matchedComp ? matchedComp.component_code : '—'}</div>
                         </td>
                         <td className="p-3 text-(--text-secondary) max-w-50 truncate">{item.task_standard_desc}</td>
-                        <td className="p-3 font-mono whitespace-nowrap">{item.standard_time}m</td>
-                        <td className="p-3 font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap">${(item.est_labor_cost ?? 0).toFixed(2)}</td>
-                        <td className="p-3 font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap">${(item.est_materials_cost ?? 0).toFixed(2)}</td>
+                        <td className="p-3 font-mono whitespace-nowrap">{item.standard_time} HR</td>
+                        <td className="p-3 font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap">₱{(item.est_labor_cost ?? 0).toFixed(2)}</td>
+                        <td className="p-3 font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap">₱{(item.est_materials_cost ?? 0).toFixed(2)}</td>
                         <td className="p-3 text-right space-x-3 whitespace-nowrap">
                           <button
                             onClick={() => handleOpenEdit(item)}
@@ -545,9 +571,10 @@ export function TaskStandards() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Standard Time (mins)</label>
+                        <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Std. Time (HR)</label>
                         <input
                           type="number"
+                          step="any"
                           required
                           min="0"
                           value={standardForm.standard_time}
@@ -556,7 +583,7 @@ export function TaskStandards() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Est. Labor Cost ($)</label>
+                        <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Est. Labor Cost (₱)</label>
                         <input
                           type="number"
                           step="any"
@@ -567,7 +594,7 @@ export function TaskStandards() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Est. Materials Cost ($)</label>
+                        <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Est. Materials Cost (₱)</label>
                         <input
                           type="number"
                           step="any"
