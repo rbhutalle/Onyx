@@ -16,7 +16,9 @@ import {
   Wrench,
   XCircle,
   PauseCircle,
-  Activity
+  Activity,
+  PlayCircle,
+  CheckCircle2
 } from 'lucide-react';
 
 /* --- Interfaces --- */
@@ -54,7 +56,8 @@ interface InspectionComplianceSummary {
   total_active_vehicles: number;
   inspected_count: number;
   uninspected_count: number;
-  inspected_missing_status_count: number;
+  status_compliant_count: number;
+  status_compliance_percentage: number;
   operational_count: number;
   standby_count: number;
   breakdown_count: number;
@@ -73,7 +76,7 @@ interface JobOrderVolumeSummary {
   total_job_orders_created: number;
   unique_vehicles_serviced: number;
   completed_count: number;
-  open_count: number;
+  not_yet_started_count: number;
   completion_rate_percentage: number;
 }
 
@@ -124,7 +127,14 @@ export function Dashboard() {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [selectedInspectionDate, setSelectedInspectionDate] = useState<string>('2026-10-29');
+  // Initialize with current local date
+  const [selectedInspectionDate, setSelectedInspectionDate] = useState<string>(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
 
   // Overview / PM Priority state
   const [overviewSummary, setOverviewSummary] = useState<OverviewSummary>({
@@ -140,11 +150,12 @@ export function Dashboard() {
 
   // Inspection Compliance State
   const [complianceSummary, setComplianceSummary] = useState<InspectionComplianceSummary>({
-    inspection_date: '2026-10-29',
+    inspection_date: selectedInspectionDate,
     total_active_vehicles: 0,
     inspected_count: 0,
     uninspected_count: 0,
-    inspected_missing_status_count: 0,
+    status_compliant_count: 0,
+    status_compliance_percentage: 0,
     operational_count: 0,
     standby_count: 0,
     breakdown_count: 0,
@@ -155,17 +166,18 @@ export function Dashboard() {
 
   // Job Order Priorities State
   const [volumeSummary, setVolumeSummary] = useState<JobOrderVolumeSummary>({
-    job_order_date: '2026-10-29',
+    job_order_date: selectedInspectionDate,
     total_job_orders_created: 0,
     unique_vehicles_serviced: 0,
     completed_count: 0,
-    open_count: 0,
+    not_yet_started_count: 0,
     completion_rate_percentage: 0
   });
-  const [workOrderRegister, setWorkOrderRegister] = useState<WorkOrderRegisterRecord[]>([]);
+  const [ongoingWorkOrderRegister, setOngoingWorkOrderRegister] = useState<WorkOrderRegisterRecord[]>([]);
+  const [notYetStartedRegister, setNotYetStartedRegister] = useState<WorkOrderRegisterRecord[]>([]);
 
   const [delayedSummary, setDelayedSummary] = useState<DelayedSummaryMetrics>({
-    evaluation_date: '2026-10-29',
+    evaluation_date: selectedInspectionDate,
     total_delayed_job_orders: 0,
     max_days_delayed: 0,
     avg_days_delayed: 0
@@ -273,7 +285,7 @@ export function Dashboard() {
       const totalActive = activeVehiclesData?.length || 0;
       let inspectedCount = 0;
       let uninspectedCount = 0;
-      let inspectedMissingStatusCount = 0;
+      let statusCompliantCount = 0;
       let operationalCount = 0;
       let standbyCount = 0;
       let breakdownCount = 0;
@@ -289,11 +301,11 @@ export function Dashboard() {
 
         if (logEntry) {
           inspectedCount++;
-          if (!logEntry.operations_id || !logEntry.matched_operations_id) {
-            inspectedMissingStatusCount++;
-            statusName = 'No Status Assigned';
-          } else {
+          if (logEntry.operations_id && logEntry.matched_operations_id) {
+            statusCompliantCount++;
             statusName = logEntry.status_name;
+          } else {
+            statusName = 'No Status Assigned';
           }
         } else {
           uninspectedCount++;
@@ -322,13 +334,15 @@ export function Dashboard() {
         .join(', ') || 'No active vehicles';
 
       const compliancePct = totalActive > 0 ? Number(((inspectedCount / totalActive) * 100).toFixed(2)) : 0;
+      const statusCompliancePct = inspectedCount > 0 ? Number(((statusCompliantCount / inspectedCount) * 100).toFixed(2)) : 0;
 
       setComplianceSummary({
         inspection_date: targetDate,
         total_active_vehicles: totalActive,
         inspected_count: inspectedCount,
         uninspected_count: uninspectedCount,
-        inspected_missing_status_count: inspectedMissingStatusCount,
+        status_compliant_count: statusCompliantCount,
+        status_compliance_percentage: statusCompliancePct,
         operational_count: operationalCount,
         standby_count: standbyCount,
         breakdown_count: breakdownCount,
@@ -349,9 +363,8 @@ export function Dashboard() {
       setDateLoading(true);
 
       const startOfDay = `${requestedDate}T00:00:00.000Z`;
-      const endOfDay = `${requestedDate}T23:59:59.999Z`;
 
-      const { data: rawRecords, error: joErr } = await supabase
+      const { data: createdRecords, error: createdErr } = await supabase
         .from('joborder_master')
         .select(`
           job_order_id,
@@ -367,22 +380,52 @@ export function Dashboard() {
           employees ( employee_name ),
           vehicles ( vehicle_id, plate_no, is_active )
         `)
-        .gte('created_at', startOfDay)
-        .lte('created_at', endOfDay)
-        .order('created_at', { ascending: false });
+        .gte('created_at', startOfDay);
 
-      if (joErr) throw joErr;
+      if (createdErr) throw createdErr;
 
-      const targetDateRecords = (rawRecords || []).filter(j => {
+      const filteredCreatedRecords = (createdRecords || []).filter(j => {
         const rawVeh = j.vehicles as Record<string, unknown> | Record<string, unknown>[] | null;
         const veh = Array.isArray(rawVeh) ? rawVeh[0] : rawVeh;
         return veh === null || veh.is_active === true || veh.is_active === undefined || veh.is_active === null;
       });
 
-      const totalCreated = targetDateRecords.length;
-      const uniqueVehicles = new Set(targetDateRecords.map(j => j.vehicle_id)).size;
-      const completedCount = targetDateRecords.filter(j => j.date_completed !== null).length;
-      const openCount = targetDateRecords.filter(j => j.date_completed === null).length;
+      const totalCreated = filteredCreatedRecords.length;
+      const uniqueVehicles = new Set(filteredCreatedRecords.map(j => j.vehicle_id)).size;
+
+      const { data: allMasterRaw, error: masterErr } = await supabase
+        .from('joborder_master')
+        .select(`
+          job_order_id,
+          job_order_no,
+          vehicle_id,
+          created_at,
+          date_started,
+          expected_completion,
+          date_completed,
+          assigned_supervisor,
+          joborder_priority ( priority_id, priority_desc ),
+          joborder_status ( status_id, status_name ),
+          employees ( employee_name ),
+          vehicles ( vehicle_id, plate_no, is_active )
+        `);
+
+      if (masterErr) throw masterErr;
+
+      const masterList = (allMasterRaw || []).filter(j => {
+        const rawVeh = j.vehicles as Record<string, unknown> | Record<string, unknown>[] | null;
+        const veh = Array.isArray(rawVeh) ? rawVeh[0] : rawVeh;
+        return veh === null || veh.is_active === true || veh.is_active === undefined || veh.is_active === null;
+      });
+
+      const completedCount = masterList.filter(j => {
+        if (!j.date_completed) return false;
+        return String(j.date_completed).substring(0, 10) === requestedDate;
+      }).length;
+
+      const notYetStartedRecords = filteredCreatedRecords.filter(j => j.date_started === null);
+      const notYetStartedCount = notYetStartedRecords.length;
+
       const completionRate = totalCreated > 0 ? Number(((completedCount / totalCreated) * 100).toFixed(2)) : 0;
 
       setVolumeSummary({
@@ -390,11 +433,12 @@ export function Dashboard() {
         total_job_orders_created: totalCreated,
         unique_vehicles_serviced: uniqueVehicles,
         completed_count: completedCount,
-        open_count: openCount,
+        not_yet_started_count: notYetStartedCount,
         completion_rate_percentage: completionRate
       });
 
-      const registerList: WorkOrderRegisterRecord[] = targetDateRecords.map(j => {
+      const ongoingRecords = filteredCreatedRecords.filter(j => j.date_completed === null && j.date_started !== null);
+      const ongoingList: WorkOrderRegisterRecord[] = ongoingRecords.map(j => {
         const rawPrio = j.joborder_priority as Record<string, unknown> | Record<string, unknown>[] | null;
         const prio = Array.isArray(rawPrio) ? rawPrio[0] : rawPrio;
 
@@ -412,7 +456,7 @@ export function Dashboard() {
           job_order_no: String(j.job_order_no || `JO-${j.job_order_id}`),
           plate_no: String(veh?.plate_no || 'N/A'),
           priority_level: String(prio?.priority_desc || 'Unassigned'),
-          current_status: String(stat?.status_name || 'Open'),
+          current_status: String(stat?.status_name || 'Ongoing'),
           date_started: j.date_started ? String(j.date_started).substring(0, 10) : null,
           expected_completion: j.expected_completion ? String(j.expected_completion).substring(0, 10) : null,
           date_completed: j.date_completed ? String(j.date_completed).substring(0, 10) : null,
@@ -420,30 +464,35 @@ export function Dashboard() {
         };
       });
 
-      setWorkOrderRegister(registerList);
+      setOngoingWorkOrderRegister(ongoingList);
 
-      const { data: allMaster } = await supabase
-        .from('joborder_master')
-        .select(`
-          job_order_id,
-          job_order_no,
-          vehicle_id,
-          created_at,
-          date_started,
-          expected_completion,
-          date_completed,
-          assigned_supervisor,
-          joborder_priority ( priority_id, priority_desc ),
-          joborder_status ( status_id, status_name ),
-          employees ( employee_name ),
-          vehicles ( vehicle_id, plate_no, is_active )
-        `);
+      const notYetStartedList: WorkOrderRegisterRecord[] = notYetStartedRecords.map(j => {
+        const rawPrio = j.joborder_priority as Record<string, unknown> | Record<string, unknown>[] | null;
+        const prio = Array.isArray(rawPrio) ? rawPrio[0] : rawPrio;
 
-      const masterList = (allMaster || []).filter(j => {
+        const rawStat = j.joborder_status as Record<string, unknown> | Record<string, unknown>[] | null;
+        const stat = Array.isArray(rawStat) ? rawStat[0] : rawStat;
+
+        const rawEmp = j.employees as Record<string, unknown> | Record<string, unknown>[] | null;
+        const emp = Array.isArray(rawEmp) ? rawEmp[0] : rawEmp;
+
         const rawVeh = j.vehicles as Record<string, unknown> | Record<string, unknown>[] | null;
         const veh = Array.isArray(rawVeh) ? rawVeh[0] : rawVeh;
-        return veh === null || veh.is_active === true || veh.is_active === undefined || veh.is_active === null;
+
+        return {
+          job_order_date: requestedDate,
+          job_order_no: String(j.job_order_no || `JO-${j.job_order_id}`),
+          plate_no: String(veh?.plate_no || 'N/A'),
+          priority_level: String(prio?.priority_desc || 'Unassigned'),
+          current_status: String(stat?.status_name || 'Pending'),
+          date_started: j.date_started ? String(j.date_started).substring(0, 10) : null,
+          expected_completion: j.expected_completion ? String(j.expected_completion).substring(0, 10) : null,
+          date_completed: j.date_completed ? String(j.date_completed).substring(0, 10) : null,
+          assigned_supervisor: String(emp?.employee_name || 'Unassigned')
+        };
       });
+
+      setNotYetStartedRegister(notYetStartedList);
 
       const requestedDateObj = new Date(requestedDate);
 
@@ -737,44 +786,69 @@ export function Dashboard() {
 
     let title: string;
     let summaryCardsHtml: string;
-    let tableHeadersHtml: string;
-    let tableRowsHtml: string;
+    let contentTablesHtml: string;
 
     if (joSubTab === 'volume') {
-      title = 'Daily Job Order Creation Volume & Register Report';
+      title = 'Daily Job Order Volume & Registers Report';
       summaryCardsHtml = `
         <div class="summary-card"><div class="summary-card-title">Total Created</div><div class="summary-card-value">${volumeSummary.total_job_orders_created}</div></div>
         <div class="summary-card"><div class="summary-card-title">Unique Vehicles</div><div class="summary-card-value">${volumeSummary.unique_vehicles_serviced}</div></div>
         <div class="summary-card" style="border-color: #a7f3d0; background-color: #ecfdf5;"><div class="summary-card-title" style="color: #047857;">Completed</div><div class="summary-card-value" style="color: #047857;">${volumeSummary.completed_count}</div></div>
-        <div class="summary-card" style="border-color: #fde68a; background-color: #fffbeb;"><div class="summary-card-title" style="color: #b45309;">Open Orders</div><div class="summary-card-value" style="color: #b45309;">${volumeSummary.open_count}</div></div>
+        <div class="summary-card" style="border-color: #fde68a; background-color: #fffbeb;"><div class="summary-card-title" style="color: #b45309;">Not Yet Started</div><div class="summary-card-value" style="color: #b45309;">${volumeSummary.not_yet_started_count}</div></div>
         <div class="summary-card" style="border-color: #bfdbfe; background-color: #eff6ff;"><div class="summary-card-title" style="color: #1d4ed8;">Completion Rate</div><div class="summary-card-value" style="color: #1d4ed8;">${volumeSummary.completion_rate_percentage}%</div></div>
       `;
-      tableHeadersHtml = `
-        <tr>
-          <th>JO Number</th>
-          <th>Plate No</th>
-          <th>Priority Level</th>
-          <th>Current Status</th>
-          <th>Date Started</th>
-          <th>Expected Comp.</th>
-          <th>Date Completed</th>
-          <th>Supervisor</th>
-        </tr>
-      `;
-      tableRowsHtml = workOrderRegister.length === 0 
-        ? `<tr><td colspan="8" style="text-align: center; padding: 12px; color: #64748b;">No job orders created on this date.</td></tr>`
-        : workOrderRegister.map((r, idx) => `
+
+      const ongoingRows = ongoingWorkOrderRegister.length === 0
+        ? `<tr><td colspan="8" style="text-align: center; padding: 10px; color: #64748b;">No ongoing job orders found.</td></tr>`
+        : ongoingWorkOrderRegister.map((r, idx) => `
           <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
-            <td style="padding: 8px 10px; font-weight: 700; font-family: monospace; color: #0f172a; border-bottom: 1px solid #e2e8f0;">${r.job_order_no}</td>
-            <td style="padding: 8px 10px; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0;">${r.plate_no}</td>
-            <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0;">${r.priority_level}</td>
-            <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0;">${r.current_status}</td>
-            <td style="padding: 8px 10px; font-family: monospace; border-bottom: 1px solid #e2e8f0;">${r.date_started || '—'}</td>
-            <td style="padding: 8px 10px; font-family: monospace; border-bottom: 1px solid #e2e8f0;">${r.expected_completion || '—'}</td>
-            <td style="padding: 8px 10px; font-family: monospace; font-weight: 600; color: #047857; border-bottom: 1px solid #e2e8f0;">${r.date_completed || '—'}</td>
-            <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0;">${r.assigned_supervisor}</td>
+            <td style="padding: 6px 8px; font-weight: 700; font-family: monospace; color: #0f172a; border-bottom: 1px solid #e2e8f0;">${r.job_order_no}</td>
+            <td style="padding: 6px 8px; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0;">${r.plate_no}</td>
+            <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${r.priority_level}</td>
+            <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${r.current_status}</td>
+            <td style="padding: 6px 8px; font-family: monospace; color: #047857; font-weight: 600; border-bottom: 1px solid #e2e8f0;">${r.date_started || '—'}</td>
+            <td style="padding: 6px 8px; font-family: monospace; border-bottom: 1px solid #e2e8f0;">${r.expected_completion || '—'}</td>
+            <td style="padding: 6px 8px; font-family: monospace; border-bottom: 1px solid #e2e8f0;">${r.date_completed || '—'}</td>
+            <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${r.assigned_supervisor}</td>
           </tr>
         `).join('');
+
+      const notStartedRows = notYetStartedRegister.length === 0
+        ? `<tr><td colspan="8" style="text-align: center; padding: 10px; color: #64748b;">No pending/unstarted job orders found.</td></tr>`
+        : notYetStartedRegister.map((r, idx) => `
+          <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+            <td style="padding: 6px 8px; font-weight: 700; font-family: monospace; color: #0f172a; border-bottom: 1px solid #e2e8f0;">${r.job_order_no}</td>
+            <td style="padding: 6px 8px; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0;">${r.plate_no}</td>
+            <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${r.priority_level}</td>
+            <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${r.current_status}</td>
+            <td style="padding: 6px 8px; font-family: monospace; color: #b45309; font-weight: 600; border-bottom: 1px solid #e2e8f0;">${r.date_started || '—'}</td>
+            <td style="padding: 6px 8px; font-family: monospace; border-bottom: 1px solid #e2e8f0;">${r.expected_completion || '—'}</td>
+            <td style="padding: 6px 8px; font-family: monospace; border-bottom: 1px solid #e2e8f0;">${r.date_completed || '—'}</td>
+            <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${r.assigned_supervisor}</td>
+          </tr>
+        `).join('');
+
+      contentTablesHtml = `
+        <h3 style="margin: 16px 0 8px 0; font-size: 13px; font-weight: 700; color: #0f172a;">Ongoing Job Orders (${ongoingWorkOrderRegister.length})</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>JO Number</th><th>Plate No</th><th>Priority</th><th>Status</th><th>Date Started</th><th>Expected Comp.</th><th>Date Completed</th><th>Supervisor</th>
+            </tr>
+          </thead>
+          <tbody>${ongoingRows}</tbody>
+        </table>
+
+        <h3 style="margin: 24px 0 8px 0; font-size: 13px; font-weight: 700; color: #0f172a;">Not yet Started Job Orders (${notYetStartedRegister.length})</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>JO Number</th><th>Plate No</th><th>Priority</th><th>Status</th><th>Date Started</th><th>Expected Comp.</th><th>Date Completed</th><th>Supervisor</th>
+            </tr>
+          </thead>
+          <tbody>${notStartedRows}</tbody>
+        </table>
+      `;
 
     } else {
       title = 'Overdue Job Orders & Delay Duration Queue Report';
@@ -783,18 +857,8 @@ export function Dashboard() {
         <div class="summary-card" style="border-color: #fca5a5; background-color: #fef2f2;"><div class="summary-card-title" style="color: #b91c1c;">Max Delay Duration</div><div class="summary-card-value" style="color: #b91c1c;">${delayedSummary.max_days_delayed} Days</div></div>
         <div class="summary-card" style="border-color: #fde68a; background-color: #fffbeb;"><div class="summary-card-title" style="color: #b45309;">Average Schedule Variance</div><div class="summary-card-value" style="color: #b45309;">${delayedSummary.avg_days_delayed} Days</div></div>
       `;
-      tableHeadersHtml = `
-        <tr>
-          <th>JO Number</th>
-          <th>Plate No</th>
-          <th>Priority Level</th>
-          <th>Current Status</th>
-          <th>Target Completion</th>
-          <th>Days Delayed</th>
-          <th>Assigned Supervisor</th>
-        </tr>
-      `;
-      tableRowsHtml = overdueQueue.length === 0
+
+      const overdueRows = overdueQueue.length === 0
         ? `<tr><td colspan="7" style="text-align: center; padding: 12px; color: #64748b;">No overdue job orders recorded.</td></tr>`
         : overdueQueue.map((r, idx) => `
           <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
@@ -807,6 +871,18 @@ export function Dashboard() {
             <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0;">${r.assigned_supervisor}</td>
           </tr>
         `).join('');
+
+      contentTablesHtml = `
+        <h3 style="margin: 16px 0 8px 0; font-size: 13px; font-weight: 700; color: #0f172a;">Overdue Queue (${overdueQueue.length})</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>JO Number</th><th>Plate No</th><th>Priority Level</th><th>Current Status</th><th>Target Completion</th><th>Days Delayed</th><th>Assigned Supervisor</th>
+            </tr>
+          </thead>
+          <tbody>${overdueRows}</tbody>
+        </table>
+      `;
     }
 
     const htmlContent = `
@@ -826,7 +902,7 @@ export function Dashboard() {
           .summary-card { padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; background-color: #f8fafc; }
           .summary-card-title { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 4px; }
           .summary-card-value { font-size: 18px; font-weight: 800; color: #0f172a; }
-          table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
+          table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 6px; }
           th { background-color: #0f172a; color: #ffffff; text-transform: uppercase; font-size: 9px; font-weight: 700; padding: 8px 10px; text-align: left; }
         </style>
       </head>
@@ -844,14 +920,7 @@ export function Dashboard() {
         <div class="summary-grid">
           ${summaryCardsHtml}
         </div>
-        <table>
-          <thead>
-            ${tableHeadersHtml}
-          </thead>
-          <tbody>
-            ${tableRowsHtml}
-          </tbody>
-        </table>
+        ${contentTablesHtml}
       </body>
       </html>
     `;
@@ -1108,7 +1177,7 @@ export function Dashboard() {
                   <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-(--bg-surface) border border-(--border-main) rounded-xl shadow-xs">
                     <div>
                       <h2 className="text-xs font-bold uppercase tracking-wider text-(--text-primary)">
-                        Daily Fleet Inspection Compliance Analytics
+                        Daily Fleet Inspection Compliance
                       </h2>
                       <p className="text-[11px] text-(--text-muted)">
                         Monitor active fleet daily inspections, operational statuses, and uninspected vehicle queues for {selectedInspectionDate}.
@@ -1173,6 +1242,7 @@ export function Dashboard() {
                       <div>
                         <div className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">Operational</div>
                         <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">{complianceSummary.operational_count}</div>
+                        <div className="text-[9px] text-emerald-600/70 dark:text-emerald-400/70 mt-0.5">Subset of inspected vehicles</div>
                       </div>
                       <Activity className="w-5 h-5 text-emerald-500" />
                     </div>
@@ -1181,6 +1251,7 @@ export function Dashboard() {
                       <div>
                         <div className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">Standby</div>
                         <div className="text-lg font-extrabold text-amber-600 dark:text-amber-400">{complianceSummary.standby_count}</div>
+                        <div className="text-[9px] text-amber-600/70 dark:text-amber-400/70 mt-0.5">Subset of inspected vehicles</div>
                       </div>
                       <PauseCircle className="w-5 h-5 text-amber-500" />
                     </div>
@@ -1189,16 +1260,18 @@ export function Dashboard() {
                       <div>
                         <div className="text-[10px] font-bold uppercase text-red-600 dark:text-red-400">Breakdown</div>
                         <div className="text-lg font-extrabold text-red-600 dark:text-red-400">{complianceSummary.breakdown_count}</div>
+                        <div className="text-[9px] text-red-600/70 dark:text-red-400/70 mt-0.5">Subset of inspected vehicles</div>
                       </div>
                       <Wrench className="w-5 h-5 text-red-500" />
                     </div>
 
-                    <div className="p-3 bg-purple-500/5 border border-purple-500/20 rounded-xl flex items-center justify-between shadow-xs">
+                    <div className="p-3 bg-indigo-500/5 border border-indigo-500/20 rounded-xl flex items-center justify-between shadow-xs">
                       <div>
-                        <div className="text-[10px] font-bold uppercase text-purple-600 dark:text-purple-400">Missing Status</div>
-                        <div className="text-lg font-extrabold text-purple-600 dark:text-purple-400">{complianceSummary.inspected_missing_status_count}</div>
+                        <div className="text-[10px] font-bold uppercase text-indigo-600 dark:text-indigo-400">Status Compliance</div>
+                        <div className="text-lg font-extrabold text-indigo-600 dark:text-indigo-400">{complianceSummary.status_compliance_percentage}%</div>
+                        <div className="text-[9px] text-indigo-600/70 dark:text-indigo-400/70 mt-0.5">Subset of inspected vehicles</div>
                       </div>
-                      <AlertCircle className="w-5 h-5 text-purple-500" />
+                      <CheckCircle2 className="w-5 h-5 text-indigo-500" />
                     </div>
                   </div>
 
@@ -1285,7 +1358,7 @@ export function Dashboard() {
                         className="flex items-center gap-1.5 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer shadow-xs"
                       >
                         <Printer className="w-3.5 h-3.5" />
-                        <span>Export Sub-Tab View</span>
+                        <span>Export View</span>
                       </button>
                     </div>
                   </div>
@@ -1323,7 +1396,7 @@ export function Dashboard() {
                         <div className="p-3 bg-(--bg-surface) border border-(--border-main) rounded-xl space-y-1 shadow-xs">
                           <div className="text-[10px] font-bold uppercase text-(--text-muted)">Total Created</div>
                           <div className="text-xl font-extrabold text-(--text-primary)">{volumeSummary.total_job_orders_created}</div>
-                          <div className="text-[10px] text-(--text-muted)">Created on {volumeSummary.job_order_date}</div>
+                          <div className="text-[10px] text-(--text-muted)">Created &ge; {volumeSummary.job_order_date}</div>
                         </div>
 
                         <div className="p-3 bg-(--bg-surface) border border-(--border-main) rounded-xl space-y-1 shadow-xs">
@@ -1335,13 +1408,13 @@ export function Dashboard() {
                         <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-1 shadow-xs">
                           <div className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">Completed</div>
                           <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">{volumeSummary.completed_count}</div>
-                          <div className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">Closed on target date</div>
+                          <div className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">Completed on target date</div>
                         </div>
 
                         <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-1 shadow-xs">
-                          <div className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">Open Jobs</div>
-                          <div className="text-xl font-extrabold text-amber-600 dark:text-amber-400">{volumeSummary.open_count}</div>
-                          <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">Pending completion</div>
+                          <div className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">Not Yet Started</div>
+                          <div className="text-xl font-extrabold text-amber-600 dark:text-amber-400">{volumeSummary.not_yet_started_count}</div>
+                          <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">date_started is null</div>
                         </div>
 
                         <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl space-y-1 shadow-xs col-span-2 md:col-span-1">
@@ -1351,17 +1424,18 @@ export function Dashboard() {
                         </div>
                       </div>
 
+                      {/* Table 1: Ongoing Job Order Register */}
                       <div className="border border-(--border-main) rounded-xl p-4 bg-(--bg-surface) space-y-3 shadow-xs">
                         <div className="flex items-center justify-between border-b border-(--border-main) pb-3">
                           <div className="flex items-center gap-2">
-                            <ClipboardList className="w-4 h-4 text-emerald-500" />
+                            <Activity className="w-4 h-4 text-emerald-500" />
                             <h3 className="text-xs font-bold uppercase text-(--text-primary)">
-                              Daily Work Order Register ({workOrderRegister.length} Job Orders)
+                              Ongoing Job Orders ({ongoingWorkOrderRegister.length} Job Orders)
                             </h3>
                           </div>
                         </div>
 
-                        <div className="overflow-x-auto max-h-80 overflow-y-auto border border-(--border-main) rounded-lg">
+                        <div className="overflow-x-auto max-h-72 overflow-y-auto border border-(--border-main) rounded-lg">
                           <table className="w-full text-left text-xs border-collapse">
                             <thead>
                               <tr className="border-b border-(--border-main) text-(--text-muted) text-[10px] uppercase bg-(--bg-elevated) sticky top-0 z-10">
@@ -1376,22 +1450,73 @@ export function Dashboard() {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-(--border-main)">
-                              {workOrderRegister.length === 0 ? (
+                              {ongoingWorkOrderRegister.length === 0 ? (
                                 <tr>
                                   <td colSpan={8} className="p-6 text-center text-(--text-muted) italic">
-                                    No job orders created on this date.
+                                    No ongoing job orders found.
                                   </td>
                                 </tr>
                               ) : (
-                                workOrderRegister.map((r, idx) => (
+                                ongoingWorkOrderRegister.map((r, idx) => (
                                   <tr key={idx} className="hover:bg-(--accent-subtle) transition-colors">
                                     <td className="p-2.5 font-mono font-bold text-(--text-primary)">{r.job_order_no}</td>
                                     <td className="p-2.5 font-semibold text-(--text-primary)">{r.plate_no}</td>
                                     <td className="p-2.5">{r.priority_level}</td>
                                     <td className="p-2.5">{r.current_status}</td>
-                                    <td className="p-2.5 font-mono text-(--text-secondary)">{r.date_started || '—'}</td>
+                                    <td className="p-2.5 font-mono text-emerald-600 dark:text-emerald-400 font-semibold">{r.date_started || '—'}</td>
                                     <td className="p-2.5 font-mono text-(--text-secondary)">{r.expected_completion || '—'}</td>
-                                    <td className="p-2.5 font-mono text-emerald-600 dark:text-emerald-400 font-semibold">{r.date_completed || '—'}</td>
+                                    <td className="p-2.5 font-mono text-(--text-secondary)">{r.date_completed || '—'}</td>
+                                    <td className="p-2.5 text-(--text-secondary)">{r.assigned_supervisor}</td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Table 2: Not yet Started Job Orders */}
+                      <div className="border border-(--border-main) rounded-xl p-4 bg-(--bg-surface) space-y-3 shadow-xs">
+                        <div className="flex items-center justify-between border-b border-(--border-main) pb-3">
+                          <div className="flex items-center gap-2">
+                            <PlayCircle className="w-4 h-4 text-amber-500" />
+                            <h3 className="text-xs font-bold uppercase text-(--text-primary)">
+                              Not yet Started Job Orders ({notYetStartedRegister.length} Job Orders)
+                            </h3>
+                          </div>
+                        </div>
+
+                        <div className="overflow-x-auto max-h-72 overflow-y-auto border border-(--border-main) rounded-lg">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr className="border-b border-(--border-main) text-(--text-muted) text-[10px] uppercase bg-(--bg-elevated) sticky top-0 z-10">
+                                <th className="p-2.5">Job Order No</th>
+                                <th className="p-2.5">Plate No</th>
+                                <th className="p-2.5">Priority</th>
+                                <th className="p-2.5">Status</th>
+                                <th className="p-2.5">Date Started</th>
+                                <th className="p-2.5">Expected Comp.</th>
+                                <th className="p-2.5">Date Completed</th>
+                                <th className="p-2.5">Supervisor</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-(--border-main)">
+                              {notYetStartedRegister.length === 0 ? (
+                                <tr>
+                                  <td colSpan={8} className="p-6 text-center text-(--text-muted) italic">
+                                    No pending/unstarted job orders found.
+                                  </td>
+                                </tr>
+                              ) : (
+                                notYetStartedRegister.map((r, idx) => (
+                                  <tr key={idx} className="hover:bg-(--accent-subtle) transition-colors">
+                                    <td className="p-2.5 font-mono font-bold text-(--text-primary)">{r.job_order_no}</td>
+                                    <td className="p-2.5 font-semibold text-(--text-primary)">{r.plate_no}</td>
+                                    <td className="p-2.5">{r.priority_level}</td>
+                                    <td className="p-2.5">{r.current_status}</td>
+                                    <td className="p-2.5 font-mono text-amber-600 dark:text-amber-400 font-semibold">{r.date_started || '—'}</td>
+                                    <td className="p-2.5 font-mono text-(--text-secondary)">{r.expected_completion || '—'}</td>
+                                    <td className="p-2.5 font-mono text-(--text-secondary)">{r.date_completed || '—'}</td>
                                     <td className="p-2.5 text-(--text-secondary)">{r.assigned_supervisor}</td>
                                   </tr>
                                 ))
