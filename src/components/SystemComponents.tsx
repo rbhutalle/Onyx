@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { 
   Cpu, 
@@ -11,7 +11,10 @@ import {
   Trash2,
   Filter,
   Save,
-  Loader2
+  Loader2,
+  Search,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface EquipmentSystemRecord {
@@ -33,14 +36,23 @@ interface EquipmentComponentRecord {
   [key: string]: unknown;
 }
 
+type TabType = 'systems' | 'components';
+
 export function SystemComponents() {
-  const [activeTab, setActiveTab] = useState<'systems' | 'components'>('systems');
+  const [activeTab, setActiveTab] = useState<TabType>('systems');
 
   const [systems, setSystems] = useState<EquipmentSystemRecord[]>([]);
   const [components, setComponents] = useState<EquipmentComponentRecord[]>([]);
 
-  // Filter state for Components tab
+  const [loading, setLoading] = useState<boolean>(false);
+
+  // Filter & Search state
   const [selectedSystemFilter, setSelectedSystemFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 10;
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -57,43 +69,48 @@ export function SystemComponents() {
     component_desc: '' 
   });
 
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setErrorMsg(null);
+      
+      const systemsRes = await supabase.from('equipment_system').select('*').order('system_code');
+      if (systemsRes.error) throw systemsRes.error;
+      setSystems(systemsRes.data || []);
+
+      const compsRes = await supabase.from('equipment_component').select('*').order('component_code');
+      if (compsRes.error) throw compsRes.error;
+      setComponents(compsRes.data || []);
+    } catch {
+      setErrorMsg(`Failed to load data. Please check table permissions.`);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
-
-    async function loadData() {
-      try {
-        setErrorMsg(null);
-        
-        const systemsRes = await supabase.from('equipment_system').select('*').order('system_code');
-        if (systemsRes.error) throw systemsRes.error;
-        if (isMounted) setSystems(systemsRes.data || []);
-
-        const compsRes = await supabase.from('equipment_component').select('*').order('component_code');
-        if (compsRes.error) throw compsRes.error;
-        if (isMounted) setComponents(compsRes.data || []);
-      } catch {
-        if (isMounted) setErrorMsg(`Failed to load data. Please check table permissions.`);
+    queueMicrotask(() => {
+      if (isMounted) {
+        setCurrentPage(1);
+        setSearchQuery('');
+        setSelectedSystemFilter('all');
+        loadData();
       }
-    }
-
-    loadData();
-
+    });
     return () => {
       isMounted = false;
     };
-  }, [activeTab]);
+  }, [activeTab, loadData]);
 
-  const refreshData = async () => {
-    try {
-      const systemsRes = await supabase.from('equipment_system').select('*').order('system_code');
-      if (systemsRes.data) setSystems(systemsRes.data);
-
-      const compsRes = await supabase.from('equipment_component').select('*').order('component_code');
-      if (compsRes.data) setComponents(compsRes.data);
-    } catch {
-      // Ignored
-    }
-  };
+  // Reset pagination when search query or filter changes
+  useEffect(() => {
+    let isMounted = true;
+    queueMicrotask(() => {
+      if (isMounted) setCurrentPage(1);
+    });
+    return () => { isMounted = false; };
+  }, [searchQuery, selectedSystemFilter]);
 
   const handleOpenAdd = () => {
     setEditingId(null);
@@ -135,7 +152,7 @@ export function SystemComponents() {
 
       setSuccessMsg('Record deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 3000);
-      refreshData();
+      loadData();
     } catch {
       setErrorMsg('Failed to delete record. Check foreign key dependencies.');
     }
@@ -149,8 +166,9 @@ export function SystemComponents() {
     try {
       if (activeTab === 'systems') {
         const payload = {
-          system_code: systemForm.system_code,
-          system_desc: systemForm.system_desc,
+          system_code: systemForm.system_code.trim(),
+          system_desc: systemForm.system_desc.trim(),
+          updated_at: new Date().toISOString()
         };
         if (editingId) {
           const { error } = await supabase.from('equipment_system').update(payload).eq('system_id', editingId);
@@ -163,8 +181,9 @@ export function SystemComponents() {
       } else if (activeTab === 'components') {
         const payload = {
           system_id: componentForm.system_id,
-          component_code: componentForm.component_code,
-          component_desc: componentForm.component_desc,
+          component_code: componentForm.component_code.trim(),
+          component_desc: componentForm.component_desc.trim(),
+          updated_at: new Date().toISOString()
         };
         if (editingId) {
           const { error } = await supabase.from('equipment_component').update(payload).eq('component_id', editingId);
@@ -178,7 +197,7 @@ export function SystemComponents() {
 
       setIsModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 4000);
-      refreshData();
+      loadData();
     } catch {
       setErrorMsg('Failed to save record. Please check unique constraints or required fields.');
     } finally {
@@ -186,229 +205,305 @@ export function SystemComponents() {
     }
   };
 
-  const filteredComponents = selectedSystemFilter === 'all'
-    ? components
-    : components.filter((c) => c.system_id === selectedSystemFilter);
+  // Filter & Search computation
+  const filteredSystems = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    return systems.filter(s => 
+      s.system_code.toLowerCase().includes(q) || 
+      (s.system_desc || '').toLowerCase().includes(q)
+    );
+  }, [systems, searchQuery]);
+
+  const filteredComponents = useMemo(() => {
+    return components.filter((c) => {
+      const matchesSystem = selectedSystemFilter === 'all' || c.system_id === selectedSystemFilter;
+      const q = searchQuery.toLowerCase();
+      const matchesCode = (c.component_code || '').toLowerCase().includes(q);
+      const matchesDesc = (c.component_desc || '').toLowerCase().includes(q);
+      return matchesSystem && (matchesCode || matchesDesc);
+    });
+  }, [components, selectedSystemFilter, searchQuery]);
+
+  const paginatedList = useMemo(() => {
+    const list = activeTab === 'systems' ? filteredSystems : filteredComponents;
+    const start = (currentPage - 1) * pageSize;
+    return list.slice(start, start + pageSize);
+  }, [activeTab, filteredSystems, filteredComponents, currentPage, pageSize]);
+
+  const totalPages = useMemo(() => {
+    const totalLength = activeTab === 'systems' ? filteredSystems.length : filteredComponents.length;
+    return Math.ceil(totalLength / pageSize) || 1;
+  }, [activeTab, filteredSystems.length, filteredComponents.length, pageSize]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-4">
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
       {/* Header */}
-      <div className="shrink-0 flex items-center gap-3 border-b border-(--border-main) pb-4">
-        <div className="p-2.5 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-xl">
-          <Cpu className="w-7 h-7" />
-        </div>
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-(--text-primary)">System & Components Management</h1>
-          <p className="text-xs sm:text-sm text-(--text-muted)">Configure equipment systems and their associated sub-components.</p>
+      <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-(--accent-subtle) text-(--text-primary) rounded-xl">
+            <Cpu className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-(--text-primary)">System & Components Management</h1>
+            <p className="text-xs sm:text-sm text-(--text-muted)">Configure equipment systems and their associated sub-components.</p>
+          </div>
         </div>
       </div>
 
       {successMsg && (
-        <div className="shrink-0 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
-          <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+        <div className="shrink-0 bg-(--accent-subtle) border border-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg flex items-center gap-2.5 text-xs">
+          <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="shrink-0 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
-          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
+        <div className="shrink-0 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-3 py-2 rounded-lg flex items-center gap-2.5 text-xs">
+          <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
-      {/* Clean Tab Navigation */}
+      {/* Tab Navigation */}
       <div className="shrink-0 flex border-b border-(--border-main) gap-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('systems')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
             activeTab === 'systems'
               ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
+              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
           }`}
         >
-          <Cpu className="w-4 h-4" />
+          <Cpu className="w-3.5 h-3.5" />
           <span>Equipment Systems</span>
         </button>
 
         <button
           onClick={() => setActiveTab('components')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
             activeTab === 'components'
               ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
+              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
           }`}
         >
-          <Layers className="w-4 h-4" />
+          <Layers className="w-3.5 h-3.5" />
           <span>Equipment Components</span>
         </button>
       </div>
 
       {/* Tab Content Container */}
-      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-(--border-main) shadow-xs rounded-xl p-6 space-y-4">
-        <div className="shrink-0 flex flex-wrap justify-between items-center gap-4">
-          <div>
-            {activeTab === 'components' && (
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-(--text-muted)" />
-                <select
-                  value={selectedSystemFilter}
-                  onChange={(e) => setSelectedSystemFilter(e.target.value)}
-                  className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
-                >
-                  <option value="all">All Systems (Filter by System)</option>
-                  {systems.map((sys) => (
-                    <option key={sys.system_id} value={sys.system_id}>
-                      {sys.system_code} - {sys.system_desc}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-4 overflow-hidden space-y-3">
+        <div className="shrink-0 flex flex-wrap items-center gap-2">
+          {activeTab === 'components' && (
+            <div className="flex items-center gap-2">
+              <Filter className="w-3.5 h-3.5 text-(--text-muted)" />
+              <select
+                value={selectedSystemFilter}
+                onChange={(e) => setSelectedSystemFilter(e.target.value)}
+                className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
+              >
+                <option value="all">All Systems (Filter by System)</option>
+                {systems.map((sys) => (
+                  <option key={sys.system_id} value={sys.system_id}>
+                    {sys.system_code} - {sys.system_desc}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
+            <input
+              type="text"
+              placeholder={activeTab === 'systems' ? 'Filter systems...' : 'Search by component code or description...'}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
+            />
           </div>
 
           <button
             onClick={handleOpenAdd}
-            className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow ml-auto"
+            className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             <span>Add Record</span>
           </button>
         </div>
 
         {/* Scrollable Container with Sticky Table Headers */}
         <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
-          {/* TAB 1: EQUIPMENT SYSTEMS */}
-          {activeTab === 'systems' && (
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-(--border-main) text-(--text-muted) text-xs uppercase bg-(--bg-surface) sticky top-0 z-10 shadow-xs">
-                  <th className="p-3">System Code</th>
-                  <th className="p-3">System Description</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                {systems.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} className="p-8 text-center text-(--text-muted)">No equipment systems found.</td>
+          {loading ? (
+            <div className="h-full flex items-center justify-center text-(--text-muted) gap-2 text-xs">
+              <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
+              <span>Loading records...</span>
+            </div>
+          ) : activeTab === 'systems' ? (
+            filteredSystems.length === 0 ? (
+              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                No equipment systems found. Click &quot;Add Record&quot; above.
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                    <th className="py-2 px-3">System Code</th>
+                    <th className="py-2 px-3">System Description</th>
+                    <th className="py-2 px-3 text-right w-28">Actions</th>
                   </tr>
-                ) : (
-                  systems.map((item) => (
-                    <tr key={item.system_id} className="hover:bg-(--accent-subtle) transition-colors">
-                      <td className="p-3 font-semibold text-(--text-primary)">{item.system_code}</td>
-                      <td className="p-3 text-(--text-muted)">{item.system_desc}</td>
-                      <td className="p-3 text-right space-x-3">
-                        <button
-                          onClick={() => handleOpenEdit(item)}
-                          className="text-xs text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" /> Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.system_id, 'equipment_system', 'system_id')}
-                          className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" /> Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          )}
-
-          {/* TAB 2: EQUIPMENT COMPONENTS */}
-          {activeTab === 'components' && (
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-(--border-main) text-(--text-muted) text-xs uppercase bg-(--bg-surface) sticky top-0 z-10 shadow-xs">
-                  <th className="p-3">Component Code</th>
-                  <th className="p-3">Component Description</th>
-                  <th className="p-3">System Reference</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                {filteredComponents.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="p-8 text-center text-(--text-muted)">No equipment components found.</td>
-                  </tr>
-                ) : (
-                  filteredComponents.map((item) => {
-                    const matchedSystem = systems.find((s) => s.system_id === item.system_id);
+                </thead>
+                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                  {paginatedList.map((item) => {
+                    const system = item as EquipmentSystemRecord;
                     return (
-                      <tr key={item.component_id} className="hover:bg-(--accent-subtle) transition-colors">
-                        <td className="p-3 font-semibold text-(--text-primary)">{item.component_code}</td>
-                        <td className="p-3 text-(--text-muted)">{item.component_desc}</td>
-                        <td className="p-3 text-(--text-primary) font-medium">
-                          {matchedSystem ? `${matchedSystem.system_code} - ${matchedSystem.system_desc}` : '—'}
-                        </td>
-                        <td className="p-3 text-right space-x-3">
-                          <button
-                            onClick={() => handleOpenEdit(item)}
-                            className="text-xs text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" /> Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(item.component_id, 'equipment_component', 'component_id')}
-                            className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" /> Delete
-                          </button>
+                      <tr key={system.system_id} className="hover:bg-(--accent-subtle) transition-colors">
+                        <td className="py-2 px-3 font-semibold text-(--text-primary)">{system.system_code}</td>
+                        <td className="py-2 px-3 text-(--text-muted)">{system.system_desc}</td>
+                        <td className="py-2 px-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleOpenEdit(system)}
+                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Edit2 className="w-3 h-3" /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(system.system_id, 'equipment_system', 'system_id')}
+                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Trash2 className="w-3 h-3" /> Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
-                  })
-                )}
-              </tbody>
-            </table>
+                  })}
+                </tbody>
+              </table>
+            )
+          ) : (
+            filteredComponents.length === 0 ? (
+              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                No equipment components found. Click &quot;Add Record&quot; above.
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                    <th className="py-2 px-3">Component Code</th>
+                    <th className="py-2 px-3">Component Description</th>
+                    <th className="py-2 px-3">System Reference</th>
+                    <th className="py-2 px-3 text-right w-28">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                  {paginatedList.map((item) => {
+                    const component = item as EquipmentComponentRecord;
+                    const matchedSystem = systems.find((s) => s.system_id === component.system_id);
+                    return (
+                      <tr key={component.component_id} className="hover:bg-(--accent-subtle) transition-colors">
+                        <td className="py-2 px-3 font-semibold text-(--text-primary)">{component.component_code}</td>
+                        <td className="py-2 px-3 text-(--text-muted)">{component.component_desc}</td>
+                        <td className="py-2 px-3 text-(--text-primary) font-medium">
+                          {matchedSystem ? `${matchedSystem.system_code} - ${matchedSystem.system_desc}` : '—'}
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleOpenEdit(component)}
+                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Edit2 className="w-3 h-3" /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(component.component_id, 'equipment_component', 'component_id')}
+                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Trash2 className="w-3 h-3" /> Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )
           )}
         </div>
+
+        {/* Pagination */}
+        {!loading && ((activeTab === 'systems' && filteredSystems.length > 0) || (activeTab === 'components' && filteredComponents.length > 0)) && (
+          <div className="shrink-0 flex items-center justify-between pt-2 text-xs text-(--text-muted)">
+            <span>
+              Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, activeTab === 'systems' ? filteredSystems.length : filteredComponents.length)} of {activeTab === 'systems' ? filteredSystems.length : filteredComponents.length} entries
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <span>Page {currentPage} of {totalPages}</span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage >= totalPages}
+                className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* FORM MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 max-h-[92vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-(--border-main) pb-4 shrink-0">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-lg p-6 shadow-2xl max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-(--border-main) pb-3 shrink-0">
               <h3 className="text-lg font-bold text-(--text-primary)">
                 {editingId ? 'Edit Record' : 'Add New Record'}
               </h3>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer"
+                className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer p-1"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitForm} className="flex flex-col flex-1 overflow-hidden">
+            <form onSubmit={handleSubmitForm} className="flex flex-col flex-1 overflow-hidden mt-4">
               <div className="overflow-y-auto space-y-4 p-1 flex-1">
                 {activeTab === 'systems' && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">System Code</label>
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                        System Code <span className="text-red-500">*</span>
+                      </label>
                       <input
                         type="text"
                         required
                         value={systemForm.system_code}
                         onChange={(e) => setSystemForm({ ...systemForm, system_code: e.target.value })}
                         placeholder="e.g. ENG, HYD"
-                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">System Description</label>
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                        System Description <span className="text-red-500">*</span>
+                      </label>
                       <textarea
                         rows={3}
                         required
                         value={systemForm.system_desc}
                         onChange={(e) => setSystemForm({ ...systemForm, system_desc: e.target.value })}
                         placeholder="Describe equipment system..."
-                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                   </>
@@ -417,14 +512,16 @@ export function SystemComponents() {
                 {activeTab === 'components' && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Equipment System</label>
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                        Equipment System <span className="text-red-500">*</span>
+                      </label>
                       <select
                         required
                         value={componentForm.system_id}
                         onChange={(e) => setComponentForm({ ...componentForm, system_id: e.target.value })}
-                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
                       >
-                        <option value="">Select Equipment System</option>
+                        <option value="">Select Equipment System...</option>
                         {systems.map((sys) => (
                           <option key={sys.system_id} value={sys.system_id}>
                             {sys.system_code} - {sys.system_desc}
@@ -433,43 +530,47 @@ export function SystemComponents() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Component Code</label>
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                        Component Code <span className="text-red-500">*</span>
+                      </label>
                       <input
                         type="text"
                         required
                         value={componentForm.component_code}
                         onChange={(e) => setComponentForm({ ...componentForm, component_code: e.target.value })}
                         placeholder="e.g. ENG_TURBO"
-                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Component Description</label>
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                        Component Description <span className="text-red-500">*</span>
+                      </label>
                       <textarea
                         rows={3}
                         required
                         value={componentForm.component_desc}
                         onChange={(e) => setComponentForm({ ...componentForm, component_desc: e.target.value })}
                         placeholder="Describe component details..."
-                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                   </>
                 )}
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-(--border-main) shrink-0 mt-4">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-(--border-main) shrink-0 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-(--accent-subtle) hover:opacity-80 text-(--text-primary) rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-(--accent-subtle) text-(--text-primary) hover:opacity-80 rounded-lg text-xs font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow disabled:opacity-50"
+                  className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow disabled:opacity-50"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   <span>Save Changes</span>

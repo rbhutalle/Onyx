@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { 
   ShieldAlert, 
@@ -12,7 +12,10 @@ import {
   Trash2,
   Save,
   Loader2,
-  Filter
+  Filter,
+  Search,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface StandardRecord {
@@ -43,17 +46,26 @@ interface ThresholdRecord {
   [key: string]: unknown;
 }
 
+type TabType = 'standards' | 'intervals' | 'thresholds';
+
 const PM_CODES = ['PM2', 'PM3', 'PM4', 'PM5', 'PM6', 'PM7'];
 
 export function ServiceStandards() {
-  const [activeTab, setActiveTab] = useState<'standards' | 'intervals' | 'thresholds'>('standards');
+  const [activeTab, setActiveTab] = useState<TabType>('standards');
 
   const [standards, setStandards] = useState<StandardRecord[]>([]);
   const [intervals, setIntervals] = useState<IntervalRecord[]>([]);
   const [thresholds, setThresholds] = useState<ThresholdRecord[]>([]);
 
-  // Filter state for Service Intervals
+  const [loading, setLoading] = useState<boolean>(false);
+
+  // Filter & Search state
   const [selectedStandardFilter, setSelectedStandardFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 10;
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -77,53 +89,54 @@ export function ServiceStandards() {
     average_lookback: '' 
   });
 
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setErrorMsg(null);
+      
+      const stdRes = await supabase.from('service_standards').select('*').order('code');
+      if (stdRes.error) throw stdRes.error;
+      setStandards(stdRes.data || []);
+
+      if (activeTab === 'intervals') {
+        const { data, error } = await supabase.from('service_intervals').select('*').order('code');
+        if (error) throw error;
+        setIntervals(data || []);
+      } else if (activeTab === 'thresholds') {
+        const { data, error } = await supabase.from('service_thresholds').select('*');
+        if (error) throw error;
+        setThresholds(data || []);
+      }
+    } catch {
+      setErrorMsg(`Failed to load ${activeTab} data. Please check table permissions.`);
+    } finally {
+      setLoading(false);
+    }
+  }, [activeTab]);
+
   useEffect(() => {
     let isMounted = true;
-
-    async function loadTabData() {
-      try {
-        setErrorMsg(null);
-        const stdRes = await supabase.from('service_standards').select('*');
-        if (stdRes.error) throw stdRes.error;
-        if (isMounted) setStandards(stdRes.data || []);
-
-        if (activeTab === 'intervals') {
-          const { data, error } = await supabase.from('service_intervals').select('*');
-          if (error) throw error;
-          if (isMounted) setIntervals(data || []);
-        } else if (activeTab === 'thresholds') {
-          const { data, error } = await supabase.from('service_thresholds').select('*');
-          if (error) throw error;
-          if (isMounted) setThresholds(data || []);
-        }
-      } catch {
-        if (isMounted) setErrorMsg(`Failed to load ${activeTab} data. Please check table permissions.`);
+    queueMicrotask(() => {
+      if (isMounted) {
+        setCurrentPage(1);
+        setSearchQuery('');
+        setSelectedStandardFilter('all');
+        loadData();
       }
-    }
-
-    loadTabData();
-
+    });
     return () => {
       isMounted = false;
     };
-  }, [activeTab]);
+  }, [activeTab, loadData]);
 
-  const refreshCurrentData = async () => {
-    try {
-      const stdRes = await supabase.from('service_standards').select('*');
-      if (stdRes.data) setStandards(stdRes.data);
-
-      if (activeTab === 'intervals') {
-        const { data } = await supabase.from('service_intervals').select('*');
-        if (data) setIntervals(data);
-      } else if (activeTab === 'thresholds') {
-        const { data } = await supabase.from('service_thresholds').select('*');
-        if (data) setThresholds(data);
-      }
-    } catch {
-      // Ignored
-    }
-  };
+  // Reset pagination when search query or filter changes
+  useEffect(() => {
+    let isMounted = true;
+    queueMicrotask(() => {
+      if (isMounted) setCurrentPage(1);
+    });
+    return () => { isMounted = false; };
+  }, [searchQuery, selectedStandardFilter]);
 
   const handleOpenAdd = () => {
     setEditingId(null);
@@ -187,7 +200,7 @@ export function ServiceStandards() {
 
       setSuccessMsg('Record deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 3000);
-      refreshCurrentData();
+      loadData();
     } catch {
       setErrorMsg('Failed to delete record. Check foreign key constraints.');
     }
@@ -201,8 +214,8 @@ export function ServiceStandards() {
     try {
       if (activeTab === 'standards') {
         const payload = { 
-          code: standardForm.code, 
-          description: standardForm.description 
+          code: standardForm.code.trim(), 
+          description: standardForm.description.trim() 
         };
         if (editingId) {
           const { error } = await supabase.from('service_standards').update(payload).eq('service_standard_id', editingId);
@@ -217,7 +230,7 @@ export function ServiceStandards() {
           service_standard_id: intervalForm.service_standard_id, 
           code: intervalForm.code,
           interval: intervalForm.interval !== '' ? Number(intervalForm.interval) : null,
-          description: intervalForm.description || null,
+          description: intervalForm.description ? intervalForm.description.trim() : null,
           is_active: intervalForm.is_active
         };
         if (editingId) {
@@ -234,6 +247,7 @@ export function ServiceStandards() {
           pm_hrs_converter: thresholdForm.pm_hrs_converter !== '' ? Number(thresholdForm.pm_hrs_converter) : null,
           pm_calendar_converter: thresholdForm.pm_calendar_converter !== '' ? Number(thresholdForm.pm_calendar_converter) : null,
           average_lookback: thresholdForm.average_lookback !== '' ? Number(thresholdForm.average_lookback) : null,
+          updated_at: new Date().toISOString()
         };
         if (editingId) {
           const { error } = await supabase.from('service_thresholds').update(payload).eq('thresholds_id', editingId);
@@ -244,7 +258,7 @@ export function ServiceStandards() {
 
       setIsModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 4000);
-      refreshCurrentData();
+      loadData();
     } catch {
       setErrorMsg('Failed to save record. Please check required fields or constraints.');
     } finally {
@@ -252,33 +266,67 @@ export function ServiceStandards() {
     }
   };
 
-  const filteredIntervals = selectedStandardFilter === 'all'
-    ? intervals
-    : intervals.filter((item) => item.service_standard_id === selectedStandardFilter);
+  // Filter & Search computation
+  const filteredStandards = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    return standards.filter((s) => 
+      s.code.toLowerCase().includes(q) || 
+      (s.description || '').toLowerCase().includes(q)
+    );
+  }, [standards, searchQuery]);
+
+  const filteredIntervals = useMemo(() => {
+    return intervals.filter((item) => {
+      const matchesStandard = selectedStandardFilter === 'all' || item.service_standard_id === selectedStandardFilter;
+      const q = searchQuery.toLowerCase();
+      const codeMatch = (item.code || '').toLowerCase().includes(q);
+      const descMatch = (item.description || '').toLowerCase().includes(q);
+      return matchesStandard && (codeMatch || descMatch);
+    });
+  }, [intervals, selectedStandardFilter, searchQuery]);
+
+  const filteredThresholds = useMemo(() => {
+    return thresholds;
+  }, [thresholds]);
+
+  const paginatedList = useMemo(() => {
+    const list = activeTab === 'standards' ? filteredStandards : activeTab === 'intervals' ? filteredIntervals : filteredThresholds;
+    const start = (currentPage - 1) * pageSize;
+    return list.slice(start, start + pageSize);
+  }, [activeTab, filteredStandards, filteredIntervals, filteredThresholds, currentPage, pageSize]);
+
+  const totalPages = useMemo(() => {
+    const totalLength = activeTab === 'standards' ? filteredStandards.length : activeTab === 'intervals' ? filteredIntervals.length : filteredThresholds.length;
+    return Math.ceil(totalLength / pageSize) || 1;
+  }, [activeTab, filteredStandards.length, filteredIntervals.length, filteredThresholds.length, pageSize]);
+
+  const totalCurrentEntries = activeTab === 'standards' ? filteredStandards.length : activeTab === 'intervals' ? filteredIntervals.length : filteredThresholds.length;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-4">
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
       {/* Header */}
-      <div className="shrink-0 flex items-center gap-3 border-b border-(--border-main) pb-4">
-        <div className="p-2.5 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-xl">
-          <ShieldAlert className="w-7 h-7" />
-        </div>
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-(--text-primary)">Service Standards Management</h1>
-          <p className="text-xs sm:text-sm text-(--text-muted)">Configure preventive maintenance standards, intervals, and operational thresholds.</p>
+      <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-(--accent-subtle) text-(--text-primary) rounded-xl">
+            <ShieldAlert className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-(--text-primary)">Service Standards Management</h1>
+            <p className="text-xs sm:text-sm text-(--text-muted)">Configure preventive maintenance standards, intervals, and operational thresholds.</p>
+          </div>
         </div>
       </div>
 
       {successMsg && (
-        <div className="shrink-0 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
-          <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+        <div className="shrink-0 bg-(--accent-subtle) border border-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg flex items-center gap-2.5 text-xs">
+          <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="shrink-0 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
-          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
+        <div className="shrink-0 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-3 py-2 rounded-lg flex items-center gap-2.5 text-xs">
+          <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
@@ -287,72 +335,84 @@ export function ServiceStandards() {
       <div className="shrink-0 flex border-b border-(--border-main) gap-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('standards')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
             activeTab === 'standards'
               ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
+              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
           }`}
         >
-          <ShieldAlert className="w-4 h-4" />
+          <ShieldAlert className="w-3.5 h-3.5" />
           <span>Service Standards</span>
         </button>
 
         <button
           onClick={() => setActiveTab('intervals')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
             activeTab === 'intervals'
               ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
+              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
           }`}
         >
-          <Clock className="w-4 h-4" />
+          <Clock className="w-3.5 h-3.5" />
           <span>Service Intervals</span>
         </button>
 
         <button
           onClick={() => setActiveTab('thresholds')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
             activeTab === 'thresholds'
               ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
+              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
           }`}
         >
-          <Sliders className="w-4 h-4" />
+          <Sliders className="w-3.5 h-3.5" />
           <span>Service Thresholds</span>
         </button>
       </div>
 
       {/* Tab Content Container */}
-      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-(--border-main) shadow-xs rounded-xl p-6 space-y-4">
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-4 overflow-hidden space-y-3">
         {/* Toolbar / Actions */}
-        <div className="shrink-0 flex flex-wrap justify-between items-center gap-4">
-          <div>
-            {activeTab === 'intervals' && (
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-(--text-muted)" />
-                <select
-                  value={selectedStandardFilter}
-                  onChange={(e) => setSelectedStandardFilter(e.target.value)}
-                  className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
-                >
-                  <option value="all">All Standards (Filter by Code)</option>
-                  {standards.map((std) => (
-                    <option key={std.service_standard_id} value={std.service_standard_id}>
-                      {std.code} {std.description ? `- ${std.description}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
+        <div className="shrink-0 flex flex-wrap items-center gap-2">
+          {activeTab === 'intervals' && (
+            <div className="flex items-center gap-2">
+              <Filter className="w-3.5 h-3.5 text-(--text-muted)" />
+              <select
+                value={selectedStandardFilter}
+                onChange={(e) => setSelectedStandardFilter(e.target.value)}
+                className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
+              >
+                <option value="all">All Standards (Filter by Code)</option>
+                {standards.map((std) => (
+                  <option key={std.service_standard_id} value={std.service_standard_id}>
+                    {std.code} {std.description ? `- ${std.description}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-          {/* Add Record Button hidden for Thresholds tab */}
+          {activeTab !== 'thresholds' ? (
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
+              <input
+                type="text"
+                placeholder={activeTab === 'standards' ? 'Filter standards...' : 'Search by PM Code or description...'}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
+              />
+            </div>
+          ) : (
+            <div className="flex-1"></div>
+          )}
+
           {activeTab !== 'thresholds' && (
             <button
               onClick={handleOpenAdd}
-              className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow ml-auto"
+              className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5" />
               <span>Add Record</span>
             </button>
           )}
@@ -360,186 +420,225 @@ export function ServiceStandards() {
 
         {/* Scrollable Container with Sticky Table Headers */}
         <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
-          {/* TAB 1: STANDARDS */}
-          {activeTab === 'standards' && (
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-(--border-main) text-(--text-muted) text-xs uppercase bg-(--bg-surface) sticky top-0 z-10 shadow-xs">
-                  <th className="p-3">Code</th>
-                  <th className="p-3">Description</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                {standards.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} className="p-8 text-center text-(--text-muted)">No service standards found.</td>
+          {loading ? (
+            <div className="h-full flex items-center justify-center text-(--text-muted) gap-2 text-xs">
+              <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
+              <span>Loading records...</span>
+            </div>
+          ) : activeTab === 'standards' ? (
+            filteredStandards.length === 0 ? (
+              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                No service standards found. Click &quot;Add Record&quot; above.
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                    <th className="py-2 px-3">Code</th>
+                    <th className="py-2 px-3">Description</th>
+                    <th className="py-2 px-3 text-right w-28">Actions</th>
                   </tr>
-                ) : (
-                  standards.map((item) => (
-                    <tr key={item.service_standard_id} className="hover:bg-(--accent-subtle) transition-colors">
-                      <td className="p-3 font-semibold text-(--text-primary)">{item.code}</td>
-                      <td className="p-3 text-(--text-muted)">{item.description}</td>
-                      <td className="p-3 text-right space-x-3">
-                        <button
-                          onClick={() => handleOpenEdit(item)}
-                          className="text-xs text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" /> Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.service_standard_id, 'service_standards')}
-                          className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" /> Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          )}
-
-          {/* TAB 2: INTERVALS */}
-          {activeTab === 'intervals' && (
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-(--border-main) text-(--text-muted) text-xs uppercase bg-(--bg-surface) sticky top-0 z-10 shadow-xs">
-                  <th className="p-3">Standard Code</th>
-                  <th className="p-3">PM Code</th>
-                  <th className="p-3">Interval</th>
-                  <th className="p-3">Description</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                {filteredIntervals.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="p-8 text-center text-(--text-muted)">No service intervals found for this filter.</td>
-                  </tr>
-                ) : (
-                  filteredIntervals.map((item) => {
-                    const matchedStandard = standards.find(s => s.service_standard_id === item.service_standard_id);
+                </thead>
+                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                  {paginatedList.map((item) => {
+                    const std = item as StandardRecord;
                     return (
-                      <tr key={item.service_interval_id} className="hover:bg-(--accent-subtle) transition-colors">
-                        <td className="p-3 font-semibold text-(--text-primary)">{matchedStandard ? matchedStandard.code : '—'}</td>
-                        <td className="p-3 font-semibold text-emerald-600 dark:text-emerald-400">{item.code}</td>
-                        <td className="p-3 font-semibold text-(--text-primary)">{item.interval ?? 'N/A'}</td>
-                        <td className="p-3 text-(--text-muted)">{item.description || '—'}</td>
-                        <td className="p-3">
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${item.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main)'}`}>
-                            {item.is_active ? 'Active' : 'Inactive'}
+                      <tr key={std.service_standard_id} className="hover:bg-(--accent-subtle) transition-colors">
+                        <td className="py-2 px-3 font-semibold text-(--text-primary)">{std.code}</td>
+                        <td className="py-2 px-3 text-(--text-muted)">{std.description}</td>
+                        <td className="py-2 px-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleOpenEdit(std)}
+                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Edit2 className="w-3 h-3" /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(std.service_standard_id, 'service_standards')}
+                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Trash2 className="w-3 h-3" /> Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )
+          ) : activeTab === 'intervals' ? (
+            filteredIntervals.length === 0 ? (
+              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                No service intervals found. Click &quot;Add Record&quot; above.
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                    <th className="py-2 px-3">Standard Code</th>
+                    <th className="py-2 px-3">PM Code</th>
+                    <th className="py-2 px-3">Interval</th>
+                    <th className="py-2 px-3">Description</th>
+                    <th className="py-2 px-3">Status</th>
+                    <th className="py-2 px-3 text-right w-28">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                  {paginatedList.map((item) => {
+                    const intervalRec = item as IntervalRecord;
+                    const matchedStandard = standards.find(s => s.service_standard_id === intervalRec.service_standard_id);
+                    return (
+                      <tr key={intervalRec.service_interval_id} className="hover:bg-(--accent-subtle) transition-colors">
+                        <td className="py-2 px-3 font-semibold text-(--text-primary)">{matchedStandard ? matchedStandard.code : '—'}</td>
+                        <td className="py-2 px-3 font-semibold text-emerald-600 dark:text-emerald-400">{intervalRec.code}</td>
+                        <td className="py-2 px-3 font-semibold text-(--text-primary)">{intervalRec.interval ?? 'N/A'}</td>
+                        <td className="py-2 px-3 text-(--text-muted)">{intervalRec.description || '—'}</td>
+                        <td className="py-2 px-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${intervalRec.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main)'}`}>
+                            {intervalRec.is_active ? 'Active' : 'Inactive'}
                           </span>
                         </td>
-                        <td className="p-3 text-right space-x-3">
+                        <td className="py-2 px-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleOpenEdit(intervalRec)}
+                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Edit2 className="w-3 h-3" /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(intervalRec.service_interval_id, 'service_intervals')}
+                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Trash2 className="w-3 h-3" /> Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )
+          ) : (
+            filteredThresholds.length === 0 ? (
+              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                No service thresholds found.
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                    <th className="py-2 px-3">PM Threshold</th>
+                    <th className="py-2 px-3">PM Hrs Converter</th>
+                    <th className="py-2 px-3">PM Calendar Converter</th>
+                    <th className="py-2 px-3">Average Lookback</th>
+                    <th className="py-2 px-3">Updated At</th>
+                    <th className="py-2 px-3 text-right w-28">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                  {paginatedList.map((item) => {
+                    const thresholdRec = item as ThresholdRecord;
+                    return (
+                      <tr key={thresholdRec.thresholds_id} className="hover:bg-(--accent-subtle) transition-colors">
+                        <td className="py-2 px-3 font-semibold text-amber-600 dark:text-amber-400">{thresholdRec.pm_threshold ?? '0'}</td>
+                        <td className="py-2 px-3 text-(--text-secondary)">{thresholdRec.pm_hrs_converter ?? '—'}</td>
+                        <td className="py-2 px-3 text-(--text-secondary)">{thresholdRec.pm_calendar_converter ?? '—'}</td>
+                        <td className="py-2 px-3 text-(--text-secondary)">{thresholdRec.average_lookback ?? '—'}</td>
+                        <td className="py-2 px-3 font-mono text-[10px] text-(--text-muted)">
+                          {thresholdRec.updated_at ? new Date(thresholdRec.updated_at).toLocaleString() : '—'}
+                        </td>
+                        <td className="py-2 px-3 text-right">
                           <button
-                            onClick={() => handleOpenEdit(item)}
-                            className="text-xs text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
+                            onClick={() => handleOpenEdit(thresholdRec)}
+                            className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
                           >
-                            <Edit2 className="w-3.5 h-3.5" /> Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(item.service_interval_id, 'service_intervals')}
-                            className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                            <Edit2 className="w-3 h-3" /> Edit
                           </button>
                         </td>
                       </tr>
                     );
-                  })
-                )}
-              </tbody>
-            </table>
-          )}
-
-          {/* TAB 3: THRESHOLDS (Edit only) */}
-          {activeTab === 'thresholds' && (
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-(--border-main) text-(--text-muted) text-xs uppercase bg-(--bg-surface) sticky top-0 z-10 shadow-xs">
-                  <th className="p-3">PM Threshold</th>
-                  <th className="p-3">PM Hrs Converter</th>
-                  <th className="p-3">PM Calendar Converter</th>
-                  <th className="p-3">Average Lookback</th>
-                  <th className="p-3">Updated At</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                {thresholds.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="p-8 text-center text-(--text-muted)">No service thresholds found.</td>
-                  </tr>
-                ) : (
-                  thresholds.map((item) => (
-                    <tr key={item.thresholds_id} className="hover:bg-(--accent-subtle) transition-colors">
-                      <td className="p-3 font-semibold text-amber-600 dark:text-amber-400">{item.pm_threshold ?? '0'}</td>
-                      <td className="p-3 text-(--text-secondary)">{item.pm_hrs_converter ?? '—'}</td>
-                      <td className="p-3 text-(--text-secondary)">{item.pm_calendar_converter ?? '—'}</td>
-                      <td className="p-3 text-(--text-secondary)">{item.average_lookback ?? '—'}</td>
-                      <td className="p-3 font-mono text-xs text-(--text-muted)">
-                        {item.updated_at ? new Date(item.updated_at).toLocaleString() : '—'}
-                      </td>
-                      <td className="p-3 text-right">
-                        <button
-                          onClick={() => handleOpenEdit(item)}
-                          className="text-xs text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" /> Edit
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  })}
+                </tbody>
+              </table>
+            )
           )}
         </div>
+
+        {/* Pagination */}
+        {!loading && totalCurrentEntries > 0 && (
+          <div className="shrink-0 flex items-center justify-between pt-2 text-xs text-(--text-muted)">
+            <span>
+              Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalCurrentEntries)} of {totalCurrentEntries} entries
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <span>Page {currentPage} of {totalPages}</span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage >= totalPages}
+                className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* FORM MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 max-h-[92vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-(--border-main) pb-4 shrink-0">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-lg p-6 shadow-2xl max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-(--border-main) pb-3 shrink-0">
               <h3 className="text-lg font-bold text-(--text-primary)">
                 {editingId ? 'Edit Record' : 'Add New Record'}
               </h3>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer"
+                className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer p-1"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitForm} className="flex flex-col flex-1 overflow-hidden">
+            <form onSubmit={handleSubmitForm} className="flex flex-col flex-1 overflow-hidden mt-4">
               <div className="overflow-y-auto space-y-4 p-1 flex-1">
                 {activeTab === 'standards' && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Standard Code</label>
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                        Standard Code <span className="text-red-500">*</span>
+                      </label>
                       <input
                         type="text"
                         required
                         value={standardForm.code}
                         onChange={(e) => setStandardForm({ ...standardForm, code: e.target.value })}
                         placeholder="e.g. PM_STD_01"
-                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Description</label>
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                        Description <span className="text-red-500">*</span>
+                      </label>
                       <textarea
                         rows={3}
                         required
                         value={standardForm.description}
                         onChange={(e) => setStandardForm({ ...standardForm, description: e.target.value })}
                         placeholder="Describe maintenance standard..."
-                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                   </>
@@ -548,14 +647,16 @@ export function ServiceStandards() {
                 {activeTab === 'intervals' && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Service Standard Reference</label>
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                        Service Standard Reference <span className="text-red-500">*</span>
+                      </label>
                       <select
                         required
                         value={intervalForm.service_standard_id}
                         onChange={(e) => setIntervalForm({ ...intervalForm, service_standard_id: e.target.value })}
-                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
                       >
-                        <option value="">Select Service Standard</option>
+                        <option value="">Select Service Standard...</option>
                         {standards.map((std) => (
                           <option key={std.service_standard_id} value={std.service_standard_id}>
                             {std.code} {std.description ? `- ${std.description.substring(0, 40)}` : ''}
@@ -564,12 +665,14 @@ export function ServiceStandards() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Code (Fixed PM Value)</label>
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                        Code (Fixed PM Value) <span className="text-red-500">*</span>
+                      </label>
                       <select
                         required
                         value={intervalForm.code}
                         onChange={(e) => setIntervalForm({ ...intervalForm, code: e.target.value })}
-                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
                       >
                         {PM_CODES.map((pmCode) => (
                           <option key={pmCode} value={pmCode}>{pmCode}</option>
@@ -577,27 +680,27 @@ export function ServiceStandards() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Interval</label>
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">Interval</label>
                       <input
                         type="number"
                         min="0"
                         value={intervalForm.interval}
                         onChange={(e) => setIntervalForm({ ...intervalForm, interval: e.target.value })}
                         placeholder="e.g. 5000"
-                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Description</label>
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">Description</label>
                       <input
                         type="text"
                         value={intervalForm.description || ''}
                         onChange={(e) => setIntervalForm({ ...intervalForm, description: e.target.value })}
                         placeholder="Optional details..."
-                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
-                    <div className="flex items-center gap-2 pt-2">
+                    <div className="flex items-center gap-2 pt-1">
                       <input
                         type="checkbox"
                         id="is_active_chk"
@@ -605,7 +708,7 @@ export function ServiceStandards() {
                         onChange={(e) => setIntervalForm({ ...intervalForm, is_active: e.target.checked })}
                         className="rounded bg-(--bg-elevated) border border-(--border-main) text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
                       />
-                      <label htmlFor="is_active_chk" className="text-xs font-semibold uppercase text-(--text-muted) cursor-pointer">Is Active</label>
+                      <label htmlFor="is_active_chk" className="text-xs font-semibold text-(--text-primary) cursor-pointer">Is Active</label>
                     </div>
                   </>
                 )}
@@ -613,7 +716,9 @@ export function ServiceStandards() {
                 {activeTab === 'thresholds' && (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">PM Threshold</label>
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                        PM Threshold <span className="text-red-500">*</span>
+                      </label>
                       <input
                         type="number"
                         step="any"
@@ -621,61 +726,61 @@ export function ServiceStandards() {
                         value={thresholdForm.pm_threshold}
                         onChange={(e) => setThresholdForm({ ...thresholdForm, pm_threshold: e.target.value })}
                         placeholder="e.g. 1000"
-                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">PM Hrs Converter</label>
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">PM Hrs Converter</label>
                       <input
                         type="number"
                         step="any"
                         value={thresholdForm.pm_hrs_converter}
                         onChange={(e) => setThresholdForm({ ...thresholdForm, pm_hrs_converter: e.target.value })}
                         placeholder="e.g. 1.0"
-                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">PM Calendar Converter</label>
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">PM Calendar Converter</label>
                       <input
                         type="number"
                         step="any"
                         value={thresholdForm.pm_calendar_converter}
                         onChange={(e) => setThresholdForm({ ...thresholdForm, pm_calendar_converter: e.target.value })}
                         placeholder="e.g. 30"
-                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Average Lookback</label>
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">Average Lookback</label>
                       <input
                         type="number"
                         step="any"
                         value={thresholdForm.average_lookback}
                         onChange={(e) => setThresholdForm({ ...thresholdForm, average_lookback: e.target.value })}
                         placeholder="e.g. 30"
-                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                   </>
                 )}
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-(--border-main) shrink-0 mt-4">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-(--border-main) shrink-0 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-(--accent-subtle) hover:opacity-80 text-(--text-primary) cursor-pointer"
+                  className="px-4 py-2 bg-(--accent-subtle) text-(--text-primary) hover:opacity-80 rounded-lg text-xs font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow"
+                  className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow disabled:opacity-50"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  <span>{editingId ? 'Update Record' : 'Save Record'}</span>
+                  <span>Save Changes</span>
                 </button>
               </div>
             </form>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { 
   Activity, 
@@ -12,7 +12,9 @@ import {
   Loader2,
   MapPin,
   Fuel,
-  Search
+  Search,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface OperationsStatusRecord {
@@ -39,14 +41,22 @@ interface RouteRecord {
   [key: string]: unknown;
 }
 
+type TabType = 'statuses' | 'routes';
+
 export function OperationsStandards() {
-  const [activeTab, setActiveTab] = useState<'statuses' | 'routes'>('statuses');
+  const [activeTab, setActiveTab] = useState<TabType>('statuses');
 
   const [statuses, setStatuses] = useState<OperationsStatusRecord[]>([]);
   const [routes, setRoutes] = useState<RouteRecord[]>([]);
 
-  // Search filter state for Routes tab
-  const [routeSearchQuery, setRouteSearchQuery] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+
+  // Search filter state
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 10;
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -76,65 +86,49 @@ export function OperationsStandards() {
     is_active: true
   });
 
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setErrorMsg(null);
+      const [statusRes, routeRes] = await Promise.all([
+        supabase.from('operations_status').select('*').order('status_name', { ascending: true }),
+        supabase.from('routes').select('*').order('route_code', { ascending: true })
+      ]);
+
+      if (statusRes.error) throw statusRes.error;
+      if (routeRes.error) throw routeRes.error;
+
+      setStatuses(statusRes.data || []);
+      setRoutes(routeRes.data || []);
+    } catch {
+      setErrorMsg('Failed to load operations standards data. Please check table permissions.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
-
-    async function loadData() {
-      try {
-        setErrorMsg(null);
-        const [statusRes, routeRes] = await Promise.all([
-          supabase.from('operations_status').select('*').order('status_name', { ascending: true }),
-          supabase.from('routes').select('*').order('route_code', { ascending: true })
-        ]);
-
-        if (statusRes.error) throw statusRes.error;
-        if (routeRes.error) throw routeRes.error;
-
-        if (isMounted) {
-          setStatuses(statusRes.data || []);
-          setRoutes(routeRes.data || []);
-        }
-      } catch {
-        if (isMounted) {
-          setErrorMsg('Failed to load operations standards data. Please check table permissions.');
-        }
+    queueMicrotask(() => {
+      if (isMounted) {
+        setCurrentPage(1);
+        setSearchQuery('');
+        loadData();
       }
-    }
-
-    loadData();
-
+    });
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [activeTab, loadData]);
 
-  const refreshStatuses = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('operations_status')
-        .select('*')
-        .order('status_name', { ascending: true });
-
-      if (error) throw error;
-      setStatuses(data || []);
-    } catch {
-      // Ignored
-    }
-  };
-
-  const refreshRoutes = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('routes')
-        .select('*')
-        .order('route_code', { ascending: true });
-
-      if (error) throw error;
-      setRoutes(data || []);
-    } catch {
-      // Ignored
-    }
-  };
+  // Reset pagination when search query changes
+  useEffect(() => {
+    let isMounted = true;
+    queueMicrotask(() => {
+      if (isMounted) setCurrentPage(1);
+    });
+    return () => { isMounted = false; };
+  }, [searchQuery]);
 
   const handleOpenAdd = () => {
     setEditingId(null);
@@ -198,7 +192,7 @@ export function OperationsStandards() {
 
       setSuccessMsg('Operations standard deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 3000);
-      refreshStatuses();
+      loadData();
     } catch {
       setErrorMsg('Failed to delete record. Check foreign key constraints.');
     }
@@ -217,7 +211,7 @@ export function OperationsStandards() {
 
       setSuccessMsg('Route deleted successfully!');
       setTimeout(() => setSuccessMsg(null), 3000);
-      refreshRoutes();
+      loadData();
     } catch {
       setErrorMsg('Failed to delete route. Check foreign key constraints.');
     }
@@ -257,7 +251,6 @@ export function OperationsStandards() {
           if (error) throw error;
           setSuccessMsg('Operations standard created successfully!');
         }
-        refreshStatuses();
       } else {
         if (!routeForm.route_code.trim() || !routeForm.route_name.trim() || !routeForm.origin.trim() || !routeForm.destination.trim() || !routeForm.distance_km) {
           setErrorMsg('Route code, name, origin, destination, and distance are required.');
@@ -295,11 +288,11 @@ export function OperationsStandards() {
           if (error) throw error;
           setSuccessMsg('Route created successfully!');
         }
-        refreshRoutes();
       }
 
       setIsModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 4000);
+      loadData();
     } catch {
       setErrorMsg('Failed to save record. Please check required fields or schema constraints.');
     } finally {
@@ -307,37 +300,65 @@ export function OperationsStandards() {
     }
   };
 
-  // Filter routes based on search query matching route_code or route_name
-  const filteredRoutes = routes.filter((r) => {
-    const q = routeSearchQuery.toLowerCase();
-    const codeMatch = (r.route_code || '').toLowerCase().includes(q);
-    const nameMatch = (r.route_name || '').toLowerCase().includes(q);
-    return codeMatch || nameMatch;
-  });
+  // Filter computations
+  const filteredStatuses = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    return statuses.filter((s) => {
+      const nameMatch = (s.status_name || '').toLowerCase().includes(q);
+      const descMatch = (s.description || '').toLowerCase().includes(q);
+      return nameMatch || descMatch;
+    });
+  }, [statuses, searchQuery]);
+
+  const filteredRoutes = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    return routes.filter((r) => {
+      const codeMatch = (r.route_code || '').toLowerCase().includes(q);
+      const nameMatch = (r.route_name || '').toLowerCase().includes(q);
+      const originMatch = (r.origin || '').toLowerCase().includes(q);
+      const destMatch = (r.destination || '').toLowerCase().includes(q);
+      return codeMatch || nameMatch || originMatch || destMatch;
+    });
+  }, [routes, searchQuery]);
+
+  const paginatedList = useMemo(() => {
+    const list = activeTab === 'statuses' ? filteredStatuses : filteredRoutes;
+    const start = (currentPage - 1) * pageSize;
+    return list.slice(start, start + pageSize);
+  }, [activeTab, filteredStatuses, filteredRoutes, currentPage, pageSize]);
+
+  const totalPages = useMemo(() => {
+    const totalLength = activeTab === 'statuses' ? filteredStatuses.length : filteredRoutes.length;
+    return Math.ceil(totalLength / pageSize) || 1;
+  }, [activeTab, filteredStatuses.length, filteredRoutes.length, pageSize]);
+
+  const totalCurrentEntries = activeTab === 'statuses' ? filteredStatuses.length : filteredRoutes.length;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-4">
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
       {/* Header */}
-      <div className="shrink-0 flex items-center gap-3 border-b border-(--border-main) pb-4">
-        <div className="p-2.5 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-xl">
-          <Activity className="w-7 h-7" />
-        </div>
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-(--text-primary)">Operations Standards</h1>
-          <p className="text-xs sm:text-sm text-(--text-muted)">Configure status definitions, route fuel metrics, and operations parameters.</p>
+      <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-(--accent-subtle) text-(--text-primary) rounded-xl">
+            <Activity className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-(--text-primary)">Operations Standards</h1>
+            <p className="text-xs sm:text-sm text-(--text-muted)">Configure status definitions, route fuel metrics, and operations parameters.</p>
+          </div>
         </div>
       </div>
 
       {successMsg && (
-        <div className="shrink-0 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
-          <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+        <div className="shrink-0 bg-(--accent-subtle) border border-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg flex items-center gap-2.5 text-xs">
+          <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="shrink-0 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg flex items-center gap-3 text-sm">
-          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
+        <div className="shrink-0 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-3 py-2 rounded-lg flex items-center gap-2.5 text-xs">
+          <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
@@ -346,174 +367,210 @@ export function OperationsStandards() {
       <div className="shrink-0 flex border-b border-(--border-main) gap-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('statuses')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
             activeTab === 'statuses'
               ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
+              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
           }`}
         >
-          <Activity className="w-4 h-4" />
-          <span>Operations Standards ({statuses.length})</span>
+          <Activity className="w-3.5 h-3.5" />
+          <span>Operations Standards</span>
         </button>
 
         <button
           onClick={() => setActiveTab('routes')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
             activeTab === 'routes'
               ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
+              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
           }`}
         >
-          <MapPin className="w-4 h-4" />
-          <span>Routes ({routes.length})</span>
+          <MapPin className="w-3.5 h-3.5" />
+          <span>Routes</span>
         </button>
       </div>
 
       {/* Tab Content Container */}
-      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-(--border-main) shadow-xs rounded-xl p-6 space-y-4">
-        {/* Toolbar / Actions */}
-        <div className="shrink-0 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
-          {activeTab === 'routes' ? (
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-2.5 w-4 h-4 text-(--text-muted)" />
-              <input
-                type="text"
-                placeholder="Search by Route Code or Route Name..."
-                value={routeSearchQuery}
-                onChange={(e) => setRouteSearchQuery(e.target.value)}
-                className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
-              />
-            </div>
-          ) : (
-            <div></div>
-          )}
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-4 overflow-hidden space-y-3">
+        <div className="shrink-0 flex flex-wrap items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
+            <input
+              type="text"
+              placeholder={activeTab === 'statuses' ? 'Filter standards...' : 'Search by Route Code, Name, Origin or Destination...'}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
+            />
+          </div>
 
           <button
             onClick={handleOpenAdd}
-            className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow shrink-0"
+            className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             <span>{activeTab === 'statuses' ? 'Add Standard' : 'Add Route'}</span>
           </button>
         </div>
 
         {/* Scrollable Container with Sticky Table Headers */}
         <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
-          {activeTab === 'statuses' ? (
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-(--border-main) text-(--text-muted) text-xs uppercase bg-(--bg-surface) sticky top-0 z-10 shadow-xs">
-                  <th className="p-3">Status Name</th>
-                  <th className="p-3">Description</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                {statuses.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} className="p-8 text-center text-(--text-muted)">No operations standards found.</td>
+          {loading ? (
+            <div className="h-full flex items-center justify-center text-(--text-muted) gap-2 text-xs">
+              <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
+              <span>Loading records...</span>
+            </div>
+          ) : activeTab === 'statuses' ? (
+            filteredStatuses.length === 0 ? (
+              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                No operations standards found. Click &quot;Add Standard&quot; above.
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                    <th className="py-2 px-3">Status Name</th>
+                    <th className="py-2 px-3">Description</th>
+                    <th className="py-2 px-3 text-right w-28">Actions</th>
                   </tr>
-                ) : (
-                  statuses.map((item) => (
-                    <tr key={item.operations_id} className="hover:bg-(--accent-subtle) transition-colors">
-                      <td className="p-3 font-semibold text-(--text-primary)">
-                        <span className="inline-block px-2.5 py-1 bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) rounded-lg text-xs font-semibold">
-                          {item.status_name || 'N/A'}
-                        </span>
-                      </td>
-                      <td className="p-3 text-(--text-muted)">{item.description || '—'}</td>
-                      <td className="p-3 text-right space-x-3">
-                        <button
-                          onClick={() => handleOpenEditStatus(item)}
-                          className="text-xs text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" /> Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteStatus(item.operations_id)}
-                          className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" /> Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                  {paginatedList.map((item) => {
+                    const statusRec = item as OperationsStatusRecord;
+                    return (
+                      <tr key={statusRec.operations_id} className="hover:bg-(--accent-subtle) transition-colors">
+                        <td className="py-2 px-3 font-semibold text-(--text-primary)">
+                          <span className="inline-block px-2 py-0.5 bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) rounded text-xs font-semibold">
+                            {statusRec.status_name || 'N/A'}
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 text-(--text-muted)">{statusRec.description || '—'}</td>
+                        <td className="py-2 px-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleOpenEditStatus(statusRec)}
+                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Edit2 className="w-3 h-3" /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteStatus(statusRec.operations_id)}
+                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Trash2 className="w-3 h-3" /> Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )
           ) : (
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-(--border-main) text-(--text-muted) text-xs uppercase bg-(--bg-surface) sticky top-0 z-10 shadow-xs">
-                  <th className="p-3">Route Code / Name</th>
-                  <th className="p-3">Origin & Destination</th>
-                  <th className="p-3">Distance (km)</th>
-                  <th className="p-3">Fuel Standards (L)</th>
-                  <th className="p-3">Type</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                {filteredRoutes.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="p-8 text-center text-(--text-muted)">No matching routes found.</td>
+            filteredRoutes.length === 0 ? (
+              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                No matching routes found. Click &quot;Add Route&quot; above.
+              </div>
+            ) : (
+              <table className="w-full min-w-187.5 text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                    <th className="py-2 px-3">Route Code / Name</th>
+                    <th className="py-2 px-3">Origin & Destination</th>
+                    <th className="py-2 px-3">Distance</th>
+                    <th className="py-2 px-3">Fuel Standards</th>
+                    <th className="py-2 px-3">Type</th>
+                    <th className="py-2 px-3">Status</th>
+                    <th className="py-2 px-3 text-right w-28">Actions</th>
                   </tr>
-                ) : (
-                  filteredRoutes.map((item) => (
-                    <tr key={item.route_id} className="hover:bg-(--accent-subtle) transition-colors">
-                      <td className="p-3">
-                        <div className="font-semibold text-(--text-primary)">{item.route_name}</div>
-                        <div className="text-xs font-mono text-(--text-muted)">{item.route_code}</div>
-                      </td>
-                      <td className="p-3 text-xs">
-                        <span className="font-medium text-(--text-primary)">{item.origin}</span>
-                        <span className="mx-1.5 text-(--text-muted)">→</span>
-                        <span className="font-medium text-(--text-primary)">{item.destination}</span>
-                      </td>
-                      <td className="p-3 font-mono text-xs">{item.distance_km} km</td>
-                      <td className="p-3 text-xs font-mono">
-                        <div className="text-(--text-primary)">Std: {item.standard_fuel_liters}L</div>
-                        <div className="text-(--text-muted) text-[11px]">Buffer: {item.buffer_allowance_liters}L</div>
-                        <div className="text-emerald-600 dark:text-emerald-400 font-semibold">Max: {item.max_authorized_liters ?? (Number(item.standard_fuel_liters || 0) + Number(item.buffer_allowance_liters || 0))}L</div>
-                      </td>
-                      <td className="p-3 text-xs">
-                        <div className="text-(--text-primary) font-medium">{item.terrain_type}</div>
-                        <div className="text-(--text-muted) text-[11px]">{item.traffic_factor}</div>
-                      </td>
-                      <td className="p-3">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${item.is_active ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main)'}`}>
-                          {item.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="p-3 text-right space-x-3">
-                        <button
-                          onClick={() => handleOpenEditRoute(item)}
-                          className="text-xs text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" /> Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteRoute(item.route_id)}
-                          className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" /> Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                  {paginatedList.map((item) => {
+                    const route = item as RouteRecord;
+                    return (
+                      <tr key={route.route_id} className="hover:bg-(--accent-subtle) transition-colors">
+                        <td className="py-2 px-3">
+                          <div className="font-semibold text-(--text-primary)">{route.route_name}</div>
+                          <div className="text-[10px] font-mono text-(--text-muted)">{route.route_code}</div>
+                        </td>
+                        <td className="py-2 px-3 text-xs">
+                          <span className="font-medium text-(--text-primary)">{route.origin}</span>
+                          <span className="mx-1.5 text-(--text-muted)">→</span>
+                          <span className="font-medium text-(--text-primary)">{route.destination}</span>
+                        </td>
+                        <td className="py-2 px-3 font-mono">{route.distance_km} km</td>
+                        <td className="py-2 px-3 font-mono text-xs">
+                          <div className="text-(--text-primary)">Std: {route.standard_fuel_liters}L</div>
+                          <div className="text-(--text-muted) text-[10px]">Buf: {route.buffer_allowance_liters}L</div>
+                          <div className="text-emerald-600 dark:text-emerald-400 font-semibold">Max: {route.max_authorized_liters ?? (Number(route.standard_fuel_liters || 0) + Number(route.buffer_allowance_liters || 0))}L</div>
+                        </td>
+                        <td className="py-2 px-3">
+                          <div className="text-(--text-primary) font-medium">{route.terrain_type}</div>
+                          <div className="text-(--text-muted) text-[10px]">{route.traffic_factor}</div>
+                        </td>
+                        <td className="py-2 px-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${route.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main)'}`}>
+                            {route.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleOpenEditRoute(route)}
+                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Edit2 className="w-3 h-3" /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteRoute(route.route_id)}
+                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Trash2 className="w-3 h-3" /> Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )
           )}
         </div>
+
+        {/* Pagination */}
+        {!loading && totalCurrentEntries > 0 && (
+          <div className="shrink-0 flex items-center justify-between pt-2 text-xs text-(--text-muted)">
+            <span>
+              Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalCurrentEntries)} of {totalCurrentEntries} entries
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <span>Page {currentPage} of {totalPages}</span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage >= totalPages}
+                className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* FORM MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 max-h-[92vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-(--border-main) pb-4 shrink-0">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-lg p-6 shadow-2xl max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-(--border-main) pb-3 shrink-0">
               <h3 className="text-lg font-bold text-(--text-primary)">
                 {editingId 
                   ? (activeTab === 'statuses' ? 'Edit Operations Standard' : 'Edit Route') 
@@ -521,93 +578,105 @@ export function OperationsStandards() {
               </h3>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer"
+                className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer p-1"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitForm} className="flex flex-col flex-1 overflow-hidden">
+            <form onSubmit={handleSubmitForm} className="flex flex-col flex-1 overflow-hidden mt-4">
               <div className="overflow-y-auto space-y-4 p-1 flex-1">
                 {activeTab === 'statuses' ? (
                   <>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Status Name <span className="text-red-500">*</span></label>
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                        Status Name <span className="text-red-500">*</span>
+                      </label>
                       <input
                         type="text"
                         required
                         value={statusForm.status_name}
                         onChange={(e) => setStatusForm({ ...statusForm, status_name: e.target.value })}
                         placeholder="e.g. Active, Standby, Maintenance..."
-                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Description</label>
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">Description</label>
                       <textarea
                         rows={3}
                         value={statusForm.description}
                         onChange={(e) => setStatusForm({ ...statusForm, description: e.target.value })}
                         placeholder="Optional details or operational context..."
-                        className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2.5 text-sm focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                   </>
                 ) : (
                   <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Route Code <span className="text-red-500">*</span></label>
+                        <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                          Route Code <span className="text-red-500">*</span>
+                        </label>
                         <input
                           type="text"
                           required
                           value={routeForm.route_code}
                           onChange={(e) => setRouteForm({ ...routeForm, route_code: e.target.value })}
                           placeholder="e.g. RT-001"
-                          className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2 text-sm focus:outline-none focus:border-(--text-primary) font-mono"
+                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) font-mono"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Route Name <span className="text-red-500">*</span></label>
+                        <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                          Route Name <span className="text-red-500">*</span>
+                        </label>
                         <input
                           type="text"
                           required
                           value={routeForm.route_name}
                           onChange={(e) => setRouteForm({ ...routeForm, route_name: e.target.value })}
                           placeholder="e.g. North Express Line"
-                          className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2 text-sm focus:outline-none focus:border-(--text-primary)"
+                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Origin <span className="text-red-500">*</span></label>
+                        <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                          Origin <span className="text-red-500">*</span>
+                        </label>
                         <input
                           type="text"
                           required
                           value={routeForm.origin}
                           onChange={(e) => setRouteForm({ ...routeForm, origin: e.target.value })}
                           placeholder="Origin terminal/city"
-                          className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2 text-sm focus:outline-none focus:border-(--text-primary)"
+                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Destination <span className="text-red-500">*</span></label>
+                        <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                          Destination <span className="text-red-500">*</span>
+                        </label>
                         <input
                           type="text"
                           required
                           value={routeForm.destination}
                           onChange={(e) => setRouteForm({ ...routeForm, destination: e.target.value })}
                           placeholder="Destination terminal/city"
-                          className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2 text-sm focus:outline-none focus:border-(--text-primary)"
+                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Distance (km) <span className="text-red-500">*</span></label>
+                        <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                          Distance (km) <span className="text-red-500">*</span>
+                        </label>
                         <input
                           type="number"
                           step="0.01"
@@ -615,70 +684,70 @@ export function OperationsStandards() {
                           value={routeForm.distance_km}
                           onChange={(e) => setRouteForm({ ...routeForm, distance_km: e.target.value })}
                           placeholder="e.g. 150.50"
-                          className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2 text-sm focus:outline-none focus:border-(--text-primary) font-mono"
+                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) font-mono"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Terrain Type</label>
+                        <label className="block text-xs font-semibold text-(--text-primary) mb-1">Terrain Type</label>
                         <input
                           type="text"
                           value={routeForm.terrain_type}
                           onChange={(e) => setRouteForm({ ...routeForm, terrain_type: e.target.value })}
                           placeholder="e.g. FLAT, HILLY"
-                          className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2 text-sm focus:outline-none focus:border-(--text-primary)"
+                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Traffic Factor</label>
+                        <label className="block text-xs font-semibold text-(--text-primary) mb-1">Traffic Factor</label>
                         <input
                           type="text"
                           value={routeForm.traffic_factor}
                           onChange={(e) => setRouteForm({ ...routeForm, traffic_factor: e.target.value })}
                           placeholder="e.g. HIGHWAY, URBAN"
-                          className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3.5 py-2 text-sm focus:outline-none focus:border-(--text-primary)"
+                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-(--accent-subtle) p-3.5 rounded-xl border border-(--border-main)">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-(--accent-subtle) p-3 rounded-xl border border-(--border-main)">
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Standard Fuel (L)</label>
+                        <label className="block text-xs font-semibold text-(--text-primary) mb-1">Standard Fuel (L)</label>
                         <input
                           type="number"
                           step="0.01"
                           value={routeForm.standard_fuel_liters}
                           onChange={(e) => setRouteForm({ ...routeForm, standard_fuel_liters: e.target.value })}
                           placeholder="0.00"
-                          className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3 py-1.5 text-sm focus:outline-none focus:border-(--text-primary) font-mono"
+                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) font-mono"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Buffer Fuel (L)</label>
+                        <label className="block text-xs font-semibold text-(--text-primary) mb-1">Buffer Fuel (L)</label>
                         <input
                           type="number"
                           step="0.01"
                           value={routeForm.buffer_allowance_liters}
                           onChange={(e) => setRouteForm({ ...routeForm, buffer_allowance_liters: e.target.value })}
                           placeholder="0.00"
-                          className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg w-full px-3 py-1.5 text-sm focus:outline-none focus:border-(--text-primary) font-mono"
+                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) font-mono"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Max Authorized (L)</label>
-                        <div className="bg-(--bg-elevated) border border-(--border-main) rounded-lg px-3 py-1.5 text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400 flex items-center">
+                        <label className="block text-xs font-semibold text-(--text-primary) mb-1">Max Authorized (L)</label>
+                        <div className="bg-(--bg-elevated) border border-(--border-main) rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 flex items-center">
                           <Fuel className="w-3.5 h-3.5 mr-1.5 shrink-0" />
                           {(Number(routeForm.standard_fuel_liters || 0) + Number(routeForm.buffer_allowance_liters || 0)).toFixed(2)} L
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-6 pt-2">
+                    <div className="flex items-center gap-6 pt-1">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={routeForm.round_trip}
                           onChange={(e) => setRouteForm({ ...routeForm, round_trip: e.target.checked })}
-                          className="rounded border-(--border-main) bg-(--bg-elevated) text-(--text-primary) focus:ring-0 w-4 h-4 cursor-pointer"
+                          className="rounded bg-(--bg-elevated) border border-(--border-main) text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
                         />
                         <span className="text-xs font-semibold text-(--text-primary)">Round Trip</span>
                       </label>
@@ -687,7 +756,7 @@ export function OperationsStandards() {
                           type="checkbox"
                           checked={routeForm.is_active}
                           onChange={(e) => setRouteForm({ ...routeForm, is_active: e.target.checked })}
-                          className="rounded border-(--border-main) bg-(--bg-elevated) text-(--text-primary) focus:ring-0 w-4 h-4 cursor-pointer"
+                          className="rounded bg-(--bg-elevated) border border-(--border-main) text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
                         />
                         <span className="text-xs font-semibold text-(--text-primary)">Is Active</span>
                       </label>
@@ -696,18 +765,18 @@ export function OperationsStandards() {
                 )}
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-(--border-main) shrink-0 mt-4">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-(--border-main) shrink-0 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-(--accent-subtle) hover:opacity-80 text-(--text-primary) rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-(--accent-subtle) text-(--text-primary) hover:opacity-80 rounded-lg text-xs font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow disabled:opacity-50"
+                  className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow disabled:opacity-50"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   <span>{editingId ? (activeTab === 'statuses' ? 'Update Standard' : 'Update Route') : (activeTab === 'statuses' ? 'Save Standard' : 'Save Route')}</span>
