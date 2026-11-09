@@ -13,6 +13,7 @@ import { VehicleModels } from '@/components/VehicleModels';
 import { JobOrderSettings } from '@/components/JobOrderSettings';
 import { JobOrder } from '@/components/JobOrder';
 import { JobOrderDashboard } from '@/components/JobOrderDashboard';
+import { FMEADashboard } from '@/components/FMEADashboard';
 import { VehicleRegistry } from '@/components/VehicleRegistry';
 import { EmployeeRegistry } from '@/components/EmployeeRegistry';
 import { ComponentRegistry } from '@/components/ComponentRegistry';
@@ -104,6 +105,7 @@ export function App() {
                       <Route path="/maintenance-forecast" element={<MaintenanceForecast />} />
                       <Route path="/job-orders" element={<JobOrder />} />
                       <Route path="/job-orders/dashboard" element={<JobOrderDashboard />} />
+                      <Route path="/incident-management/fmea-dashboard" element={<FMEADashboard />} />
                       <Route path="/incident-management/incident-report" element={<IncidentReport />} />
                       <Route path="/global-settings/vehicle-registry" element={<VehicleRegistry />} />
                       <Route path="/global-settings/employee-registry" element={<EmployeeRegistry />} />

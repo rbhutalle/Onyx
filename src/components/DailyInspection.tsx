@@ -19,6 +19,7 @@ interface DailyRiskRecord {
   fmea_id: string | null;
   created_at: string;
   updated_at: string;
+  remarks?: string | null;
   detail_code?: string;
   detail_description?: string;
   current_control?: string;
@@ -90,6 +91,7 @@ export function DailyInspection() {
   const [fmeaList, setFmeaList] = useState<FmeaOption[]>([]);
   const [selectedLogId, setSelectedLogId] = useState<string>('');
   const [selectedFmeaId, setSelectedFmeaId] = useState<string>('');
+  const [flagRemarks, setFlagRemarks] = useState<string>('');
   const [fmeaSearchQuery, setFmeaSearchQuery] = useState<string>('');
 
   const todayDateStr = new Date().toISOString().split('T')[0];
@@ -469,6 +471,7 @@ export function DailyInspection() {
   const handleOpenAddFlagModal = () => {
     setSelectedLogId('');
     setSelectedFmeaId('');
+    setFlagRemarks('');
     setSelectedFlagVehicle(null);
     setFlagPickerSearch('');
     setFmeaSearchQuery('');
@@ -499,7 +502,11 @@ export function DailyInspection() {
     try {
       setSubmitting(true);
       const { error } = await supabase.from('vehicle_daily_risks').insert([
-        { log_id: selectedLogId, fmea_id: selectedFmeaId }
+        { 
+          log_id: selectedLogId, 
+          fmea_id: selectedFmeaId,
+          remarks: flagRemarks.trim() || null
+        }
       ]);
 
       if (error) throw error;
@@ -818,13 +825,14 @@ export function DailyInspection() {
                     <th className="py-2 px-3">Detail Code</th>
                     <th className="py-2 px-3">Detail Description</th>
                     <th className="py-2 px-3">Current Control</th>
+                    <th className="py-2 px-3">Remarks</th>
                     <th className="py-2 px-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
                   {filteredDailyRisks.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="text-center py-12 px-3 text-(--text-muted) italic">
+                      <td colSpan={7} className="text-center py-12 px-3 text-(--text-muted) italic">
                         No inspection risk flags found for the current day.
                       </td>
                     </tr>
@@ -838,6 +846,7 @@ export function DailyInspection() {
                           <td className="py-2 px-3 font-mono font-semibold text-(--text-primary)">{risk.detail_code || '—'}</td>
                           <td className="py-2 px-3 text-(--text-secondary)">{risk.detail_description || '—'}</td>
                           <td className="py-2 px-3 text-(--text-muted)">{risk.current_control || '—'}</td>
+                          <td className="py-2 px-3 text-(--text-secondary)">{risk.remarks || '—'}</td>
                           <td className="py-2 px-3 text-right">
                             <button
                               onClick={() => handleDeleteFlag(risk.logrisk_id)}
@@ -1140,6 +1149,17 @@ export function DailyInspection() {
                       );
                     })}
                   </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <span className="block font-semibold uppercase text-(--text-secondary)">Flag Remarks</span>
+                  <textarea
+                    rows={2}
+                    placeholder="Optional notes regarding this specific inspection flag..."
+                    value={flagRemarks}
+                    onChange={(e) => setFlagRemarks(e.target.value)}
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) px-3.5 py-2 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
+                  />
                 </div>
               </div>
 

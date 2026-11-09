@@ -14,8 +14,6 @@ import {
   UserCheck, 
   Briefcase, 
   Layers, 
-  Car, 
-  Calendar, 
   User, 
   UserCheck2,
   ChevronDown,
@@ -24,7 +22,6 @@ import {
   Lock
 } from 'lucide-react';
 
-// Equipment Telemetry View Interface
 interface EquipmentPm {
   plate_no: string;
   service_rdg?: number | null;
@@ -71,52 +68,72 @@ interface IncidentRecord {
   updated_at?: string;
 }
 
-// Option Reference Interfaces for Dropdowns
 interface TaxonomyOption {
   id: string;
   code: string;
   description: string;
 }
 
-interface ConditionDetailOption {
-  detail_id: string;
+interface ConditionFmeaOption {
+  conditionsfmea_id: string;
   condition_id: string;
-  code: string;
-  description: string;
+  detail_id?: string | null;
+  code?: string;
+  description?: string;
+  detail_code?: string;
+  detail_description?: string;
+  computed_rpn?: number | null;
+  currentcontrols_desc?: string;
 }
 
-interface ActDetailOption {
-  detail_id: string;
+interface ActFmeaOption {
+  actfmea_id: string;
   act_id: string;
-  code: string;
-  description: string;
+  detail_id?: string | null;
+  code?: string;
+  description?: string;
+  detail_code?: string;
+  detail_description?: string;
+  computed_rpn?: number | null;
+  currentcontrols_desc?: string;
 }
 
-interface FactorDetailOption {
-  detail_id: string;
+interface FactorFmeaOption {
+  factors_fmea_id: string;
   factor_id: string;
-  code: string;
-  description: string;
+  detail_id?: string | null;
+  code?: string;
+  description?: string;
+  detail_code?: string;
+  detail_description?: string;
+  computed_rpn?: number | null;
+  currentcontrols_desc?: string;
 }
 
-interface CauseDetailOption {
-  detail_id: string;
+interface CauseFmeaOption {
+  cause_fmea_id: string;
   cause_id: string;
-  code: string;
-  description: string;
+  detail_id?: string | null;
+  code?: string;
+  description?: string;
+  detail_code?: string;
+  detail_description?: string;
+  computed_rpn?: number | null;
+  currentcontrols_desc?: string;
 }
 
-// Child Record Interfaces
 interface IncidentConditionRecord {
   incident_conditions_id: string;
   incident_id: string;
   condition_id: string;
   detail_id?: string | null;
+  conditionsfmea_id?: string | null;
   remarks: string;
   code?: string;
   description?: string;
   detail_code?: string;
   detail_description?: string;
+  computed_rpn?: number | null;
 }
 
 interface IncidentActRecord {
@@ -124,11 +141,13 @@ interface IncidentActRecord {
   incident_id: string;
   act_id: string;
   detail_id?: string | null;
+  actfmea_id?: string | null;
   remarks: string;
   code?: string;
   description?: string;
   detail_code?: string;
   detail_description?: string;
+  computed_rpn?: number | null;
 }
 
 interface IncidentPersonalRecord {
@@ -136,11 +155,13 @@ interface IncidentPersonalRecord {
   incident_id: string;
   factor_id: string;
   detail_id?: string | null;
+  factors_fmea_id?: string | null;
   remarks: string;
   code?: string;
   description?: string;
   detail_code?: string;
   detail_description?: string;
+  computed_rpn?: number | null;
 }
 
 interface IncidentWorkRelatedRecord {
@@ -148,68 +169,58 @@ interface IncidentWorkRelatedRecord {
   incident_id: string;
   cause_id: string;
   detail_id?: string | null;
+  cause_fmea_id?: string | null;
   remarks: string;
   code?: string;
   description?: string;
   detail_code?: string;
   detail_description?: string;
+  computed_rpn?: number | null;
 }
 
 type AnalysisTab = 'conditions' | 'acts' | 'personal' | 'workrelated';
 
 export function IncidentReport() {
-  // Collapsible State for 2nd Area (Incident Record Display)
   const [isSecondAreaOpen, setIsSecondAreaOpen] = useState<boolean>(true);
-
-  // Master Incident Data
   const [incidents, setIncidents] = useState<IncidentRecord[]>([]);
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null); 
   const [loadingIncidents, setLoadingIncidents] = useState<boolean>(false);
 
-  // Search Modal for Incident Reports
   const [isIncidentSearchOpen, setIsIncidentSearchOpen] = useState<boolean>(false);
   const [incidentSearchQuery, setIncidentSearchQuery] = useState<string>('');
 
-  // Equipment Picker Modal State
   const [equipmentList, setEquipmentList] = useState<EquipmentPm[]>([]);
   const [selectedEquipment, setSelectedEquipment] = useState<EquipmentPm | null>(null);
   const [showEquipmentPicker, setShowEquipmentPicker] = useState<boolean>(false);
   const [equipmentSearchQuery, setEquipmentSearchQuery] = useState<string>('');
   const [loadingEquipment, setLoadingEquipment] = useState<boolean>(false);
 
-  // References
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [statuses, setStatuses] = useState<StatusOption[]>([]);
+
   const [conditionOptions, setConditionOptions] = useState<TaxonomyOption[]>([]);
-  const [conditionDetailOptions, setConditionDetailOptions] = useState<ConditionDetailOption[]>([]);
+  const [conditionFmeaList, setConditionFmeaList] = useState<ConditionFmeaOption[]>([]);
+
   const [actOptions, setActOptions] = useState<TaxonomyOption[]>([]);
-  const [actDetailOptions, setActDetailOptions] = useState<ActDetailOption[]>([]);
+  const [actFmeaList, setActFmeaList] = useState<ActFmeaOption[]>([]);
+
   const [factorOptions, setFactorOptions] = useState<TaxonomyOption[]>([]);
-  const [factorDetailOptions, setFactorDetailOptions] = useState<FactorDetailOption[]>([]);
+  const [factorFmeaList, setFactorFmeaList] = useState<FactorFmeaOption[]>([]);
+
   const [causeOptions, setCauseOptions] = useState<TaxonomyOption[]>([]);
-  const [causeDetailOptions, setCauseDetailOptions] = useState<CauseDetailOption[]>([]);
+  const [causeFmeaList, setCauseFmeaList] = useState<CauseFmeaOption[]>([]);
 
-  // Search query states within Details pickers
-  const [conditionDetailSearchQuery, setConditionDetailSearchQuery] = useState<string>('');
-  const [actDetailSearchQuery, setActDetailSearchQuery] = useState<string>('');
-  const [factorDetailSearchQuery, setFactorDetailSearchQuery] = useState<string>('');
-  const [causeDetailSearchQuery, setCauseDetailSearchQuery] = useState<string>('');
-
-  // Active Analysis Tab for Child Tables
   const [activeAnalysisTab, setActiveAnalysisTab] = useState<AnalysisTab>('conditions');
 
-  // Child Data Lists
   const [incidentConditions, setIncidentConditions] = useState<IncidentConditionRecord[]>([]);
   const [incidentActs, setIncidentActs] = useState<IncidentActRecord[]>([]);
   const [incidentPersonal, setIncidentPersonal] = useState<IncidentPersonalRecord[]>([]);
   const [incidentWorkRelated, setIncidentWorkRelated] = useState<IncidentWorkRelatedRecord[]>([]);
   const [loadingChild, setLoadingChild] = useState<boolean>(false);
 
-  // Status Msgs
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Master Incident Form Modal State
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -227,31 +238,30 @@ export function IncidentReport() {
     reportcompleted_date: ''
   });
 
-  // Employee Modal Search States
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState<boolean>(false);
   const [employeeModalTarget, setEmployeeModalTarget] = useState<'reported_by' | 'validated_by' | null>(null);
   const [employeeSearchQuery, setEmployeeSearchQuery] = useState<string>('');
 
-  // Child Analysis Form Modal State
   const [isChildModalOpen, setIsChildModalOpen] = useState<boolean>(false);
   const [childEditingId, setChildEditingId] = useState<string | null>(null);
   const [childForm, setChildForm] = useState({
     selectedOptionId: '',
-    selectedDetailId: '',
+    selectedFmeaId: '',
     remarks: ''
   });
 
-  // O(1) Lookup Maps
   const conditionMap = useMemo(() => new Map(conditionOptions.map(c => [c.id, c])), [conditionOptions]);
-  const conditionDetailMap = useMemo(() => new Map(conditionDetailOptions.map(d => [d.detail_id, d])), [conditionDetailOptions]);
-  const actMap = useMemo(() => new Map(actOptions.map(a => [a.id, a])), [actOptions]);
-  const actDetailMap = useMemo(() => new Map(actDetailOptions.map(d => [d.detail_id, d])), [actDetailOptions]);
-  const factorMap = useMemo(() => new Map(factorOptions.map(f => [f.id, f])), [factorOptions]);
-  const factorDetailMap = useMemo(() => new Map(factorDetailOptions.map(d => [d.detail_id, d])), [factorDetailOptions]);
-  const causeMap = useMemo(() => new Map(causeOptions.map(c => [c.id, c])), [causeOptions]);
-  const causeDetailMap = useMemo(() => new Map(causeDetailOptions.map(d => [d.detail_id, d])), [causeDetailOptions]);
+  const conditionFmeaMap = useMemo(() => new Map(conditionFmeaList.map(f => [f.conditionsfmea_id, f])) as Map<string, ConditionFmeaOption>, [conditionFmeaList]);
 
-  // Fetch Equipment List for Modal Picker
+  const actMap = useMemo(() => new Map(actOptions.map(a => [a.id, a])), [actOptions]);
+  const actFmeaMap = useMemo(() => new Map(actFmeaList.map(f => [f.actfmea_id, f])) as Map<string, ActFmeaOption>, [actFmeaList]);
+
+  const factorMap = useMemo(() => new Map(factorOptions.map(f => [f.id, f])), [factorOptions]);
+  const factorFmeaMap = useMemo(() => new Map(factorFmeaList.map(f => [f.factors_fmea_id, f])) as Map<string, FactorFmeaOption>, [factorFmeaList]);
+
+  const causeMap = useMemo(() => new Map(causeOptions.map(c => [c.id, c])), [causeOptions]);
+  const causeFmeaMap = useMemo(() => new Map(causeFmeaList.map(f => [f.cause_fmea_id, f])) as Map<string, CauseFmeaOption>, [causeFmeaList]);
+
   const fetchEquipmentList = useCallback(async (queryToRun?: string) => {
     try {
       setLoadingEquipment(true);
@@ -293,7 +303,6 @@ export function IncidentReport() {
     }
   }, [equipmentSearchQuery]);
 
-  // Fetch Incident List and Statuses
   const fetchIncidentList = useCallback(async () => {
     try {
       setLoadingIncidents(true);
@@ -314,7 +323,6 @@ export function IncidentReport() {
         })));
       }
 
-      // Employees Lookup
       const empList: EmployeeOption[] = (empRes.data || []).map((e: Record<string, unknown>) => {
         const fname = String(e.first_name || '');
         const lname = String(e.last_name || '');
@@ -329,7 +337,6 @@ export function IncidentReport() {
       });
       setEmployees(empList);
 
-      // Formatted Master Incidents
       const formatted: IncidentRecord[] = (incRes.data || []).map((row: Record<string, unknown>) => {
         const statusObj = row.joborder_status as Record<string, unknown> | null;
         return {
@@ -361,18 +368,22 @@ export function IncidentReport() {
     }
   }, []);
 
-  // Fetch Taxonomy Options and Details
   const fetchTaxonomyOptions = useCallback(async () => {
     try {
-      const [condRes, condDetailRes, actRes, actDetailRes, factorRes, factorDetailRes, causeRes, causeDetailRes] = await Promise.all([
+      const [
+        condRes, condFmeaRes, 
+        actRes, actFmeaRes, 
+        factorRes, factorFmeaRes, 
+        causeRes, causeFmeaRes
+      ] = await Promise.all([
         supabase.from('unsafe_conditions').select('*').order('code'),
-        supabase.from('condition_details').select('*').order('code'),
+        supabase.from('conditions_fmea').select('*, unsafe_conditions(code, description), condition_details(code, description), fmea_currentcontrols(currentcontrols_desc)').order('computed_rpn', { ascending: false }),
         supabase.from('unsafe_acts').select('*').order('code'),
-        supabase.from('act_details').select('*').order('code'),
+        supabase.from('act_fmea').select('*, unsafe_acts(code, description), act_details(code, description), fmea_currentcontrols(currentcontrols_desc)').order('computed_rpn', { ascending: false }),
         supabase.from('personal_factors').select('*').order('code'),
-        supabase.from('factor_details').select('*').order('code'),
+        supabase.from('factors_fmea').select('*, personal_factors(code, description), factor_details(code, description), fmea_currentcontrols(currentcontrols_desc)').order('computed_rpn', { ascending: false }),
         supabase.from('work_causes').select('*').order('code'),
-        supabase.from('cause_details').select('*').order('code')
+        supabase.from('cause_fmea').select('*, work_causes(code, description), cause_details(code, description), fmea_currentcontrols(currentcontrols_desc)').order('computed_rpn', { ascending: false })
       ]);
 
       if (condRes.data) {
@@ -382,14 +393,25 @@ export function IncidentReport() {
           description: String(r.description || '')
         })));
       }
-      if (condDetailRes.data) {
-        setConditionDetailOptions(condDetailRes.data.map((r: Record<string, unknown>) => ({
-          detail_id: String(r.detail_id),
-          condition_id: String(r.condition_id),
-          code: String(r.code || ''),
-          description: String(r.description || '')
-        })));
+      if (condFmeaRes.data) {
+        setConditionFmeaList(condFmeaRes.data.map((r: Record<string, unknown>) => {
+          const parentObj = r.unsafe_conditions as Record<string, unknown> | null;
+          const detailObj = r.condition_details as Record<string, unknown> | null;
+          const controlObj = r.fmea_currentcontrols as Record<string, unknown> | null;
+          return {
+            conditionsfmea_id: String(r.conditionsfmea_id),
+            condition_id: String(r.condition_id),
+            detail_id: r.detail_id ? String(r.detail_id) : null,
+            code: String(parentObj?.code || ''),
+            description: String(parentObj?.description || ''),
+            detail_code: String(detailObj?.code || ''),
+            detail_description: String(detailObj?.description || ''),
+            computed_rpn: r.computed_rpn ? Number(r.computed_rpn) : null,
+            currentcontrols_desc: String(controlObj?.currentcontrols_desc || '—')
+          };
+        }));
       }
+
       if (actRes.data) {
         setActOptions(actRes.data.map((r: Record<string, unknown>) => ({
           id: String(r.act_id),
@@ -397,14 +419,25 @@ export function IncidentReport() {
           description: String(r.description || '')
         })));
       }
-      if (actDetailRes.data) {
-        setActDetailOptions(actDetailRes.data.map((r: Record<string, unknown>) => ({
-          detail_id: String(r.detail_id),
-          act_id: String(r.act_id),
-          code: String(r.code || ''),
-          description: String(r.description || '')
-        })));
+      if (actFmeaRes.data) {
+        setActFmeaList(actFmeaRes.data.map((r: Record<string, unknown>) => {
+          const parentObj = r.unsafe_acts as Record<string, unknown> | null;
+          const detailObj = r.act_details as Record<string, unknown> | null;
+          const controlObj = r.fmea_currentcontrols as Record<string, unknown> | null;
+          return {
+            actfmea_id: String(r.actfmea_id),
+            act_id: String(r.act_id),
+            detail_id: r.detail_id ? String(r.detail_id) : null,
+            code: String(parentObj?.code || ''),
+            description: String(parentObj?.description || ''),
+            detail_code: String(detailObj?.code || ''),
+            detail_description: String(detailObj?.description || ''),
+            computed_rpn: r.computed_rpn ? Number(r.computed_rpn) : null,
+            currentcontrols_desc: String(controlObj?.currentcontrols_desc || '—')
+          };
+        }));
       }
+
       if (factorRes.data) {
         setFactorOptions(factorRes.data.map((r: Record<string, unknown>) => ({
           id: String(r.factor_id),
@@ -412,14 +445,25 @@ export function IncidentReport() {
           description: String(r.description || '')
         })));
       }
-      if (factorDetailRes.data) {
-        setFactorDetailOptions(factorDetailRes.data.map((r: Record<string, unknown>) => ({
-          detail_id: String(r.detail_id),
-          factor_id: String(r.factor_id),
-          code: String(r.code || ''),
-          description: String(r.description || '')
-        })));
+      if (factorFmeaRes.data) {
+        setFactorFmeaList(factorFmeaRes.data.map((r: Record<string, unknown>) => {
+          const parentObj = r.personal_factors as Record<string, unknown> | null;
+          const detailObj = r.factor_details as Record<string, unknown> | null;
+          const controlObj = r.fmea_currentcontrols as Record<string, unknown> | null;
+          return {
+            factors_fmea_id: String(r.factors_fmea_id),
+            factor_id: String(r.factor_id),
+            detail_id: r.detail_id ? String(r.detail_id) : null,
+            code: String(parentObj?.code || ''),
+            description: String(parentObj?.description || ''),
+            detail_code: String(detailObj?.code || ''),
+            detail_description: String(detailObj?.description || ''),
+            computed_rpn: r.computed_rpn ? Number(r.computed_rpn) : null,
+            currentcontrols_desc: String(controlObj?.currentcontrols_desc || '—')
+          };
+        }));
       }
+
       if (causeRes.data) {
         setCauseOptions(causeRes.data.map((r: Record<string, unknown>) => ({
           id: String(r.cause_id),
@@ -427,20 +471,29 @@ export function IncidentReport() {
           description: String(r.description || '')
         })));
       }
-      if (causeDetailRes.data) {
-        setCauseDetailOptions(causeDetailRes.data.map((r: Record<string, unknown>) => ({
-          detail_id: String(r.detail_id),
-          cause_id: String(r.cause_id),
-          code: String(r.code || ''),
-          description: String(r.description || '')
-        })));
+      if (causeFmeaRes.data) {
+        setCauseFmeaList(causeFmeaRes.data.map((r: Record<string, unknown>) => {
+          const parentObj = r.work_causes as Record<string, unknown> | null;
+          const detailObj = r.cause_details as Record<string, unknown> | null;
+          const controlObj = r.fmea_currentcontrols as Record<string, unknown> | null;
+          return {
+            cause_fmea_id: String(r.cause_fmea_id),
+            cause_id: String(r.cause_id),
+            detail_id: r.detail_id ? String(r.detail_id) : null,
+            code: String(parentObj?.code || ''),
+            description: String(parentObj?.description || ''),
+            detail_code: String(detailObj?.code || ''),
+            detail_description: String(detailObj?.description || ''),
+            computed_rpn: r.computed_rpn ? Number(r.computed_rpn) : null,
+            currentcontrols_desc: String(controlObj?.currentcontrols_desc || '—')
+          };
+        }));
       }
     } catch {
       // Handled silently
     }
   }, []);
 
-  // Fetch Child Records with O(1) Lookup Maps
   const fetchChildRecords = useCallback(async (incId: string) => {
     try {
       setLoadingChild(true);
@@ -452,66 +505,74 @@ export function IncidentReport() {
       ]);
 
       setIncidentConditions((condRes.data || []).map((row: Record<string, unknown>) => {
-        const matchedCond = conditionMap.get(String(row.condition_id));
-        const matchedDetail = conditionDetailMap.get(String(row.detail_id));
+        const matchedFmea = conditionFmeaMap.get(String(row.conditionsfmea_id || row.fmea_id)) ?? ({} as ConditionFmeaOption);
+        const matchedCond = conditionMap.get(String(row.condition_id || matchedFmea.condition_id));
         return {
           incident_conditions_id: String(row.incident_conditions_id),
           incident_id: String(row.incident_id),
-          condition_id: String(row.condition_id),
-          detail_id: row.detail_id ? String(row.detail_id) : null,
+          condition_id: String(row.condition_id || matchedFmea.condition_id || ''),
+          detail_id: row.detail_id ? String(row.detail_id) : matchedFmea.detail_id,
+          conditionsfmea_id: row.conditionsfmea_id ? String(row.conditionsfmea_id) : null,
           remarks: String(row.remarks || ''),
-          code: matchedCond?.code,
-          description: matchedCond?.description,
-          detail_code: matchedDetail?.code,
-          detail_description: matchedDetail?.description
+          code: matchedCond?.code || matchedFmea.code,
+          description: matchedCond?.description || matchedFmea.description,
+          detail_code: matchedFmea.detail_code,
+          detail_description: matchedFmea.detail_description,
+          computed_rpn: matchedFmea.computed_rpn ?? null
         };
       }));
 
       setIncidentActs((actRes.data || []).map((row: Record<string, unknown>) => {
-        const matchedAct = actMap.get(String(row.act_id));
-        const matchedDetail = actDetailMap.get(String(row.detail_id));
+        const matchedFmea = actFmeaMap.get(String(row.actfmea_id || row.fmea_id)) || ({} as Partial<ActFmeaOption>);
+        const matchedAct = actMap.get(String(row.act_id || matchedFmea.act_id));
         return {
           incident_act_id: String(row.incident_act_id),
           incident_id: String(row.incident_id),
-          act_id: String(row.act_id),
-          detail_id: row.detail_id ? String(row.detail_id) : null,
+          act_id: String(row.act_id || matchedFmea.act_id || ''),
+          detail_id: row.detail_id ? String(row.detail_id) : matchedFmea.detail_id,
+          actfmea_id: row.actfmea_id ? String(row.actfmea_id) : null,
           remarks: String(row.remarks || ''),
-          code: matchedAct?.code,
-          description: matchedAct?.description,
-          detail_code: matchedDetail?.code,
-          detail_description: matchedDetail?.description
+          code: matchedAct?.code || matchedFmea.code,
+          description: matchedAct?.description || matchedFmea.description,
+          detail_code: matchedFmea.detail_code,
+          detail_description: matchedFmea.detail_description,
+          computed_rpn: matchedFmea.computed_rpn ?? null
         };
       }));
 
       setIncidentPersonal((factorRes.data || []).map((row: Record<string, unknown>) => {
-        const matchedFactor = factorMap.get(String(row.factor_id));
-        const matchedDetail = factorDetailMap.get(String(row.detail_id));
+        const matchedFmea = factorFmeaMap.get(String(row.factors_fmea_id || row.fmea_id)) || ({} as Partial<FactorFmeaOption>);
+        const matchedFactor = factorMap.get(String(row.factor_id || matchedFmea.factor_id));
         return {
           incident_personal_id: String(row.incident_personal_id),
           incident_id: String(row.incident_id),
-          factor_id: String(row.factor_id),
-          detail_id: row.detail_id ? String(row.detail_id) : null,
+          factor_id: String(row.factor_id || matchedFmea.factor_id || ''),
+          detail_id: row.detail_id ? String(row.detail_id) : matchedFmea.detail_id,
+          factors_fmea_id: row.factors_fmea_id ? String(row.factors_fmea_id) : null,
           remarks: String(row.remarks || ''),
-          code: matchedFactor?.code,
-          description: matchedFactor?.description,
-          detail_code: matchedDetail?.code,
-          detail_description: matchedDetail?.description
+          code: matchedFactor?.code || matchedFmea.code,
+          description: matchedFactor?.description || matchedFmea.description,
+          detail_code: matchedFmea.detail_code,
+          detail_description: matchedFmea.detail_description,
+          computed_rpn: matchedFmea.computed_rpn ?? null
         };
       }));
 
       setIncidentWorkRelated((causeRes.data || []).map((row: Record<string, unknown>) => {
-        const matchedCause = causeMap.get(String(row.cause_id));
-        const matchedDetail = causeDetailMap.get(String(row.detail_id));
+        const matchedFmea = causeFmeaMap.get(String(row.cause_fmea_id || row.fmea_id)) || ({} as Partial<CauseFmeaOption>);
+        const matchedCause = causeMap.get(String(row.cause_id || matchedFmea.cause_id));
         return {
           incident_workrelated_id: String(row.incident_workrelated_id),
           incident_id: String(row.incident_id),
-          cause_id: String(row.cause_id),
-          detail_id: row.detail_id ? String(row.detail_id) : null,
+          cause_id: String(row.cause_id || matchedFmea.cause_id || ''),
+          detail_id: row.detail_id ? String(row.detail_id) : matchedFmea.detail_id,
+          cause_fmea_id: row.cause_fmea_id ? String(row.cause_fmea_id) : null,
           remarks: String(row.remarks || ''),
-          code: matchedCause?.code,
-          description: matchedCause?.description,
-          detail_code: matchedDetail?.code,
-          detail_description: matchedDetail?.description
+          code: matchedCause?.code || matchedFmea.code,
+          description: matchedCause?.description || matchedFmea.description,
+          detail_code: matchedFmea.detail_code,
+          detail_description: matchedFmea.detail_description,
+          computed_rpn: matchedFmea.computed_rpn ?? null
         };
       }));
 
@@ -520,12 +581,10 @@ export function IncidentReport() {
     } finally {
       setLoadingChild(false);
     }
-  }, [conditionMap, conditionDetailMap, actMap, actDetailMap, factorMap, factorDetailMap, causeMap, causeDetailMap]);
+  }, [conditionMap, conditionFmeaMap, actMap, actFmeaMap, factorMap, factorFmeaMap, causeMap, causeFmeaMap]);
 
-  // Initial Load Effect
   useEffect(() => {
     let isMounted = true;
-
     queueMicrotask(() => {
       if (isMounted) {
         fetchTaxonomyOptions();
@@ -533,16 +592,11 @@ export function IncidentReport() {
         fetchIncidentList();
       }
     });
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [fetchIncidentList, fetchEquipmentList, fetchTaxonomyOptions]);
 
-  // Selected Incident Child Load Effect
   useEffect(() => {
     let isMounted = true;
-
     if (selectedIncidentId) {
       queueMicrotask(() => {
         if (isMounted) {
@@ -550,13 +604,9 @@ export function IncidentReport() {
         }
       });
     }
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [selectedIncidentId, fetchChildRecords]);
 
-  // Master Incident Handlers
   const handleOpenCreateModal = () => {
     setEditingId(null);
     setSelectedEquipment(null);
@@ -606,7 +656,7 @@ export function IncidentReport() {
   const handleStatusChange = (statusIdVal: string) => {
     const selectedStatusObj = statuses.find(s => s.status_id === statusIdVal);
     const currentStatusName = selectedStatusObj?.status_name;
-    
+     
     if (currentStatusName === 'Completed') {
       const todayStr = new Date().toISOString().split('T')[0];
       setFormData(prev => ({ ...prev, status_id: statusIdVal, reportcompleted_date: todayStr }));
@@ -692,7 +742,6 @@ export function IncidentReport() {
     }
   };
 
-  // Employee Modal Lookup Handler
   const handleOpenEmployeeModal = (target: 'reported_by' | 'validated_by') => {
     setEmployeeModalTarget(target);
     setEmployeeSearchQuery('');
@@ -708,55 +757,46 @@ export function IncidentReport() {
     setIsEmployeeModalOpen(false);
   };
 
-  // Child Breakdown Handlers
   const handleOpenAddChild = () => {
     if (!selectedIncidentId) return;
     if (selectedIncidentRecord?.status_name === 'Completed' || selectedIncidentRecord?.status_name === 'Cancelled') return;
     setChildEditingId(null);
-    setConditionDetailSearchQuery('');
-    setActDetailSearchQuery('');
-    setFactorDetailSearchQuery('');
-    setCauseDetailSearchQuery('');
 
     let defaultOptionId = '';
-    let defaultDetailId = '';
+    let defaultFmeaId = '';
 
     if (activeAnalysisTab === 'conditions') {
       defaultOptionId = conditionOptions[0]?.id || '';
-      const matchedDetails = conditionDetailOptions.filter(d => d.condition_id === defaultOptionId);
-      defaultDetailId = matchedDetails[0]?.detail_id || '';
+      const matchedFmeas = conditionFmeaList.filter(f => f.condition_id === defaultOptionId);
+      defaultFmeaId = matchedFmeas[0]?.conditionsfmea_id || '';
     } else if (activeAnalysisTab === 'acts') {
       defaultOptionId = actOptions[0]?.id || '';
-      const matchedDetails = actDetailOptions.filter(d => d.act_id === defaultOptionId);
-      defaultDetailId = matchedDetails[0]?.detail_id || '';
+      const matchedFmeas = actFmeaList.filter(f => f.act_id === defaultOptionId);
+      defaultFmeaId = matchedFmeas[0]?.actfmea_id || '';
     } else if (activeAnalysisTab === 'personal') {
       defaultOptionId = factorOptions[0]?.id || '';
-      const matchedDetails = factorDetailOptions.filter(d => d.factor_id === defaultOptionId);
-      defaultDetailId = matchedDetails[0]?.detail_id || '';
+      const matchedFmeas = factorFmeaList.filter(f => f.factor_id === defaultOptionId);
+      defaultFmeaId = matchedFmeas[0]?.factors_fmea_id || '';
     } else if (activeAnalysisTab === 'workrelated') {
       defaultOptionId = causeOptions[0]?.id || '';
-      const matchedDetails = causeDetailOptions.filter(d => d.cause_id === defaultOptionId);
-      defaultDetailId = matchedDetails[0]?.detail_id || '';
+      const matchedFmeas = causeFmeaList.filter(f => f.cause_id === defaultOptionId);
+      defaultFmeaId = matchedFmeas[0]?.cause_fmea_id || '';
     }
 
     setChildForm({
       selectedOptionId: defaultOptionId,
-      selectedDetailId: defaultDetailId,
+      selectedFmeaId: defaultFmeaId,
       remarks: ''
     });
     setIsChildModalOpen(true);
   };
 
-  const handleOpenEditChild = (rowId: string, optionId: string, remarks: string, detailId?: string | null) => {
+  const handleOpenEditChild = (rowId: string, optionId: string, remarks: string, fmeaId?: string | null) => {
     if (selectedIncidentRecord?.status_name === 'Completed' || selectedIncidentRecord?.status_name === 'Cancelled') return;
     setChildEditingId(rowId);
-    setConditionDetailSearchQuery('');
-    setActDetailSearchQuery('');
-    setFactorDetailSearchQuery('');
-    setCauseDetailSearchQuery('');
     setChildForm({
       selectedOptionId: optionId,
-      selectedDetailId: detailId || '',
+      selectedFmeaId: fmeaId || '',
       remarks: remarks || ''
     });
     setIsChildModalOpen(true);
@@ -764,7 +804,7 @@ export function IncidentReport() {
 
   const handleSubmitChild = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedIncidentId || !childForm.selectedOptionId) return;
+    if (!selectedIncidentId || !childForm.selectedOptionId || !childForm.selectedFmeaId) return;
 
     try {
       setErrorMsg(null);
@@ -775,40 +815,48 @@ export function IncidentReport() {
       if (activeAnalysisTab === 'conditions') {
         tableName = 'incident_conditions';
         pkField = 'incident_conditions_id';
+        const selectedFmea = conditionFmeaMap.get(childForm.selectedFmeaId);
         payload = {
           incident_id: selectedIncidentId,
           condition_id: childForm.selectedOptionId,
-          detail_id: childForm.selectedDetailId || null,
+          detail_id: selectedFmea?.detail_id || null,
+          conditionsfmea_id: childForm.selectedFmeaId,
           remarks: childForm.remarks.trim(),
           updated_at: new Date().toISOString()
         };
       } else if (activeAnalysisTab === 'acts') {
         tableName = 'incident_acts';
         pkField = 'incident_act_id';
+        const selectedFmea = actFmeaMap.get(childForm.selectedFmeaId);
         payload = {
           incident_id: selectedIncidentId,
           act_id: childForm.selectedOptionId,
-          detail_id: childForm.selectedDetailId || null,
+          detail_id: selectedFmea?.detail_id || null,
+          actfmea_id: childForm.selectedFmeaId,
           remarks: childForm.remarks.trim(),
           updated_at: new Date().toISOString()
         };
       } else if (activeAnalysisTab === 'personal') {
         tableName = 'incident_personal';
         pkField = 'incident_personal_id';
+        const selectedFmea = factorFmeaMap.get(childForm.selectedFmeaId);
         payload = {
           incident_id: selectedIncidentId,
           factor_id: childForm.selectedOptionId,
-          detail_id: childForm.selectedDetailId || null,
+          detail_id: selectedFmea?.detail_id || null,
+          factors_fmea_id: childForm.selectedFmeaId,
           remarks: childForm.remarks.trim(),
           updated_at: new Date().toISOString()
         };
       } else if (activeAnalysisTab === 'workrelated') {
         tableName = 'incident_workrelated';
         pkField = 'incident_workrelated_id';
+        const selectedFmea = causeFmeaMap.get(childForm.selectedFmeaId);
         payload = {
           incident_id: selectedIncidentId,
           cause_id: childForm.selectedOptionId,
-          detail_id: childForm.selectedDetailId || null,
+          detail_id: selectedFmea?.detail_id || null,
+          cause_fmea_id: childForm.selectedFmeaId,
           remarks: childForm.remarks.trim(),
           updated_at: new Date().toISOString()
         };
@@ -878,7 +926,6 @@ export function IncidentReport() {
     }
   };
 
-  // Memoized Search Filter Computations with Robust Optional Chaining
   const filteredIncidents = useMemo(() => {
     const query = incidentSearchQuery.toLowerCase().trim();
     if (!query) return incidents;
@@ -901,56 +948,11 @@ export function IncidentReport() {
     );
   }, [employees, employeeSearchQuery]);
 
-  const filteredConditionDetails = useMemo(() => {
-    const query = conditionDetailSearchQuery.toLowerCase().trim();
-    return conditionDetailOptions.filter(d => {
-      const matchesCategory = !childForm.selectedOptionId || d.condition_id === childForm.selectedOptionId;
-      const matchesQuery = !query || 
-        (d.code ?? '').toLowerCase().includes(query) ||
-        (d.description ?? '').toLowerCase().includes(query);
-      return matchesCategory && matchesQuery;
-    });
-  }, [conditionDetailOptions, childForm.selectedOptionId, conditionDetailSearchQuery]);
-
-  const filteredActDetails = useMemo(() => {
-    const query = actDetailSearchQuery.toLowerCase().trim();
-    return actDetailOptions.filter(d => {
-      const matchesCategory = !childForm.selectedOptionId || d.act_id === childForm.selectedOptionId;
-      const matchesQuery = !query || 
-        (d.code ?? '').toLowerCase().includes(query) ||
-        (d.description ?? '').toLowerCase().includes(query);
-      return matchesCategory && matchesQuery;
-    });
-  }, [actDetailOptions, childForm.selectedOptionId, actDetailSearchQuery]);
-
-  const filteredFactorDetails = useMemo(() => {
-    const query = factorDetailSearchQuery.toLowerCase().trim();
-    return factorDetailOptions.filter(d => {
-      const matchesCategory = !childForm.selectedOptionId || d.factor_id === childForm.selectedOptionId;
-      const matchesQuery = !query || 
-        (d.code ?? '').toLowerCase().includes(query) ||
-        (d.description ?? '').toLowerCase().includes(query);
-      return matchesCategory && matchesQuery;
-    });
-  }, [factorDetailOptions, childForm.selectedOptionId, factorDetailSearchQuery]);
-
-  const filteredCauseDetails = useMemo(() => {
-    const query = causeDetailSearchQuery.toLowerCase().trim();
-    return causeDetailOptions.filter(d => {
-      const matchesCategory = !childForm.selectedOptionId || d.cause_id === childForm.selectedOptionId;
-      const matchesQuery = !query || 
-        (d.code ?? '').toLowerCase().includes(query) ||
-        (d.description ?? '').toLowerCase().includes(query);
-      return matchesCategory && matchesQuery;
-    });
-  }, [causeDetailOptions, childForm.selectedOptionId, causeDetailSearchQuery]);
-
   const selectedIncidentRecord = incidents.find(inc => inc.incident_id === selectedIncidentId) || null;
   const isLockedRecord = selectedIncidentRecord?.status_name === 'Completed' || selectedIncidentRecord?.status_name === 'Cancelled';
 
   return (
     <div className="flex flex-col h-full max-h-[calc(100vh-100px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-2.5 overflow-hidden">
-      {/* Main Header */}
       <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-2.5">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-black text-white rounded-xl shadow-xs">
@@ -961,13 +963,12 @@ export function IncidentReport() {
               Incident Reports & Cause Analysis
             </h1>
             <p className="text-xs sm:text-sm text-(--text-muted)">
-              Log equipment incidents and analyze root causes across unsafe conditions, acts, factors, and causes.
+              Log equipment incidents and analyze root causes from FMEA taxonomy tables.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Messages */}
       {successMsg && (
         <div className="shrink-0 bg-(--accent-subtle) border border-(--border-main) text-(--text-primary) px-3.5 py-2 rounded-lg flex items-center gap-3 text-xs shadow-xs">
           <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -982,11 +983,9 @@ export function IncidentReport() {
         </div>
       )}
 
-      {/* AREA 2: COLLAPSIBLE SINGLE INCIDENT RECORD DISPLAY */}
       <div className="shrink-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-3.5 space-y-2.5">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-(--border-main) pb-2.5">
           <div className="flex items-center gap-3">
-            {/* Dynamic Incident Ref Number & Severity */}
             <div className="text-xs font-semibold whitespace-nowrap">
               {selectedIncidentRecord ? (
                 <span className="flex items-center gap-1.5">
@@ -1026,7 +1025,6 @@ export function IncidentReport() {
             <button
               onClick={() => setIsSecondAreaOpen(!isSecondAreaOpen)}
               className="px-2.5 py-1.5 bg-(--accent-subtle) hover:opacity-80 text-(--text-primary) border border-(--border-main) rounded-lg transition-colors cursor-pointer text-xs font-semibold flex items-center gap-1.5"
-              title={isSecondAreaOpen ? "Collapse Incident Record Display" : "Expand Incident Record Display"}
             >
               {isSecondAreaOpen ? (
                 <>
@@ -1043,7 +1041,6 @@ export function IncidentReport() {
           </div>
         </div>
 
-        {/* Collapsible Body of Area 2 */}
         {isSecondAreaOpen && (
           <div className="max-h-[25vh] overflow-y-auto pr-1 space-y-2.5">
             {loadingIncidents ? (
@@ -1055,9 +1052,6 @@ export function IncidentReport() {
               <div className="py-3 text-center text-(--text-muted) space-y-1">
                 <FolderSearch className="w-6 h-6 text-(--text-muted) mx-auto" />
                 <p className="text-xs">No Incident Report selected.</p>
-                <p className="text-[11px] text-(--text-muted) max-w-md mx-auto">
-                  Use the search button above to load an incident record or click &quot;New Incident Report&quot; to create a record.
-                </p>
                 <button
                   onClick={() => {
                     setIncidentSearchQuery('');
@@ -1092,11 +1086,8 @@ export function IncidentReport() {
                       disabled={isLockedRecord}
                       onClick={() => handleOpenEditModal(selectedIncidentRecord)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors ${
-                        isLockedRecord 
-                          ? 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main) cursor-not-allowed opacity-60' 
-                          : 'bg-(--accent-subtle) hover:opacity-80 text-(--text-primary) border border-(--border-main) cursor-pointer'
+                        isLockedRecord ? 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main) cursor-not-allowed opacity-60' : 'bg-(--accent-subtle) hover:opacity-80 text-(--text-primary) border border-(--border-main) cursor-pointer'
                       }`}
-                      title={isLockedRecord ? `Cannot edit because status is "${selectedIncidentRecord.status_name}"` : 'Edit Record'}
                     >
                       {isLockedRecord ? <Lock className="w-3 h-3" /> : <Edit2 className="w-3 h-3" />}
                       <span>Edit</span>
@@ -1105,11 +1096,8 @@ export function IncidentReport() {
                       disabled={isLockedRecord}
                       onClick={() => handleDeleteMaster(selectedIncidentRecord.incident_id, selectedIncidentRecord.status_name)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors ${
-                        isLockedRecord 
-                          ? 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main) cursor-not-allowed opacity-60' 
-                          : 'bg-(--accent-subtle) hover:opacity-80 text-red-600 dark:text-red-400 border border-(--border-main) cursor-pointer'
+                        isLockedRecord ? 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main) cursor-not-allowed opacity-60' : 'bg-(--accent-subtle) hover:opacity-80 text-red-600 dark:text-red-400 border border-(--border-main) cursor-pointer'
                       }`}
-                      title={isLockedRecord ? `Cannot delete because status is "${selectedIncidentRecord.status_name}"` : 'Delete'}
                     >
                       {isLockedRecord ? <Lock className="w-3 h-3" /> : <Trash2 className="w-3 h-3" />}
                       <span>Delete</span>
@@ -1117,7 +1105,6 @@ export function IncidentReport() {
                   </div>
                 </div>
 
-                {/* Top Row Grid details */}
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
                   <div>
                     <span className="text-[11px] text-(--text-muted) uppercase block">Incident Date</span>
@@ -1147,7 +1134,6 @@ export function IncidentReport() {
                   </div>
                 </div>
 
-                {/* Description Block */}
                 <div className="pt-2 border-t border-(--border-main)">
                   <span className="text-[11px] text-(--text-muted) uppercase block mb-1">Description</span>
                   <p className="text-xs text-(--text-secondary) leading-relaxed bg-(--bg-surface) p-2.5 rounded-lg border border-(--border-main)">
@@ -1155,7 +1141,6 @@ export function IncidentReport() {
                   </p>
                 </div>
 
-                {/* Separate Reported By and Validated By Below Description */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-(--border-main)">
                   <div className="bg-(--bg-surface) p-2 rounded-lg border border-(--border-main) flex items-center gap-2.5">
                     <div className="p-1.5 bg-black text-white rounded-lg shrink-0">
@@ -1177,20 +1162,12 @@ export function IncidentReport() {
                     </div>
                   </div>
                 </div>
-
-                {selectedIncidentRecord.incident_impact && (
-                  <div>
-                    <span className="text-[11px] text-(--text-muted) uppercase block mb-1">Impact Summary</span>
-                    <p className="text-xs text-(--text-secondary)">{selectedIncidentRecord.incident_impact}</p>
-                  </div>
-                )}
               </div>
             )}
           </div>
         )}
       </div>
 
-      {/* Child Analysis Tabs Section */}
       <div className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) border border-(--border-main) rounded-xl p-3 shadow-xs overflow-hidden space-y-2">
         <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-b border-(--border-main) pb-2">
           <div>
@@ -1203,36 +1180,25 @@ export function IncidentReport() {
                 </span>
               )}
             </h2>
-            <p className="text-xs sm:text-sm text-(--text-muted)">
-              {selectedIncidentRecord 
-                ? `List down incident causes.`
-                : 'Select an incident report using search above to view and assign root cause items.'}
-            </p>
           </div>
 
           <button
             disabled={!selectedIncidentId || isLockedRecord}
             onClick={handleOpenAddChild}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs shrink-0 ${
-              !selectedIncidentId || isLockedRecord 
-                ? 'bg-(--accent-subtle) text-(--text-muted) opacity-50 cursor-not-allowed' 
-                : 'bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) cursor-pointer'
+              !selectedIncidentId || isLockedRecord ? 'bg-(--accent-subtle) text-(--text-muted) opacity-50 cursor-not-allowed' : 'bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) cursor-pointer'
             }`}
-            title={isLockedRecord ? 'Analysis items cannot be added because the incident is Completed or Cancelled' : 'Add Analysis Item'}
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Analysis Item</span>
           </button>
         </div>
 
-        {/* 4 Child Breakdown Tabs */}
         <div className="shrink-0 flex gap-2 border-b border-(--border-main) pb-2 overflow-x-auto">
           <button
             onClick={() => setActiveAnalysisTab('conditions')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap border ${
-              activeAnalysisTab === 'conditions'
-                ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-                : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
+              activeAnalysisTab === 'conditions' ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
             }`}
           >
             <AlertTriangle className="w-3.5 h-3.5" />
@@ -1242,9 +1208,7 @@ export function IncidentReport() {
           <button
             onClick={() => setActiveAnalysisTab('acts')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap border ${
-              activeAnalysisTab === 'acts'
-                ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-                : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
+              activeAnalysisTab === 'acts' ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
             }`}
           >
             <ShieldAlert className="w-3.5 h-3.5" />
@@ -1254,9 +1218,7 @@ export function IncidentReport() {
           <button
             onClick={() => setActiveAnalysisTab('personal')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap border ${
-              activeAnalysisTab === 'personal'
-                ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-                : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
+              activeAnalysisTab === 'personal' ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
             }`}
           >
             <UserCheck className="w-3.5 h-3.5" />
@@ -1266,9 +1228,7 @@ export function IncidentReport() {
           <button
             onClick={() => setActiveAnalysisTab('workrelated')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap border ${
-              activeAnalysisTab === 'workrelated'
-                ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-                : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
+              activeAnalysisTab === 'workrelated' ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
             }`}
           >
             <Briefcase className="w-3.5 h-3.5" />
@@ -1276,7 +1236,6 @@ export function IncidentReport() {
           </button>
         </div>
 
-        {/* Scrollable Container for Child Tables */}
         <div className="flex-1 min-h-0 overflow-y-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
           {loadingChild ? (
             <div className="p-8 text-center text-(--text-muted) flex items-center justify-center gap-2 text-xs">
@@ -1289,47 +1248,30 @@ export function IncidentReport() {
             </div>
           ) : (
             <>
-              {/* TAB 1: UNSAFE CONDITIONS */}
               {activeAnalysisTab === 'conditions' && (
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-(--accent-subtle) text-(--text-muted) uppercase border-b border-(--border-main) sticky top-0 z-10 shadow-xs">
-                      <th className="py-2 px-3 w-32">Condition Code</th>
-                      <th className="py-2 px-3">Category</th>
+                      <th className="py-2 px-3 w-32">Detail Code</th>
                       <th className="py-2 px-3">Condition Detail</th>
+                      <th className="py-2 px-3">RPN</th>
                       <th className="py-2 px-3">Investigation Remarks</th>
                       <th className="py-2 px-3 text-right w-24">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
                     {incidentConditions.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="py-6 text-center text-(--text-muted) text-xs">No unsafe conditions recorded for this incident.</td>
-                      </tr>
+                      <tr><td colSpan={5} className="py-6 text-center text-(--text-muted) text-xs">No unsafe conditions recorded.</td></tr>
                     ) : (
                       incidentConditions.map((row) => (
                         <tr key={row.incident_conditions_id} className="hover:bg-(--accent-subtle) transition-colors">
-                          <td className="py-2 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">{row.detail_code || row.code || '—'}</td>
-                          <td className="py-2 px-3 text-(--text-primary)">{row.description || '—'}</td>
-                          <td className="py-2 px-3 text-(--text-secondary) font-medium">{row.detail_description || '—'}</td>
+                          <td className="py-2 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">{row.detail_code || '—'}</td>
+                          <td className="py-2 px-3 text-(--text-primary) font-medium">{row.detail_description || '—'}</td>
+                          <td className="py-2 px-3 font-mono font-bold">{row.computed_rpn ?? '—'}</td>
                           <td className="py-2 px-3 text-(--text-muted)">{row.remarks || '—'}</td>
                           <td className="py-2 px-3 text-right space-x-2 shrink-0">
-                            <button
-                              disabled={isLockedRecord}
-                              onClick={() => handleOpenEditChild(row.incident_conditions_id, row.condition_id, row.remarks, row.detail_id)}
-                              className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-(--text-primary) hover:bg-(--accent-subtle) cursor-pointer'}`}
-                              title={isLockedRecord ? 'Locked' : 'Edit'}
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              disabled={isLockedRecord}
-                              onClick={() => handleDeleteChild(row.incident_conditions_id)}
-                              className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:bg-(--accent-subtle) cursor-pointer'}`}
-                              title={isLockedRecord ? 'Locked' : 'Delete'}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <button disabled={isLockedRecord} onClick={() => handleOpenEditChild(row.incident_conditions_id, row.condition_id, row.remarks, row.conditionsfmea_id)} className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-(--text-primary) hover:bg-(--accent-subtle) cursor-pointer'}`}><Edit2 className="w-3.5 h-3.5" /></button>
+                            <button disabled={isLockedRecord} onClick={() => handleDeleteChild(row.incident_conditions_id)} className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:bg-(--accent-subtle) cursor-pointer'}`}><Trash2 className="w-3.5 h-3.5" /></button>
                           </td>
                         </tr>
                       ))
@@ -1338,47 +1280,30 @@ export function IncidentReport() {
                 </table>
               )}
 
-              {/* TAB 2: UNSAFE ACTS */}
               {activeAnalysisTab === 'acts' && (
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-(--accent-subtle) text-(--text-muted) uppercase border-b border-(--border-main) sticky top-0 z-10 shadow-xs">
-                      <th className="py-2 px-3 w-32">Act Code</th>
-                      <th className="py-2 px-3">Category</th>
+                      <th className="py-2 px-3 w-32">Detail Code</th>
                       <th className="py-2 px-3">Act Detail</th>
+                      <th className="py-2 px-3">RPN</th>
                       <th className="py-2 px-3">Investigation Remarks</th>
                       <th className="py-2 px-3 text-right w-24">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
                     {incidentActs.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="py-6 text-center text-(--text-muted) text-xs">No unsafe acts recorded for this incident.</td>
-                      </tr>
+                      <tr><td colSpan={5} className="py-6 text-center text-(--text-muted) text-xs">No unsafe acts recorded.</td></tr>
                     ) : (
                       incidentActs.map((row) => (
                         <tr key={row.incident_act_id} className="hover:bg-(--accent-subtle) transition-colors">
-                          <td className="py-2 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">{row.detail_code || row.code || '—'}</td>
-                          <td className="py-2 px-3 text-(--text-primary)">{row.description || '—'}</td>
-                          <td className="py-2 px-3 text-(--text-secondary) font-medium">{row.detail_description || '—'}</td>
+                          <td className="py-2 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">{row.detail_code || '—'}</td>
+                          <td className="py-2 px-3 text-(--text-primary) font-medium">{row.detail_description || '—'}</td>
+                          <td className="py-2 px-3 font-mono font-bold">{row.computed_rpn ?? '—'}</td>
                           <td className="py-2 px-3 text-(--text-muted)">{row.remarks || '—'}</td>
                           <td className="py-2 px-3 text-right space-x-2 shrink-0">
-                            <button
-                              disabled={isLockedRecord}
-                              onClick={() => handleOpenEditChild(row.incident_act_id, row.act_id, row.remarks, row.detail_id)}
-                              className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-(--text-primary) hover:bg-(--accent-subtle) cursor-pointer'}`}
-                              title={isLockedRecord ? 'Locked' : 'Edit'}
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              disabled={isLockedRecord}
-                              onClick={() => handleDeleteChild(row.incident_act_id)}
-                              className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:bg-(--accent-subtle) cursor-pointer'}`}
-                              title={isLockedRecord ? 'Locked' : 'Delete'}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <button disabled={isLockedRecord} onClick={() => handleOpenEditChild(row.incident_act_id, row.act_id, row.remarks, row.actfmea_id)} className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-(--text-primary) hover:bg-(--accent-subtle) cursor-pointer'}`}><Edit2 className="w-3.5 h-3.5" /></button>
+                            <button disabled={isLockedRecord} onClick={() => handleDeleteChild(row.incident_act_id)} className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:bg-(--accent-subtle) cursor-pointer'}`}><Trash2 className="w-3.5 h-3.5" /></button>
                           </td>
                         </tr>
                       ))
@@ -1387,47 +1312,30 @@ export function IncidentReport() {
                 </table>
               )}
 
-              {/* TAB 3: PERSONAL FACTORS */}
               {activeAnalysisTab === 'personal' && (
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-(--accent-subtle) text-(--text-muted) uppercase border-b border-(--border-main) sticky top-0 z-10 shadow-xs">
-                      <th className="py-2 px-3 w-32">Factor Code</th>
-                      <th className="py-2 px-3">Category</th>
+                      <th className="py-2 px-3 w-32">Detail Code</th>
                       <th className="py-2 px-3">Factor Detail</th>
+                      <th className="py-2 px-3">RPN</th>
                       <th className="py-2 px-3">Investigation Remarks</th>
                       <th className="py-2 px-3 text-right w-24">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
                     {incidentPersonal.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="py-6 text-center text-(--text-muted) text-xs">No personal factors recorded for this incident.</td>
-                      </tr>
+                      <tr><td colSpan={5} className="py-6 text-center text-(--text-muted) text-xs">No personal factors recorded.</td></tr>
                     ) : (
                       incidentPersonal.map((row) => (
                         <tr key={row.incident_personal_id} className="hover:bg-(--accent-subtle) transition-colors">
-                          <td className="py-2 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">{row.detail_code || row.code || '—'}</td>
-                          <td className="py-2 px-3 text-(--text-primary)">{row.description || '—'}</td>
-                          <td className="py-2 px-3 text-(--text-secondary) font-medium">{row.detail_description || '—'}</td>
+                          <td className="py-2 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">{row.detail_code || '—'}</td>
+                          <td className="py-2 px-3 text-(--text-primary) font-medium">{row.detail_description || '—'}</td>
+                          <td className="py-2 px-3 font-mono font-bold">{row.computed_rpn ?? '—'}</td>
                           <td className="py-2 px-3 text-(--text-muted)">{row.remarks || '—'}</td>
                           <td className="py-2 px-3 text-right space-x-2 shrink-0">
-                            <button
-                              disabled={isLockedRecord}
-                              onClick={() => handleOpenEditChild(row.incident_personal_id, row.factor_id, row.remarks, row.detail_id)}
-                              className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-(--text-primary) hover:bg-(--accent-subtle) cursor-pointer'}`}
-                              title={isLockedRecord ? 'Locked' : 'Edit'}
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              disabled={isLockedRecord}
-                              onClick={() => handleDeleteChild(row.incident_personal_id)}
-                              className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:bg-(--accent-subtle) cursor-pointer'}`}
-                              title={isLockedRecord ? 'Locked' : 'Delete'}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <button disabled={isLockedRecord} onClick={() => handleOpenEditChild(row.incident_personal_id, row.factor_id, row.remarks, row.factors_fmea_id)} className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-(--text-primary) hover:bg-(--accent-subtle) cursor-pointer'}`}><Edit2 className="w-3.5 h-3.5" /></button>
+                            <button disabled={isLockedRecord} onClick={() => handleDeleteChild(row.incident_personal_id)} className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:bg-(--accent-subtle) cursor-pointer'}`}><Trash2 className="w-3.5 h-3.5" /></button>
                           </td>
                         </tr>
                       ))
@@ -1436,47 +1344,30 @@ export function IncidentReport() {
                 </table>
               )}
 
-              {/* TAB 4: WORK RELATED CAUSES */}
               {activeAnalysisTab === 'workrelated' && (
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-(--accent-subtle) text-(--text-muted) uppercase border-b border-(--border-main) sticky top-0 z-10 shadow-xs">
-                      <th className="py-2 px-3 w-32">Cause Code</th>
-                      <th className="py-2 px-3">Category</th>
+                      <th className="py-2 px-3 w-32">Detail Code</th>
                       <th className="py-2 px-3">Cause Detail</th>
+                      <th className="py-2 px-3">RPN</th>
                       <th className="py-2 px-3">Investigation Remarks</th>
                       <th className="py-2 px-3 text-right w-24">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
                     {incidentWorkRelated.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="py-6 text-center text-(--text-muted) text-xs">No work-related causes recorded for this incident.</td>
-                      </tr>
+                      <tr><td colSpan={5} className="py-6 text-center text-(--text-muted) text-xs">No work-related causes recorded.</td></tr>
                     ) : (
                       incidentWorkRelated.map((row) => (
                         <tr key={row.incident_workrelated_id} className="hover:bg-(--accent-subtle) transition-colors">
-                          <td className="py-2 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">{row.detail_code || row.code || '—'}</td>
-                          <td className="py-2 px-3 text-(--text-primary)">{row.description || '—'}</td>
-                          <td className="py-2 px-3 text-(--text-secondary) font-medium">{row.detail_description || '—'}</td>
+                          <td className="py-2 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">{row.detail_code || '—'}</td>
+                          <td className="py-2 px-3 text-(--text-primary) font-medium">{row.detail_description || '—'}</td>
+                          <td className="py-2 px-3 font-mono font-bold">{row.computed_rpn ?? '—'}</td>
                           <td className="py-2 px-3 text-(--text-muted)">{row.remarks || '—'}</td>
                           <td className="py-2 px-3 text-right space-x-2 shrink-0">
-                            <button
-                              disabled={isLockedRecord}
-                              onClick={() => handleOpenEditChild(row.incident_workrelated_id, row.cause_id, row.remarks, row.detail_id)}
-                              className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-(--text-primary) hover:bg-(--accent-subtle) cursor-pointer'}`}
-                              title={isLockedRecord ? 'Locked' : 'Edit'}
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              disabled={isLockedRecord}
-                              onClick={() => handleDeleteChild(row.incident_workrelated_id)}
-                              className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:bg-(--accent-subtle) cursor-pointer'}`}
-                              title={isLockedRecord ? 'Locked' : 'Delete'}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <button disabled={isLockedRecord} onClick={() => handleOpenEditChild(row.incident_workrelated_id, row.cause_id, row.remarks, row.cause_fmea_id)} className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-(--text-primary) hover:bg-(--accent-subtle) cursor-pointer'}`}><Edit2 className="w-3.5 h-3.5" /></button>
+                            <button disabled={isLockedRecord} onClick={() => handleDeleteChild(row.incident_workrelated_id)} className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:bg-(--accent-subtle) cursor-pointer'}`}><Trash2 className="w-3.5 h-3.5" /></button>
                           </td>
                         </tr>
                       ))
@@ -1489,7 +1380,6 @@ export function IncidentReport() {
         </div>
       </div>
 
-      {/* INCIDENT REPORT SEARCH MODAL */}
       {isIncidentSearchOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-60">
           <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
@@ -1498,151 +1388,67 @@ export function IncidentReport() {
                 <Search className="w-4 h-4 text-(--text-primary)" />
                 Search & Select Incident Report
               </h3>
-              <button onClick={() => setIsIncidentSearchOpen(false)} className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer">
-                <X className="w-4 h-4" />
-              </button>
+              <button onClick={() => setIsIncidentSearchOpen(false)} className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer"><X className="w-4 h-4" /></button>
             </div>
-
             <div className="p-3 border-b border-(--border-main) bg-(--bg-surface) shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
-                <input
-                  type="text"
-                  autoFocus
-                  placeholder="Filter ref #, plate, reporter name, or description..."
-                  value={incidentSearchQuery}
-                  onChange={(e) => setIncidentSearchQuery(e.target.value)}
-                  className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
-                />
+                <input type="text" autoFocus placeholder="Filter ref #, plate, reporter name..." value={incidentSearchQuery} onChange={(e) => setIncidentSearchQuery(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)" />
               </div>
             </div>
-
             <div className="p-4 overflow-y-auto flex-1 space-y-2">
               {filteredIncidents.length === 0 ? (
-                <div className="text-center text-(--text-muted) text-xs py-8">
-                  No incident reports match your query.
-                </div>
+                <div className="text-center text-(--text-muted) text-xs py-8">No incident reports match your query.</div>
               ) : (
                 filteredIncidents.map(inc => (
-                  <div
-                    key={inc.incident_id}
-                    onClick={() => {
-                      setSelectedIncidentId(inc.incident_id);
-                      setIsIncidentSearchOpen(false);
-                    }}
-                    className={`p-3 border rounded-xl cursor-pointer transition-all flex items-center justify-between group ${
-                      inc.incident_id === selectedIncidentId
-                        ? 'bg-(--accent-subtle) border-(--text-primary) text-(--text-primary)'
-                        : 'bg-(--bg-elevated) hover:bg-(--accent-subtle) border-(--border-main)'
-                    }`}
-                  >
+                  <div key={inc.incident_id} onClick={() => { setSelectedIncidentId(inc.incident_id); setIsIncidentSearchOpen(false); }} className={`p-3 border rounded-xl cursor-pointer transition-all flex items-center justify-between group ${inc.incident_id === selectedIncidentId ? 'bg-(--accent-subtle) border-(--text-primary) text-(--text-primary)' : 'bg-(--bg-elevated) hover:bg-(--accent-subtle) border-(--border-main)'}`}>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-bold text-(--text-primary) text-xs">{inc.incident_refno}</span>
                         <span className="text-[11px] text-(--text-muted)">({inc.incident_date})</span>
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-(--accent-subtle) text-(--text-secondary)">
-                          {inc.incident_severity}
-                        </span>
-                        {inc.status_name && (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-(--accent-subtle) text-(--text-primary) border border-(--border-main)">
-                            {inc.status_name}
-                          </span>
-                        )}
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-(--accent-subtle) text-(--text-secondary)">{inc.incident_severity}</span>
                       </div>
-                      <div className="text-xs text-(--text-secondary)">
-                        Equipment: <strong>{inc.vehicle_plate}</strong> | Reported by: {inc.reported_by || '—'}
-                      </div>
-                      <div className="text-[11px] text-(--text-muted) truncate max-w-lg">
-                        {inc.incident_description}
-                      </div>
+                      <div className="text-xs text-(--text-secondary)">Equipment: <strong>{inc.vehicle_plate}</strong> | Reported by: {inc.reported_by || '—'}</div>
                     </div>
                     <span className="text-xs text-(--text-primary) group-hover:underline font-semibold shrink-0">Select</span>
                   </div>
                 ))
               )}
             </div>
-
             <div className="p-3 border-t border-(--border-main) bg-(--accent-subtle) text-right shrink-0">
-              <button
-                onClick={() => setIsIncidentSearchOpen(false)}
-                className="px-4 py-1.5 bg-(--accent-subtle) text-(--text-primary) hover:opacity-80 rounded-lg text-xs font-semibold cursor-pointer"
-              >
-                Close
-              </button>
+              <button onClick={() => setIsIncidentSearchOpen(false)} className="px-4 py-1.5 bg-(--accent-subtle) text-(--text-primary) rounded-lg text-xs font-semibold cursor-pointer">Close</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MASTER FORM MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
             <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 bg-(--accent-subtle) shrink-0">
               <h3 className="text-lg font-bold text-(--text-primary) flex items-center gap-2">
-                <div className="p-2 bg-black text-white rounded-xl shadow-xs">
-                  <AlertTriangle className="w-4 h-4" />
-                </div>
+                <AlertTriangle className="w-4 h-4" />
                 {editingId ? 'Edit Incident Report' : 'Create Incident Report'}
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer">
-                <X className="w-5 h-5" />
-              </button>
+              <button onClick={() => setIsModalOpen(false)} className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer"><X className="w-5 h-5" /></button>
             </div>
-
             <form onSubmit={handleSubmitMaster} className="flex flex-col flex-1 overflow-hidden">
               <div className="p-6 overflow-y-auto flex-1 space-y-4">
-                {/* Equipment Selector Section */}
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-(--text-muted) uppercase tracking-wider">
-                    Selected Equipment <span className="text-red-500">*</span>
-                  </label>
-                  
+                  <label className="text-xs font-semibold text-(--text-muted) uppercase tracking-wider">Selected Equipment <span className="text-red-500">*</span></label>
                   {selectedEquipment ? (
                     <div className="flex items-center justify-between bg-(--bg-surface) border border-(--border-main) p-3.5 rounded-xl">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full text-xs">
-                        <div>
-                          <span className="text-[11px] text-(--text-muted) uppercase block">Incident ID </span>
-                          <div className="font-bold text-(--text-primary) text-sm font-mono">{selectedEquipment.plate_no}</div>
-                        </div>
-                        <div>
-                          <span className="text-[11px] text-(--text-muted) uppercase block">Current Reading</span>
-                          <div className="font-semibold text-(--text-primary)">{selectedEquipment.service_rdg ?? '0'}</div>
-                        </div>
-                        <div>
-                          <span className="text-[11px] text-(--text-muted) uppercase block">Make / Model</span>
-                          <div className="font-semibold text-(--text-primary)">{selectedEquipment.make_name || 'N/A'} {selectedEquipment.model_name ? `/ ${selectedEquipment.model_name}` : ''}</div>
-                        </div>
-                        <div>
-                          <span className="text-[11px] text-(--text-muted) uppercase block">Type</span>
-                          <div className="font-semibold text-(--text-primary)">{selectedEquipment.type_description || 'N/A'}</div>
-                        </div>
+                        <div><span className="text-[11px] text-(--text-muted) uppercase block">Plate No</span><div className="font-bold text-(--text-primary) text-sm font-mono">{selectedEquipment.plate_no}</div></div>
+                        <div><span className="text-[11px] text-(--text-muted) uppercase block">Current Reading</span><div className="font-semibold text-(--text-primary)">{selectedEquipment.service_rdg ?? '0'}</div></div>
+                        <div><span className="text-[11px] text-(--text-muted) uppercase block">Make / Model</span><div className="font-semibold text-(--text-primary)">{selectedEquipment.make_name || 'N/A'}</div></div>
+                        <div><span className="text-[11px] text-(--text-muted) uppercase block">Type</span><div className="font-semibold text-(--text-primary)">{selectedEquipment.type_description || 'N/A'}</div></div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedEquipment(null);
-                          setFormData(prev => ({ ...prev, vehicle_id: '', vehicle_plate: '' }));
-                        }}
-                        className="text-(--text-muted) hover:text-red-500 p-2 transition-colors cursor-pointer shrink-0"
-                        title="Change equipment"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
+                      <button type="button" onClick={() => { setSelectedEquipment(null); setFormData(prev => ({ ...prev, vehicle_id: '', vehicle_plate: '' })); }} className="text-(--text-muted) hover:text-red-500 p-2 cursor-pointer shrink-0"><X className="w-5 h-5" /></button>
                     </div>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowEquipmentPicker(true);
-                        fetchEquipmentList();
-                      }}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) hover:border-(--text-primary) text-(--text-secondary) px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Search className="w-4 h-4 text-(--text-primary)" />
-                        {equipmentList.length > 0 ? `Click here to select an equipment (${equipmentList.length} loaded)...` : 'Click here to select an equipment...'}
-                      </span>
+                    <button type="button" onClick={() => { setShowEquipmentPicker(true); fetchEquipmentList(); }} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-secondary) px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-between cursor-pointer">
+                      <span className="flex items-center gap-2"><Search className="w-4 h-4 text-(--text-primary)" /> Click here to select an equipment...</span>
                       <span className="text-xs bg-(--accent-subtle) text-(--text-primary) px-2 py-0.5 rounded font-medium">Browse</span>
                     </button>
                   )}
@@ -1650,372 +1456,116 @@ export function IncidentReport() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
-                      Incident Ref # <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.incident_refno}
-                      onChange={(e) => setFormData({ ...formData, incident_refno: e.target.value })}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-(--text-primary)"
-                    />
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Incident Ref # <span className="text-red-500">*</span></label>
+                    <input type="text" required value={formData.incident_refno} onChange={(e) => setFormData({ ...formData, incident_refno: e.target.value })} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-(--text-primary)" />
                   </div>
-
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
-                      Incident Date <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
-                      <input
-                        type="date"
-                        required
-                        value={formData.incident_date}
-                        onChange={(e) => setFormData({ ...formData, incident_date: e.target.value })}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-9 pr-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                      />
-                    </div>
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Incident Date <span className="text-red-500">*</span></label>
+                    <input type="date" required value={formData.incident_date} onChange={(e) => setFormData({ ...formData, incident_date: e.target.value })} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
-                      Incident Severity Level
-                    </label>
-                    <select
-                      value={formData.incident_severity}
-                      onChange={(e) => setFormData({ ...formData, incident_severity: e.target.value as IncidentRecord['incident_severity'] })}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                    >
-                      <option value="Low">Low</option>
-                      <option value="Medium">Medium</option>
-                      <option value="High">High</option>
-                      <option value="Critical">Critical</option>
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Severity Level</label>
+                    <select value={formData.incident_severity} onChange={(e) => setFormData({ ...formData, incident_severity: e.target.value as IncidentRecord['incident_severity'] })} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs">
+                      <option value="Low">Low</option><option value="Medium">Medium</option><option value="High">High</option><option value="Critical">Critical</option>
                     </select>
                   </div>
-
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
-                      Estimated Loss (₱)
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2 text-xs font-mono font-bold text-(--text-muted)">₱</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={formData.incident_loss}
-                        onChange={(e) => setFormData({ ...formData, incident_loss: parseFloat(e.target.value) || 0 })}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-2 text-xs font-mono focus:outline-none focus:border-(--text-primary)"
-                      />
-                    </div>
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Estimated Loss (₱)</label>
+                    <input type="number" step="0.01" value={formData.incident_loss} onChange={(e) => setFormData({ ...formData, incident_loss: parseFloat(e.target.value) || 0 })} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs font-mono" />
                   </div>
-
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
-                      Status
-                    </label>
-                    <select
-                      value={formData.status_id}
-                      onChange={(e) => handleStatusChange(e.target.value)}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                    >
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Status</label>
+                    <select value={formData.status_id} onChange={(e) => handleStatusChange(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs">
                       <option value="">Select Status...</option>
-                      {statuses.map(st => (
-                        <option key={st.status_id} value={st.status_id}>{st.status_name}</option>
-                      ))}
+                      {statuses.map(st => (<option key={st.status_id} value={st.status_id}>{st.status_name}</option>))}
                     </select>
                   </div>
                 </div>
 
-                {/* Read Only Completed Date Field */}
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
-                    Completed Date (Read-only)
-                  </label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
-                    <input
-                      type="date"
-                      readOnly
-                      value={formData.reportcompleted_date}
-                      placeholder="Automatically set when status is Completed"
-                      className="w-full bg-(--bg-surface) border border-(--border-main) rounded-lg pl-9 pr-3.5 py-2 text-xs font-mono text-(--text-muted) cursor-not-allowed focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
-                    Incident Description
-                  </label>
-                  <textarea
-                    rows={3}
-                    required
-                    value={formData.incident_description}
-                    onChange={(e) => setFormData({ ...formData, incident_description: e.target.value })}
-                    placeholder="Describe what occurred during the equipment incident..."
-                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
-                    Incident Impact Summary
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.incident_impact}
-                    onChange={(e) => setFormData({ ...formData, incident_impact: e.target.value })}
-                    placeholder="e.g. Downtime 4 hrs, minor bumper damage"
-                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                  />
+                  <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Incident Description</label>
+                  <textarea rows={3} required value={formData.incident_description} onChange={(e) => setFormData({ ...formData, incident_description: e.target.value })} placeholder="Describe what occurred..." className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3.5 py-2 text-xs" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  {/* Reported By Employee Picker */}
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
-                      Reported By
-                    </label>
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Reported By</label>
                     <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <User className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
-                        <input
-                          type="text"
-                          value={formData.reported_by}
-                          onChange={(e) => setFormData({ ...formData, reported_by: e.target.value })}
-                          placeholder="Select or enter reporter name..."
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEmployeeModal('reported_by')}
-                        className="bg-(--accent-subtle) hover:opacity-80 text-(--text-primary) border border-(--border-main) px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
-                      >
-                        <Search className="w-3.5 h-3.5" />
-                      </button>
+                      <input type="text" value={formData.reported_by} onChange={(e) => setFormData({ ...formData, reported_by: e.target.value })} placeholder="Reporter name..." className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs" />
+                      <button type="button" onClick={() => handleOpenEmployeeModal('reported_by')} className="bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) px-3 py-2 rounded-lg text-xs font-semibold"><Search className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
-
-                  {/* Validated By Employee Picker */}
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">
-                      Validated By
-                    </label>
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Validated By</label>
                     <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <UserCheck2 className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
-                        <input
-                          type="text"
-                          value={formData.validated_by}
-                          onChange={(e) => setFormData({ ...formData, validated_by: e.target.value })}
-                          placeholder="Select or enter validator name..."
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEmployeeModal('validated_by')}
-                        className="bg-(--accent-subtle) hover:opacity-80 text-(--text-primary) border border-(--border-main) px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
-                      >
-                        <Search className="w-3.5 h-3.5" />
-                      </button>
+                      <input type="text" value={formData.validated_by} onChange={(e) => setFormData({ ...formData, validated_by: e.target.value })} placeholder="Validator name..." className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs" />
+                      <button type="button" onClick={() => handleOpenEmployeeModal('validated_by')} className="bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) px-3 py-2 rounded-lg text-xs font-semibold"><Search className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
                 </div>
               </div>
-
-              <div className="flex justify-end gap-3 px-6 py-4 border-t border-(--border-main) shrink-0 bg-(--accent-subtle)">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-(--accent-subtle) text-(--text-primary) hover:opacity-80 rounded-lg text-xs font-semibold cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold cursor-pointer shadow-xs"
-                >
-                  Save Incident Report
-                </button>
+              <div className="flex justify-end gap-3 px-6 py-4 border-t border-(--border-main) bg-(--accent-subtle)">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-(--accent-subtle) text-(--text-primary) rounded-lg text-xs font-semibold">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold">Save Incident Report</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* EQUIPMENT PICKER MODAL */}
       {showEquipmentPicker && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 p-4">
           <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-(--border-main) bg-(--accent-subtle) shrink-0">
-              <h3 className="text-lg font-bold text-(--text-primary) flex items-center gap-2">
-                <Car className="w-4 h-4 text-(--text-primary)" />
-                Select Equipment
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowEquipmentPicker(false)}
-                className="text-(--text-muted) hover:text-(--text-primary) p-1 rounded-lg hover:bg-(--accent-subtle) cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+            <div className="flex justify-between items-center px-6 py-4 border-b border-(--border-main) bg-(--accent-subtle)">
+              <h3 className="text-lg font-bold text-(--text-primary)">Select Equipment</h3>
+              <button type="button" onClick={() => setShowEquipmentPicker(false)} className="text-(--text-muted)"><X className="w-5 h-5" /></button>
             </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                fetchEquipmentList(equipmentSearchQuery);
-              }}
-              className="p-3 border-b border-(--border-main) bg-(--bg-surface) flex gap-2 shrink-0"
-            >
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-2.5 w-4 h-4 text-(--text-muted)" />
-                <input
-                  type="text"
-                  placeholder="Filter by Equipment ID..."
-                  value={equipmentSearchQuery}
-                  onChange={(e) => setEquipmentSearchQuery(e.target.value)}
-                  className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-9 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
-                />
-              </div>
-              <button
-                type="submit"
-                className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
-              >
-                Search
-              </button>
+            <form onSubmit={(e) => { e.preventDefault(); fetchEquipmentList(equipmentSearchQuery); }} className="p-3 border-b border-(--border-main) bg-(--bg-surface) flex gap-2">
+              <input type="text" placeholder="Filter by Equipment ID..." value={equipmentSearchQuery} onChange={(e) => setEquipmentSearchQuery(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs" />
+              <button type="submit" className="bg-(--btn-primary-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-medium">Search</button>
             </form>
-
             <div className="p-4 overflow-y-auto flex-1 space-y-2">
               {loadingEquipment ? (
-                <div className="py-12 text-center text-(--text-muted) flex items-center justify-center gap-2 text-xs">
-                  <Loader2 className="w-5 h-5 animate-spin text-(--text-primary)" />
-                  <span>Loading equipment records...</span>
-                </div>
-              ) : equipmentList.length === 0 ? (
-                <div className="py-12 text-center text-(--text-muted) text-xs">
-                  No equipment records found.
-                </div>
-              ) : (
-                equipmentList.map((eq, index) => {
-                  const vehId = String(eq.vehicle_id || eq.equipment_id || eq.id || '');
-                  return (
-                    <div
-                      key={vehId || index}
-                      onClick={() => {
-                        setSelectedEquipment(eq);
-                        setFormData(prev => ({
-                          ...prev,
-                          vehicle_id: vehId,
-                          vehicle_plate: eq.plate_no
-                        }));
-                        setShowEquipmentPicker(false);
-                      }}
-                      className="flex items-center justify-between bg-(--bg-elevated) hover:bg-(--accent-subtle) border border-(--border-main) p-2.5 rounded-lg transition-colors cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-black text-white rounded-lg transition-colors">
-                          <Car className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="font-bold text-(--text-primary) text-xs font-mono">{eq.plate_no}</div>
-                          <div className="text-[11px] text-(--text-muted)">
-                            {eq.make_name || 'N/A'} {eq.model_name ? `/ ${eq.model_name}` : ''} ({eq.type_description || 'N/A'})
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[10px] text-(--text-muted) uppercase block">Service Rdg</span>
-                        <div className="text-xs font-semibold text-(--text-secondary)">{eq.service_rdg ?? '0'}</div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+                <div className="py-12 text-center text-(--text-muted)"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>
+              ) : equipmentList.map((eq, index) => {
+                const vehId = String(eq.vehicle_id || eq.equipment_id || eq.id || '');
+                return (
+                  <div key={vehId || index} onClick={() => { setSelectedEquipment(eq); setFormData(prev => ({ ...prev, vehicle_id: vehId, vehicle_plate: eq.plate_no })); setShowEquipmentPicker(false); }} className="flex items-center justify-between bg-(--bg-elevated) hover:bg-(--accent-subtle) border border-(--border-main) p-2.5 rounded-lg cursor-pointer">
+                    <div><div className="font-bold text-(--text-primary) text-xs font-mono">{eq.plate_no}</div><div className="text-[11px] text-(--text-muted)">{eq.make_name || 'N/A'}</div></div>
+                    <div className="text-xs font-semibold text-(--text-secondary)">Rdg: {eq.service_rdg ?? '0'}</div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
       )}
 
-      {/* EMPLOYEE SEARCH MODAL */}
       {isEmployeeModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-60">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-60">
           <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
-            <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 bg-(--accent-subtle) shrink-0">
-              <h3 className="text-lg font-bold text-(--text-primary) flex items-center gap-2">
-                <User className="w-4 h-4 text-(--text-primary)" />
-                Select Employee ({employeeModalTarget === 'reported_by' ? 'Reported By' : 'Validated By'})
-              </h3>
-              <button onClick={() => setIsEmployeeModalOpen(false)} className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer">
-                <X className="w-4 h-4" />
-              </button>
+            <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 bg-(--accent-subtle)">
+              <h3 className="text-lg font-bold text-(--text-primary)">Select Employee</h3>
+              <button onClick={() => setIsEmployeeModalOpen(false)} className="text-(--text-muted)"><X className="w-4 h-4" /></button>
             </div>
-
-            <div className="p-3 border-b border-(--border-main) bg-(--bg-surface) shrink-0">
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
-                <input
-                  type="text"
-                  autoFocus
-                  placeholder="Search employee name, ID, or department..."
-                  value={employeeSearchQuery}
-                  onChange={(e) => setEmployeeSearchQuery(e.target.value)}
-                  className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
-                />
-              </div>
+            <div className="p-3 border-b border-(--border-main) bg-(--bg-surface)">
+              <input type="text" autoFocus placeholder="Search employee name..." value={employeeSearchQuery} onChange={(e) => setEmployeeSearchQuery(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs" />
             </div>
-
-            <div className="p-4 overflow-y-auto flex-1">
-              {filteredEmployees.length === 0 ? (
-                <div className="text-center text-(--text-muted) text-xs py-8">
-                  No employee records found matching your query.
+            <div className="p-4 overflow-y-auto flex-1 space-y-2">
+              {filteredEmployees.map(emp => (
+                <div key={emp.employee_id} onClick={() => handleSelectEmployee(emp)} className="p-3 bg-(--bg-elevated) hover:bg-(--accent-subtle) border border-(--border-main) rounded-xl cursor-pointer flex justify-between items-center">
+                  <div><div className="text-xs font-bold text-(--text-primary)">{emp.full_name}</div><div className="text-[11px] text-(--text-muted)">{emp.position}</div></div>
+                  <span className="text-xs font-semibold text-(--text-primary)">Select</span>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-2">
-                  {filteredEmployees.map(emp => (
-                    <div
-                      key={emp.employee_id}
-                      onClick={() => handleSelectEmployee(emp)}
-                      className="p-3 bg-(--bg-elevated) hover:bg-(--accent-subtle) border border-(--border-main) rounded-xl cursor-pointer transition-all flex items-center justify-between group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-black text-white rounded-lg">
-                          <User className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-(--text-primary)">{emp.full_name}</div>
-                          <div className="text-[11px] text-(--text-muted)">
-                            {emp.employee_no && <span className="font-mono text-(--text-primary) mr-2">{emp.employee_no}</span>}
-                            {emp.position && <span>{emp.position}</span>}
-                            {emp.department && <span className="text-(--text-muted)"> ({emp.department})</span>}
-                          </div>
-                        </div>
-                      </div>
-                      <span className="text-xs text-(--text-primary) group-hover:underline font-semibold">Select</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="p-3 border-t border-(--border-main) bg-(--accent-subtle) text-right shrink-0">
-              <button
-                onClick={() => setIsEmployeeModalOpen(false)}
-                className="px-4 py-1.5 bg-(--accent-subtle) text-(--text-primary) hover:opacity-80 rounded-lg text-xs font-semibold cursor-pointer"
-              >
-                Close
-              </button>
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* CHILD ANALYSIS FORM MODAL */}
       {isChildModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 z-50">
           <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
@@ -2035,18 +1585,10 @@ export function IncidentReport() {
             <form onSubmit={handleSubmitChild} className="flex flex-col flex-1 overflow-hidden">
               <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-3">
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
-                    Incident Ref
-                  </label>
-                  <input
-                    type="text"
-                    readOnly
-                    value={`${selectedIncidentRecord?.incident_refno} (${selectedIncidentRecord?.vehicle_plate})`}
-                    className="w-full bg-(--bg-surface) border border-(--border-main) rounded-lg px-3 py-1.5 text-xs text-(--text-muted) cursor-not-allowed focus:outline-none"
-                  />
+                  <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">Incident Ref</label>
+                  <input type="text" readOnly value={`${selectedIncidentRecord?.incident_refno} (${selectedIncidentRecord?.vehicle_plate})`} className="w-full bg-(--bg-surface) border border-(--border-main) rounded-lg px-3 py-1.5 text-xs text-(--text-muted) cursor-not-allowed" />
                 </div>
 
-                {/* UNSAFE CONDITIONS CUSTOM SEARCH & PICKER */}
                 {activeAnalysisTab === 'conditions' && (
                   <>
                     <div>
@@ -2058,14 +1600,14 @@ export function IncidentReport() {
                         value={childForm.selectedOptionId}
                         onChange={(e) => {
                           const newCondId = e.target.value;
-                          const matchingDetails = conditionDetailOptions.filter(d => d.condition_id === newCondId);
+                          const matchingFmeas = conditionFmeaList.filter(f => f.condition_id === newCondId);
                           setChildForm(prev => ({
                             ...prev,
                             selectedOptionId: newCondId,
-                            selectedDetailId: matchingDetails[0]?.detail_id || ''
+                            selectedFmeaId: matchingFmeas[0]?.conditionsfmea_id || ''
                           }));
                         }}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       >
                         <option value="">Select Condition Category...</option>
                         {conditionOptions.map(opt => (
@@ -2074,58 +1616,37 @@ export function IncidentReport() {
                       </select>
                     </div>
 
-                    <div className="space-y-1.5">
+                    <div>
                       <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
-                        Search Condition Detail (<span className="text-(--text-primary) font-mono">condition_details</span>)
+                        Condition FMEA Detail <span className="text-red-500">*</span>
                       </label>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-2 w-3.5 h-3.5 text-(--text-muted)" />
-                        <input
-                          type="text"
-                          placeholder="Search detail code or description..."
-                          value={conditionDetailSearchQuery}
-                          onChange={(e) => setConditionDetailSearchQuery(e.target.value)}
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
-                        />
-                      </div>
-
-                      <div className="border border-(--border-main) rounded-xl max-h-32 overflow-y-auto bg-(--bg-elevated) divide-y divide-(--border-main)">
-                        {filteredConditionDetails.length === 0 ? (
-                          <div className="p-2.5 text-center text-(--text-muted) text-xs">
-                            No matching condition details found.
-                          </div>
-                        ) : (
-                          filteredConditionDetails.map(det => {
-                            const isSelected = childForm.selectedDetailId === det.detail_id;
-                            return (
-                              <div
-                                key={det.detail_id}
-                                onClick={() => {
-                                  setChildForm(prev => ({
-                                    ...prev,
-                                    selectedDetailId: det.detail_id,
-                                    selectedOptionId: det.condition_id
-                                  }));
-                                }}
-                                className={`p-2 cursor-pointer text-xs transition-colors flex items-center justify-between ${
-                                  isSelected ? 'bg-(--accent-subtle) border-l-2 border-(--text-primary) text-(--text-primary)' : 'hover:bg-(--accent-subtle) text-(--text-secondary)'
-                                }`}
-                              >
-                                <div>
-                                  <span className="font-mono font-bold text-amber-600 dark:text-amber-400 mr-2">[{det.code}]</span>
-                                  <span>{det.description}</span>
-                                </div>
-                                {isSelected && <CheckCircle className="w-3.5 h-3.5 text-(--text-primary) shrink-0" />}
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
+                      <select
+                        required
+                        value={childForm.selectedFmeaId}
+                        onChange={(e) => {
+                          const selectedFmeaId = e.target.value;
+                          const matchedFmea = conditionFmeaList.find(f => f.conditionsfmea_id === selectedFmeaId);
+                          setChildForm(prev => ({
+                            ...prev,
+                            selectedFmeaId: selectedFmeaId,
+                            selectedOptionId: matchedFmea ? matchedFmea.condition_id : prev.selectedOptionId
+                          }));
+                        }}
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                      >
+                        <option value="">Select Condition FMEA Detail...</option>
+                        {conditionFmeaList
+                          .filter(f => !childForm.selectedOptionId || f.condition_id === childForm.selectedOptionId)
+                          .map(fmea => (
+                            <option key={fmea.conditionsfmea_id} value={fmea.conditionsfmea_id}>
+                              [{fmea.detail_code || '—'}] {fmea.detail_description || '—'} {fmea.computed_rpn ? `(RPN: ${fmea.computed_rpn})` : ''}
+                            </option>
+                          ))}
+                      </select>
                     </div>
                   </>
                 )}
 
-                {/* UNSAFE ACTS CUSTOM SEARCH & PICKER */}
                 {activeAnalysisTab === 'acts' && (
                   <>
                     <div>
@@ -2137,14 +1658,14 @@ export function IncidentReport() {
                         value={childForm.selectedOptionId}
                         onChange={(e) => {
                           const newActId = e.target.value;
-                          const matchingDetails = actDetailOptions.filter(d => d.act_id === newActId);
+                          const matchingFmeas = actFmeaList.filter(f => f.act_id === newActId);
                           setChildForm(prev => ({
                             ...prev,
                             selectedOptionId: newActId,
-                            selectedDetailId: matchingDetails[0]?.detail_id || ''
+                            selectedFmeaId: matchingFmeas[0]?.actfmea_id || ''
                           }));
                         }}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       >
                         <option value="">Select Unsafe Act Category...</option>
                         {actOptions.map(opt => (
@@ -2153,58 +1674,37 @@ export function IncidentReport() {
                       </select>
                     </div>
 
-                    <div className="space-y-1.5">
+                    <div>
                       <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
-                        Search Act Detail (<span className="text-(--text-primary) font-mono">act_details</span>)
+                        Act FMEA Detail <span className="text-red-500">*</span>
                       </label>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-2 w-3.5 h-3.5 text-(--text-muted)" />
-                        <input
-                          type="text"
-                          placeholder="Search detail code or description..."
-                          value={actDetailSearchQuery}
-                          onChange={(e) => setActDetailSearchQuery(e.target.value)}
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
-                        />
-                      </div>
-
-                      <div className="border border-(--border-main) rounded-xl max-h-32 overflow-y-auto bg-(--bg-elevated) divide-y divide-(--border-main)">
-                        {filteredActDetails.length === 0 ? (
-                          <div className="p-2.5 text-center text-(--text-muted) text-xs">
-                            No matching act details found.
-                          </div>
-                        ) : (
-                          filteredActDetails.map(det => {
-                            const isSelected = childForm.selectedDetailId === det.detail_id;
-                            return (
-                              <div
-                                key={det.detail_id}
-                                onClick={() => {
-                                  setChildForm(prev => ({
-                                    ...prev,
-                                    selectedDetailId: det.detail_id,
-                                    selectedOptionId: det.act_id
-                                  }));
-                                }}
-                                className={`p-2 cursor-pointer text-xs transition-colors flex items-center justify-between ${
-                                  isSelected ? 'bg-(--accent-subtle) border-l-2 border-(--text-primary) text-(--text-primary)' : 'hover:bg-(--accent-subtle) text-(--text-secondary)'
-                                }`}
-                              >
-                                <div>
-                                  <span className="font-mono font-bold text-amber-600 dark:text-amber-400 mr-2">[{det.code}]</span>
-                                  <span>{det.description}</span>
-                                </div>
-                                {isSelected && <CheckCircle className="w-3.5 h-3.5 text-(--text-primary) shrink-0" />}
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
+                      <select
+                        required
+                        value={childForm.selectedFmeaId}
+                        onChange={(e) => {
+                          const selectedFmeaId = e.target.value;
+                          const matchedFmea = actFmeaList.find(f => f.actfmea_id === selectedFmeaId);
+                          setChildForm(prev => ({
+                            ...prev,
+                            selectedFmeaId: selectedFmeaId,
+                            selectedOptionId: matchedFmea ? matchedFmea.act_id : prev.selectedOptionId
+                          }));
+                        }}
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                      >
+                        <option value="">Select Act FMEA Detail...</option>
+                        {actFmeaList
+                          .filter(f => !childForm.selectedOptionId || f.act_id === childForm.selectedOptionId)
+                          .map(fmea => (
+                            <option key={fmea.actfmea_id} value={fmea.actfmea_id}>
+                              [{fmea.detail_code || '—'}] {fmea.detail_description || '—'} {fmea.computed_rpn ? `(RPN: ${fmea.computed_rpn})` : ''}
+                            </option>
+                          ))}
+                      </select>
                     </div>
                   </>
                 )}
 
-                {/* PERSONAL FACTORS CUSTOM SEARCH & PICKER */}
                 {activeAnalysisTab === 'personal' && (
                   <>
                     <div>
@@ -2216,14 +1716,14 @@ export function IncidentReport() {
                         value={childForm.selectedOptionId}
                         onChange={(e) => {
                           const newFactorId = e.target.value;
-                          const matchingDetails = factorDetailOptions.filter(d => d.factor_id === newFactorId);
+                          const matchingFmeas = factorFmeaList.filter(f => f.factor_id === newFactorId);
                           setChildForm(prev => ({
                             ...prev,
                             selectedOptionId: newFactorId,
-                            selectedDetailId: matchingDetails[0]?.detail_id || ''
+                            selectedFmeaId: matchingFmeas[0]?.factors_fmea_id || ''
                           }));
                         }}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       >
                         <option value="">Select Personal Factor Category...</option>
                         {factorOptions.map(opt => (
@@ -2232,58 +1732,37 @@ export function IncidentReport() {
                       </select>
                     </div>
 
-                    <div className="space-y-1.5">
+                    <div>
                       <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
-                        Search Factor Detail (<span className="text-(--text-primary) font-mono">factor_details</span>)
+                        Factor FMEA Detail <span className="text-red-500">*</span>
                       </label>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-2 w-3.5 h-3.5 text-(--text-muted)" />
-                        <input
-                          type="text"
-                          placeholder="Search detail code or description..."
-                          value={factorDetailSearchQuery}
-                          onChange={(e) => setFactorDetailSearchQuery(e.target.value)}
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
-                        />
-                      </div>
-
-                      <div className="border border-(--border-main) rounded-xl max-h-32 overflow-y-auto bg-(--bg-elevated) divide-y divide-(--border-main)">
-                        {filteredFactorDetails.length === 0 ? (
-                          <div className="p-2.5 text-center text-(--text-muted) text-xs">
-                            No matching factor details found.
-                          </div>
-                        ) : (
-                          filteredFactorDetails.map(det => {
-                            const isSelected = childForm.selectedDetailId === det.detail_id;
-                            return (
-                              <div
-                                key={det.detail_id}
-                                onClick={() => {
-                                  setChildForm(prev => ({
-                                    ...prev,
-                                    selectedDetailId: det.detail_id,
-                                    selectedOptionId: det.factor_id
-                                  }));
-                                }}
-                                className={`p-2 cursor-pointer text-xs transition-colors flex items-center justify-between ${
-                                  isSelected ? 'bg-(--accent-subtle) border-l-2 border-(--text-primary) text-(--text-primary)' : 'hover:bg-(--accent-subtle) text-(--text-secondary)'
-                                }`}
-                              >
-                                <div>
-                                  <span className="font-mono font-bold text-amber-600 dark:text-amber-400 mr-2">[{det.code}]</span>
-                                  <span>{det.description}</span>
-                                </div>
-                                {isSelected && <CheckCircle className="w-3.5 h-3.5 text-(--text-primary) shrink-0" />}
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
+                      <select
+                        required
+                        value={childForm.selectedFmeaId}
+                        onChange={(e) => {
+                          const selectedFmeaId = e.target.value;
+                          const matchedFmea = factorFmeaList.find(f => f.factors_fmea_id === selectedFmeaId);
+                          setChildForm(prev => ({
+                            ...prev,
+                            selectedFmeaId: selectedFmeaId,
+                            selectedOptionId: matchedFmea ? matchedFmea.factor_id : prev.selectedOptionId
+                          }));
+                        }}
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                      >
+                        <option value="">Select Factor FMEA Detail...</option>
+                        {factorFmeaList
+                          .filter(f => !childForm.selectedOptionId || f.factor_id === childForm.selectedOptionId)
+                          .map(fmea => (
+                            <option key={fmea.factors_fmea_id} value={fmea.factors_fmea_id}>
+                              [{fmea.detail_code || '—'}] {fmea.detail_description || '—'} {fmea.computed_rpn ? `(RPN: ${fmea.computed_rpn})` : ''}
+                            </option>
+                          ))}
+                      </select>
                     </div>
                   </>
                 )}
 
-                {/* WORK RELATED CAUSES CUSTOM SEARCH & PICKER */}
                 {activeAnalysisTab === 'workrelated' && (
                   <>
                     <div>
@@ -2295,14 +1774,14 @@ export function IncidentReport() {
                         value={childForm.selectedOptionId}
                         onChange={(e) => {
                           const newCauseId = e.target.value;
-                          const matchingDetails = causeDetailOptions.filter(d => d.cause_id === newCauseId);
+                          const matchingFmeas = causeFmeaList.filter(f => f.cause_id === newCauseId);
                           setChildForm(prev => ({
                             ...prev,
                             selectedOptionId: newCauseId,
-                            selectedDetailId: matchingDetails[0]?.detail_id || ''
+                            selectedFmeaId: matchingFmeas[0]?.cause_fmea_id || ''
                           }));
                         }}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       >
                         <option value="">Select Work Cause Category...</option>
                         {causeOptions.map(opt => (
@@ -2311,53 +1790,33 @@ export function IncidentReport() {
                       </select>
                     </div>
 
-                    <div className="space-y-1.5">
+                    <div>
                       <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
-                        Search Cause Detail (<span className="text-(--text-primary) font-mono">cause_details</span>)
+                        Cause FMEA Detail <span className="text-red-500">*</span>
                       </label>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-2 w-3.5 h-3.5 text-(--text-muted)" />
-                        <input
-                          type="text"
-                          placeholder="Search detail code or description..."
-                          value={causeDetailSearchQuery}
-                          onChange={(e) => setCauseDetailSearchQuery(e.target.value)}
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
-                        />
-                      </div>
-
-                      <div className="border border-(--border-main) rounded-xl max-h-32 overflow-y-auto bg-(--bg-elevated) divide-y divide-(--border-main)">
-                        {filteredCauseDetails.length === 0 ? (
-                          <div className="p-2.5 text-center text-(--text-muted) text-xs">
-                            No matching cause details found.
-                          </div>
-                        ) : (
-                          filteredCauseDetails.map(det => {
-                            const isSelected = childForm.selectedDetailId === det.detail_id;
-                            return (
-                              <div
-                                key={det.detail_id}
-                                onClick={() => {
-                                  setChildForm(prev => ({
-                                    ...prev,
-                                    selectedDetailId: det.detail_id,
-                                    selectedOptionId: det.cause_id
-                                  }));
-                                }}
-                                className={`p-2 cursor-pointer text-xs transition-colors flex items-center justify-between ${
-                                  isSelected ? 'bg-(--accent-subtle) border-l-2 border-(--text-primary) text-(--text-primary)' : 'hover:bg-(--accent-subtle) text-(--text-secondary)'
-                                }`}
-                              >
-                                <div>
-                                  <span className="font-mono font-bold text-amber-600 dark:text-amber-400 mr-2">[{det.code}]</span>
-                                  <span>{det.description}</span>
-                                </div>
-                                {isSelected && <CheckCircle className="w-3.5 h-3.5 text-(--text-primary) shrink-0" />}
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
+                      <select
+                        required
+                        value={childForm.selectedFmeaId}
+                        onChange={(e) => {
+                          const selectedFmeaId = e.target.value;
+                          const matchedFmea = causeFmeaList.find(f => f.cause_fmea_id === selectedFmeaId);
+                          setChildForm(prev => ({
+                            ...prev,
+                            selectedFmeaId: selectedFmeaId,
+                            selectedOptionId: matchedFmea ? matchedFmea.cause_id : prev.selectedOptionId
+                          }));
+                        }}
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                      >
+                        <option value="">Select Cause FMEA Detail...</option>
+                        {causeFmeaList
+                          .filter(f => !childForm.selectedOptionId || f.cause_id === childForm.selectedOptionId)
+                          .map(fmea => (
+                            <option key={fmea.cause_fmea_id} value={fmea.cause_fmea_id}>
+                              [{fmea.detail_code || '—'}] {fmea.detail_description || '—'} {fmea.computed_rpn ? `(RPN: ${fmea.computed_rpn})` : ''}
+                            </option>
+                          ))}
+                      </select>
                     </div>
                   </>
                 )}

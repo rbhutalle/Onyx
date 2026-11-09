@@ -39,6 +39,7 @@ interface JobOrderMasterRecord {
   has_changes: boolean;
   odo_rdg: number;
   contract_cost: number;
+  type_id: string | null;
   created_at: string;
   updated_at: string;
   [key: string]: unknown;
@@ -95,6 +96,14 @@ interface JobOrderContractRecord {
   reference_total: number | null;
   created_at?: string;
   updated_at?: string;
+  [key: string]: unknown;
+}
+
+interface JobOrderTypeRecord {
+  type_id: string;
+  type_code?: string;
+  type_desc?: string;
+  description?: string;
   [key: string]: unknown;
 }
 
@@ -173,6 +182,7 @@ export function JobOrder() {
 
   const [statuses, setStatuses] = useState<{ status_id: string; status_name: string }[]>([]);
   const [priorities, setPriorities] = useState<{ priority_id: string; priority_desc: string }[]>([]);
+  const [jobOrderTypes, setJobOrderTypes] = useState<JobOrderTypeRecord[]>([]);
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
   const [taskStandards, setTaskStandards] = useState<TaskStandardRecord[]>([]);
 
@@ -214,6 +224,7 @@ export function JobOrder() {
     vehicle_id: '',
     status_id: '',
     priority_id: '',
+    type_id: '',
     expected_completion: '',
     date_started: '',
     date_completed: '',
@@ -295,9 +306,10 @@ export function JobOrder() {
     let isMounted = true;
     async function loadLookups() {
       try {
-        const [sRes, pRes, eRes, tsRes] = await Promise.all([
+        const [sRes, pRes, tRes, eRes, tsRes] = await Promise.all([
           supabase.from('joborder_status').select('*'),
           supabase.from('joborder_priority').select('*'),
+          supabase.from('joborder_type').select('*'),
           supabase.from('employees').select('*'),
           supabase.from('equipment_taskstandards').select('*')
         ]);
@@ -305,6 +317,7 @@ export function JobOrder() {
         if (isMounted) {
           setStatuses(sRes.data || []);
           setPriorities(pRes.data || []);
+          setJobOrderTypes(tRes.data || []);
           setEmployees(eRes.data || []);
           setTaskStandards(tsRes.data || []);
         }
@@ -521,6 +534,7 @@ export function JobOrder() {
       vehicle_id: '',
       status_id: defaultStatusId,
       priority_id: priorities[0]?.priority_id || '',
+      type_id: jobOrderTypes[0]?.type_id || '',
       expected_completion: todayStr,
       date_started: '',
       date_completed: isCompleted ? todayStr : '',
@@ -557,6 +571,7 @@ export function JobOrder() {
       vehicle_id: currentJobOrder.vehicle_id || '',
       status_id: currentJobOrder.status_id || '',
       priority_id: currentJobOrder.priority_id || '',
+      type_id: currentJobOrder.type_id || '',
       expected_completion: currentJobOrder.expected_completion || '',
       date_started: currentJobOrder.date_started || '',
       date_completed: isCompleted ? (currentJobOrder.date_completed || todayStr) : '',
@@ -602,6 +617,7 @@ export function JobOrder() {
         vehicle_id: headerForm.vehicle_id,
         status_id: headerForm.status_id,
         priority_id: headerForm.priority_id,
+        type_id: headerForm.type_id ? headerForm.type_id : null,
         expected_completion: headerForm.expected_completion,
         date_started: headerForm.date_started || null,
         date_completed: isCompleted ? (headerForm.date_completed || new Date().toISOString().split('T')[0]) : null,
@@ -915,6 +931,7 @@ export function JobOrder() {
 
   const matchedStatus = statuses.find(s => s.status_id === currentJobOrder?.status_id);
   const matchedPriority = priorities.find(p => p.priority_id === currentJobOrder?.priority_id);
+  const matchedType = jobOrderTypes.find(t => t.type_id === currentJobOrder?.type_id);
   const matchedSupervisor = employees.find(e => e.employee_id === currentJobOrder?.assigned_supervisor);
 
   const statusNameLower = (matchedStatus?.status_name ?? '').toLowerCase();
@@ -1039,6 +1056,11 @@ export function JobOrder() {
               </div>
 
               <div className="space-y-0.5">
+                <span className="block text-[10px] font-semibold uppercase text-(--text-muted)">Job Order Type</span>
+                <span className="text-(--text-primary) font-medium block">{matchedType ? (matchedType.type_desc || matchedType.description || matchedType.type_code || '—') : '—'}</span>
+              </div>
+
+              <div className="space-y-0.5">
                 <span className="block text-[10px] font-semibold uppercase text-(--text-muted)">Expected Completion</span>
                 <span className="text-(--text-secondary) font-mono block">{currentJobOrder.expected_completion || '—'}</span>
               </div>
@@ -1058,11 +1080,6 @@ export function JobOrder() {
               <div className="space-y-0.5">
                 <span className="block text-[10px] font-semibold uppercase text-(--text-muted)">Dates (Started / Completed)</span>
                 <span className="text-(--text-secondary) font-mono block">{currentJobOrder.date_started || '—'} / {currentJobOrder.date_completed || '—'}</span>
-              </div>
-
-              <div className="space-y-0.5">
-                <span className="block text-[10px] font-bold uppercase text-(--text-primary)">Total Cost</span>
-                <span className="text-(--text-primary) font-mono text-sm font-bold block">₱{(currentJobOrder.total_cost ?? 0).toFixed(2)}</span>
               </div>
             </div>
 
@@ -1523,7 +1540,7 @@ export function JobOrder() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-semibold uppercase text-(--text-secondary) mb-1">Status</label>
                     <select
@@ -1561,6 +1578,20 @@ export function JobOrder() {
                       <option value="">Select Priority</option>
                       {priorities.map(p => (
                         <option key={p.priority_id} value={p.priority_id}>{p.priority_desc}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-(--text-secondary) mb-1">Job Order Type</label>
+                    <select
+                      value={headerForm.type_id}
+                      onChange={(e) => setHeaderForm({ ...headerForm, type_id: e.target.value })}
+                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                    >
+                      <option value="">Select Type (Optional)</option>
+                      {jobOrderTypes.map(t => (
+                        <option key={t.type_id} value={t.type_id}>{t.type_desc || t.description || t.type_code || 'Type'}</option>
                       ))}
                     </select>
                   </div>
@@ -2018,7 +2049,7 @@ export function JobOrder() {
                           type="number"
                           step="any"
                           required
-                          value={contractForm.unit_price}
+                          value={contractForm.unit_price ?? contractForm.unit_price}
                           onChange={(e) => setContractForm({ ...contractForm, unit_price: e.target.value })}
                           className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                         />

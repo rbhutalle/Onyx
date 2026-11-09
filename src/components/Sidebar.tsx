@@ -223,6 +223,17 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
           {isIncidentManagementOpen && !isMinimized && (
             <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-(--sidebar-border)">
               <button
+                onClick={() => navigate('/incident-management/fmea-dashboard')}
+                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/incident-management/fmea-dashboard'
+                    ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
+                    : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
+                }`}
+              >
+                <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">FMEA Dashboard</span>
+              </button>
+              <button
                 onClick={() => navigate('/incident-management/incident-report')}
                 className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   currentPath === '/incident-management/incident-report'
