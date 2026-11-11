@@ -58,7 +58,7 @@ export function DailyInspection() {
   const [loading, setLoading] = useState<boolean>(false);
   const [showPicker, setShowPicker] = useState<boolean>(false);
   const [pickerSearchQuery, setPickerSearchQuery] = useState<string>('');
-  const [searchNoLogsCurrentDay, setSearchNoLogsCurrentDay] = useState<boolean>(false);
+  const [searchNoLogsCurrentDay, setSearchNoLogsCurrentDay] = useState<boolean>(true); // Default checked
 
   const [selectedVehicle, setSelectedVehicle] = useState<VehiclePm | null>(null);
   const [capturedLogId, setCapturedLogId] = useState<string | null>(null);
@@ -352,10 +352,10 @@ export function DailyInspection() {
     
     async function initLoad() {
       try {
+        // Fetch initially using default searchNoLogsCurrentDay = true
         const { data, error: fetchError } = await supabase
-          .from('vw_vehicle_pm_details')
+          .from('vw_vehicles_without_today_logs')
           .select('*')
-          .eq('is_active', true)
           .order('plate_no', { ascending: true })
           .limit(50);
 

@@ -36,12 +36,14 @@ interface FmeaAnalyticsRecord {
   detail_code: string;
   detail_description: string;
   current_control: string | null;
+  potential_effect?: string | null;
   severity: number;
   occurrence: number;
   detection: number;
   computed_rpn: number;
   risk_tier: 'Critical' | 'High' | 'Medium' | 'Low';
   control_status: 'Missing Control' | 'Control Documented';
+  potential_effect_status: 'Missing Potential Effect' | 'Potential Effect Documented';
   created_at: string;
 }
 
@@ -74,6 +76,7 @@ interface VehicleBadActorRecord {
   risk_tier: string;
   incident_loss: number;
   incident_count: number;
+  total_financial_impact: number;
 }
 
 interface ComponentReliabilityRecord {
@@ -100,6 +103,12 @@ interface JobOrderFlatRecord {
   plate_no: string | null;
   model_name: string | null;
   make_name: string | null;
+}
+
+interface IncidentReportFlatRecord {
+  vehicle_id: string;
+  incident_date: string;
+  incident_loss: number;
 }
 
 type MainTab = 'risk' | 'reliability';
@@ -223,10 +232,12 @@ export function FMEADashboard() {
   const [badActors, setBadActors] = useState<VehicleBadActorRecord[]>([]);
   const [jobOrdersFlat, setJobOrdersFlat] = useState<JobOrderFlatRecord[]>([]);
   const [componentReliability, setComponentReliability] = useState<ComponentReliabilityRecord[]>([]);
+  const [incidentReportsFlat, setIncidentReportsFlat] = useState<IncidentReportFlatRecord[]>([]);
 
   // Filter States
   const [filterRiskSource, setFilterRiskSource] = useState<string>('ALL');
   const [filterControlStatus, setFilterControlStatus] = useState<string>('ALL');
+  const [filterPotentialEffectStatus, setFilterPotentialEffectStatus] = useState<string>('ALL');
   const [filterSeverityLevel, setFilterSeverityLevel] = useState<string>('ALL');
   const [filterSystemGroup, setFilterSystemGroup] = useState<string>('ALL');
 
@@ -262,13 +273,15 @@ export function FMEADashboard() {
       resIncidents,
       resBadActors,
       resJobOrders,
-      resReliability
+      resReliability,
+      resIncidentReports
     ] = await Promise.all([
       supabase.from('vw_comprehensive_fmea_analytics').select('*'),
       supabase.from('vw_operational_incident_risks').select('*'),
       supabase.from('vw_vehicle_bad_actor_metrics').select('*'),
       jobOrderQuery,
-      supabase.from('vw_component_reliability_summary').select('*')
+      supabase.from('vw_component_reliability_summary').select('*'),
+      supabase.from('incident_report').select('vehicle_id, incident_date, incident_loss')
     ]);
 
     if (resFmea.error) throw resFmea.error;
@@ -276,6 +289,7 @@ export function FMEADashboard() {
     if (resBadActors.error) throw resBadActors.error;
     if (resJobOrders.error) throw resJobOrders.error;
     if (resReliability.error) throw resReliability.error;
+    if (resIncidentReports.error) throw resIncidentReports.error;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const flattenedJOs: JobOrderFlatRecord[] = (resJobOrders.data || []).map((jo: any) => {
@@ -298,17 +312,28 @@ export function FMEADashboard() {
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mappedFmea: FmeaAnalyticsRecord[] = (resFmea.data || []).map((f: any) => {
+      const hasEffect = Boolean(f.potential_effect && String(f.potential_effect).trim() !== '' && String(f.potential_effect).toLowerCase() !== 'null');
+      return {
+        ...f,
+        potential_effect_status: f.potential_effect_status || (hasEffect ? 'Potential Effect Documented' : 'Missing Potential Effect')
+      };
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mappedIncidents: OperationalIncidentRiskRecord[] = (resIncidents.data || []).map((inc: any) => ({
       ...inc,
-      source: inc.source === 'INS' ? 'INS' : 'IRS'
+      source: inc.source === 'INS' ? 'INS' : 'IRS',
+      incident_loss: 0 
     }));
 
     return {
-      fmeaAnalytics: (resFmea.data || []) as FmeaAnalyticsRecord[],
+      fmeaAnalytics: mappedFmea,
       opIncidents: mappedIncidents,
       badActors: (resBadActors.data || []) as VehicleBadActorRecord[],
       jobOrdersFlat: flattenedJOs,
-      componentReliability: (resReliability.data || []) as ComponentReliabilityRecord[]
+      componentReliability: (resReliability.data || []) as ComponentReliabilityRecord[],
+      incidentReportsFlat: (resIncidentReports.data || []) as IncidentReportFlatRecord[]
     };
   }, []);
 
@@ -324,6 +349,7 @@ export function FMEADashboard() {
           setBadActors(data.badActors);
           setJobOrdersFlat(data.jobOrdersFlat);
           setComponentReliability(data.componentReliability);
+          setIncidentReportsFlat(data.incidentReportsFlat);
         }
       } catch (err: unknown) {
         if (!ignore) {
@@ -350,6 +376,7 @@ export function FMEADashboard() {
       setBadActors(data.badActors);
       setJobOrdersFlat(data.jobOrdersFlat);
       setComponentReliability(data.componentReliability);
+      setIncidentReportsFlat(data.incidentReportsFlat);
     } catch (err: unknown) {
       console.error('Error refreshing dashboard datasets:', err);
       setErrorMsg(err instanceof Error ? err.message : 'Failed to load database views.');
@@ -363,9 +390,10 @@ export function FMEADashboard() {
     return fmeaAnalytics.filter(r => {
       if (filterRiskSource !== 'ALL' && r.risk_source !== filterRiskSource) return false;
       if (filterControlStatus !== 'ALL' && r.control_status !== filterControlStatus) return false;
+      if (filterPotentialEffectStatus !== 'ALL' && r.potential_effect_status !== filterPotentialEffectStatus) return false;
       return true;
     });
-  }, [fmeaAnalytics, filterRiskSource, filterControlStatus]);
+  }, [fmeaAnalytics, filterRiskSource, filterControlStatus, filterPotentialEffectStatus]);
 
   const activeFmeaMatrixInspector = useMemo(() => {
     if (!selectedMatrixCell) return null;
@@ -467,22 +495,24 @@ export function FMEADashboard() {
       curr.setMonth(curr.getMonth() + 1);
     }
 
-    // Accumulate repair costs from job orders
+    // Accumulate repair costs strictly within the date range
     jobOrdersFlat.forEach(j => {
       const dateVal = j.created_at || j.date_completed;
-      if (!dateVal) return;
-      const mKey = dateVal.substring(0, 7);
-      if (!monthMap.has(mKey)) return;
+      if (!isWithinDateRange(dateVal, dateFrom, dateTo)) return;
+      
+      const mKey = dateVal?.substring(0, 7);
+      if (!mKey || !monthMap.has(mKey)) return;
 
       const cost = Number(j.total_cost || 0) || (Number(j.labor_cost || 0) + Number(j.materials_cost || 0) + Number(j.contract_cost || 0));
       const bucket = monthMap.get(mKey)!;
       bucket.repairCost += cost;
     });
 
-    // Accumulate financial losses from incidents
-    opIncidents.forEach(inc => {
-      if (!inc.event_date) return;
-      const mKey = inc.event_date.substring(0, 7);
+    // Accumulate financial losses strictly within the date range
+    incidentReportsFlat.forEach(inc => {
+      if (!inc.incident_date || !isWithinDateRange(inc.incident_date, dateFrom, dateTo)) return;
+      
+      const mKey = inc.incident_date.substring(0, 7);
       if (!monthMap.has(mKey)) return;
 
       const loss = Number(inc.incident_loss || 0);
@@ -491,7 +521,7 @@ export function FMEADashboard() {
     });
 
     return Array.from(monthMap.values()).sort((a, b) => a.monthKey.localeCompare(b.monthKey));
-  }, [jobOrdersFlat, opIncidents, dateFrom, dateTo]);
+  }, [jobOrdersFlat, incidentReportsFlat, dateFrom, dateTo]);
 
   // Incidents dynamically filtered by selected month for the KPI cards & table
   const selectedMonthIncidents = useMemo(() => {
@@ -613,45 +643,79 @@ export function FMEADashboard() {
       return true;
     });
 
-    const costMap = new Map<string, { totalCost: number; count: number; plateNo: string; modelName: string; makeName: string }>();
-    
-    filteredJOs.forEach(j => {
-      const vId = j.vehicle_id;
-      if (!vId) return;
-      const cost = Number(j.total_cost || 0) || (Number(j.labor_cost || 0) + Number(j.materials_cost || 0) + Number(j.contract_cost || 0));
-      
-      if (!costMap.has(vId)) {
-        costMap.set(vId, { totalCost: cost, count: 1, plateNo: j.plate_no || 'N/A', modelName: j.model_name || 'N/A', makeName: j.make_name || 'N/A' });
-      } else {
-        const existing = costMap.get(vId)!;
-        existing.totalCost += cost;
-        existing.count += 1;
-      }
+    const filteredIncidents = incidentReportsFlat.filter(inc => {
+      const dateVal = inc.incident_date;
+      if (!isWithinDateRange(dateVal, dateFrom, dateTo)) return false;
+      if (selectedBadActorMonthKey && dateVal && dateVal.substring(0, 7) !== selectedBadActorMonthKey) return false;
+      return true;
     });
 
-    const baseMap = new Map<string, VehicleBadActorRecord>();
-    badActors.forEach(ba => baseMap.set(ba.vehicle_id, ba));
+    const vehicleMeta = new Map<string, VehicleBadActorRecord>();
+    badActors.forEach(ba => vehicleMeta.set(ba.vehicle_id, ba));
 
-    const result: VehicleBadActorRecord[] = [];
-    costMap.forEach((val, vId) => {
-      const base = baseMap.get(vId);
-      const score = Math.min(Math.round((val.totalCost / 1000) * 10) / 10, 100);
-      result.push({
-        vehicle_id: vId,
-        plate_no: val.plateNo !== 'N/A' ? val.plateNo : (base?.plate_no || 'N/A'),
-        customer_name: base?.customer_name || 'N/A',
-        make_name: val.makeName !== 'N/A' ? val.makeName : (base?.make_name || 'N/A'),
-        model_name: val.modelName !== 'N/A' ? val.modelName : (base?.model_name || 'N/A'),
-        total_maintenance_cost: val.totalCost,
-        bad_actor_score: score,
-        risk_tier: val.totalCost > 50000 ? 'High Risk' : val.totalCost > 20000 ? 'Medium Risk' : 'Low Risk',
-        incident_loss: base?.incident_loss || 0,
-        incident_count: val.count
-      });
+    const badActorMap = new Map<string, VehicleBadActorRecord>();
+
+    filteredJOs.forEach(j => {
+      if (!j.vehicle_id) return;
+      const vId = j.vehicle_id;
+      const cost = Number(j.total_cost || 0) || (Number(j.labor_cost || 0) + Number(j.materials_cost || 0) + Number(j.contract_cost || 0));
+      
+      if (!badActorMap.has(vId)) {
+        const meta = vehicleMeta.get(vId) || ({} as Partial<VehicleBadActorRecord>);
+        badActorMap.set(vId, {
+          vehicle_id: vId,
+          plate_no: j.plate_no || meta.plate_no || 'N/A',
+          customer_name: meta.customer_name || 'N/A',
+          make_name: j.make_name || meta.make_name || 'N/A',
+          model_name: j.model_name || meta.model_name || 'N/A',
+          total_maintenance_cost: 0,
+          incident_loss: 0,
+          incident_count: 0,
+          total_financial_impact: 0,
+          bad_actor_score: 0,
+          risk_tier: 'Low Risk'
+        });
+      }
+      const record = badActorMap.get(vId)!;
+      record.total_maintenance_cost += cost;
+    });
+
+    filteredIncidents.forEach(inc => {
+      if (!inc.vehicle_id) return;
+      const vId = inc.vehicle_id;
+      const loss = Number(inc.incident_loss || 0);
+
+      if (!badActorMap.has(vId)) {
+        const meta = vehicleMeta.get(vId) || ({} as Partial<VehicleBadActorRecord>);
+        badActorMap.set(vId, {
+          vehicle_id: vId,
+          plate_no: meta.plate_no || 'N/A',
+          customer_name: meta.customer_name || 'N/A',
+          make_name: meta.make_name || 'N/A',
+          model_name: meta.model_name || 'N/A',
+          total_maintenance_cost: 0,
+          incident_loss: 0,
+          incident_count: 0,
+          total_financial_impact: 0,
+          bad_actor_score: 0,
+          risk_tier: 'Low Risk'
+        });
+      }
+      const record = badActorMap.get(vId)!;
+      record.incident_loss += loss;
+      record.incident_count += 1;
+    });
+
+    const result = Array.from(badActorMap.values()).map(record => {
+      record.total_financial_impact = record.total_maintenance_cost + record.incident_loss;
+      const score = Math.min(Math.round((record.total_maintenance_cost / 1000) * 10) / 10, 100);
+      record.bad_actor_score = score;
+      record.risk_tier = record.total_maintenance_cost >= 50000 ? 'High Risk' : record.total_maintenance_cost >= 20000 ? 'Medium Risk' : 'Low Risk';
+      return record;
     });
 
     return result.sort((a, b) => b.total_maintenance_cost - a.total_maintenance_cost);
-  }, [badActors, jobOrdersFlat, dateFrom, dateTo, selectedBadActorMonthKey]);
+  }, [badActors, jobOrdersFlat, incidentReportsFlat, dateFrom, dateTo, selectedBadActorMonthKey]);
 
   const systemAggregates = useMemo(() => {
     const map = new Map<string, { systemDesc: string; totalCost: number; totalReplacements: number; count: number }>();
@@ -858,7 +922,7 @@ export function FMEADashboard() {
                           </span>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div>
                             <label htmlFor="filterRiskSource" className="text-[10px] font-bold uppercase text-(--text-muted)">Risk Category Source</label>
                             <select
@@ -888,6 +952,21 @@ export function FMEADashboard() {
                               <option value="ALL">All Controls</option>
                               <option value="Control Documented">Control Documented</option>
                               <option value="Missing Control">Missing Control</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label htmlFor="filterPotentialEffectStatus" className="text-[10px] font-bold uppercase text-(--text-muted)">Potential Effects Status</label>
+                            <select
+                              id="filterPotentialEffectStatus"
+                              name="filterPotentialEffectStatus"
+                              value={filterPotentialEffectStatus}
+                              onChange={(e) => setFilterPotentialEffectStatus(e.target.value)}
+                              className="w-full mt-1 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2.5 py-1.5 focus:outline-none font-medium"
+                            >
+                              <option value="ALL">All Potential Effects</option>
+                              <option value="Potential Effect Documented">Potential Effect Documented</option>
+                              <option value="Missing Potential Effect">Missing Potential Effect</option>
                             </select>
                           </div>
                         </div>
@@ -1138,10 +1217,11 @@ export function FMEADashboard() {
                                     <th className="p-2">Code</th>
                                     <th className="p-2">Risk Source</th>
                                     <th className="p-2">Description</th>
+                                    <th className="p-2">Potential Effect</th>
                                     <th className="p-2 text-center">RPN</th>
                                     <th className="p-2 text-center">Risk Tier</th>
                                     <th className="p-2">Control Status</th>
-                                    <th className="p-2">Current Control</th>
+                                    <th className="p-2">Effect Status</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-(--border-main)">
@@ -1150,6 +1230,7 @@ export function FMEADashboard() {
                                       <td className="p-2 font-mono font-bold text-rose-600">{item.detail_code}</td>
                                       <td className="p-2 font-semibold">{item.risk_source}</td>
                                       <td className="p-2 text-(--text-secondary)">{item.detail_description}</td>
+                                      <td className="p-2 text-(--text-primary) italic">{item.potential_effect || 'None'}</td>
                                       <td className="p-2 text-center font-mono font-bold">{item.computed_rpn}</td>
                                       <td className="p-2 text-center">
                                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
@@ -1168,8 +1249,12 @@ export function FMEADashboard() {
                                           {item.control_status}
                                         </span>
                                       </td>
-                                      <td className="p-2 text-(--text-muted) italic font-sans">
-                                        {item.current_control || 'No control documented'}
+                                      <td className="p-2">
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                          item.potential_effect_status === 'Missing Potential Effect' ? 'bg-amber-100 text-amber-700' : 'bg-purple-100 text-purple-700'
+                                        }`}>
+                                          {item.potential_effect_status}
+                                        </span>
                                       </td>
                                     </tr>
                                   ))}
@@ -1783,7 +1868,7 @@ export function FMEADashboard() {
                         <p className="text-[11px] text-(--text-muted)">
                           {selectedBadActorMonthKey
                             ? `Currently showing bad actor metrics for: ${monthOnMonthBadActorMetrics.find(m => m.monthKey === selectedBadActorMonthKey)?.monthLabel || selectedBadActorMonthKey}. Click the selected bar to clear.`
-                            : `Comparing monthly repair expenses against financial losses (${dateFrom} to ${dateTo}). Click a bar to filter scorecard.`}
+                            : `Comparing monthly repair expenses against financial losses. Click a bar to filter scorecard.`}
                         </p>
 
                         {monthOnMonthBadActorMetrics.length === 0 ? (
@@ -1860,9 +1945,9 @@ export function FMEADashboard() {
                           </div>
                         </div>
                         <div className="p-3.5 bg-(--bg-surface) border border-(--border-main) rounded-xl shadow-xs">
-                          <div className="text-[10px] font-bold uppercase text-(--text-muted)">Total Financial Loss</div>
+                          <div className="text-[10px] font-bold uppercase text-(--text-muted)">Total Financial Impact</div>
                           <div className="text-2xl font-black text-amber-600 font-mono">
-                            &#8369;{filteredBadActors.reduce((acc, b) => acc + (b.incident_loss || 0), 0).toLocaleString()}
+                            &#8369;{filteredBadActors.reduce((acc, b) => acc + (b.total_financial_impact || 0), 0).toLocaleString()}
                           </div>
                         </div>
                       </div>
@@ -1875,14 +1960,15 @@ export function FMEADashboard() {
                               <th className="p-2.5">Make / Model</th>
                               <th className="p-2.5 text-center">Bad Actor Score Gauge</th>
                               <th className="p-2.5 text-center">Risk Tier</th>
-                              <th className="p-2.5 text-right">Maintenance Cost (Period)</th>
+                              <th className="p-2.5 text-right">Maintenance Cost</th>
                               <th className="p-2.5 text-right">Incident Loss</th>
+                              <th className="p-2.5 text-right">Total Financial Impact</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-(--border-main)">
                             {filteredBadActors.length === 0 ? (
                               <tr>
-                                <td colSpan={6} className="p-4 text-center text-(--text-muted)">
+                                <td colSpan={7} className="p-4 text-center text-(--text-muted)">
                                   No bad actor vehicle maintenance records found within the selected period.
                                 </td>
                               </tr>
@@ -1907,8 +1993,9 @@ export function FMEADashboard() {
                                       {ba.risk_tier}
                                     </span>
                                   </td>
-                                  <td className="p-2.5 text-right font-mono font-bold text-rose-600">&#8369;{(ba.total_maintenance_cost || 0).toLocaleString()}</td>
+                                  <td className="p-2.5 text-right font-mono font-bold text-(--text-primary)">&#8369;{(ba.total_maintenance_cost || 0).toLocaleString()}</td>
                                   <td className="p-2.5 text-right font-mono text-amber-600">&#8369;{(ba.incident_loss || 0).toLocaleString()}</td>
+                                  <td className="p-2.5 text-right font-mono font-black text-rose-600">&#8369;{(ba.total_financial_impact || 0).toLocaleString()}</td>
                                 </tr>
                               ))
                             )}

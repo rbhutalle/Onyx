@@ -31,6 +31,7 @@ interface EquipmentPm {
   vehicle_id?: string;
   equipment_id?: string;
   id?: string;
+  is_active?: boolean;
   [key: string]: unknown;
 }
 
@@ -40,6 +41,8 @@ interface EmployeeOption {
   full_name: string;
   department?: string;
   position?: string;
+  is_active?: boolean;
+  is_supervisor?: boolean;
 }
 
 interface StatusOption {
@@ -134,6 +137,7 @@ interface IncidentConditionRecord {
   detail_code?: string;
   detail_description?: string;
   computed_rpn?: number | null;
+  [key: string]: unknown;
 }
 
 interface IncidentActRecord {
@@ -148,6 +152,7 @@ interface IncidentActRecord {
   detail_code?: string;
   detail_description?: string;
   computed_rpn?: number | null;
+  [key: string]: unknown;
 }
 
 interface IncidentPersonalRecord {
@@ -162,6 +167,7 @@ interface IncidentPersonalRecord {
   detail_code?: string;
   detail_description?: string;
   computed_rpn?: number | null;
+  [key: string]: unknown;
 }
 
 interface IncidentWorkRelatedRecord {
@@ -176,6 +182,7 @@ interface IncidentWorkRelatedRecord {
   detail_code?: string;
   detail_description?: string;
   computed_rpn?: number | null;
+  [key: string]: unknown;
 }
 
 type AnalysisTab = 'conditions' | 'acts' | 'personal' | 'workrelated';
@@ -211,6 +218,10 @@ export function IncidentReport() {
   const [causeFmeaList, setCauseFmeaList] = useState<CauseFmeaOption[]>([]);
 
   const [activeAnalysisTab, setActiveAnalysisTab] = useState<AnalysisTab>('conditions');
+
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   const [incidentConditions, setIncidentConditions] = useState<IncidentConditionRecord[]>([]);
   const [incidentActs, setIncidentActs] = useState<IncidentActRecord[]>([]);
@@ -270,6 +281,7 @@ export function IncidentReport() {
       let equipmentQuery = supabase
         .from('vw_vehicle_pm_details')
         .select('*')
+        .eq('is_active', true)
         .order('plate_no', { ascending: true })
         .limit(50);
 
@@ -279,10 +291,11 @@ export function IncidentReport() {
 
       const { data, error } = await equipmentQuery;
 
-      if (error) {
+      if (error || !data) {
         const { data: vehData } = await supabase
           .from('vehicles')
           .select('*')
+          .eq('is_active', true)
           .ilike('plate_no', `%${activeQuery.trim()}%`)
           .limit(50);
 
@@ -291,10 +304,11 @@ export function IncidentReport() {
           plate_no: String(v.plate_no || v.vehicle_plate || 'N/A'),
           make_name: String(v.make_name || v.make || ''),
           model_name: String(v.model_name || v.model || ''),
-          type_description: String(v.type_description || v.type || '')
+          type_description: String(v.type_description || v.type || ''),
+          is_active: Boolean(v.is_active ?? true)
         })));
       } else {
-        setEquipmentList(data || []);
+        setEquipmentList((data || []).filter((e: EquipmentPm) => e.is_active !== false));
       }
     } catch {
       // Handled silently
@@ -332,7 +346,9 @@ export function IncidentReport() {
           employee_no: String(e.employee_no || e.code || ''),
           full_name: String(e.full_name || constructedName || e.employee_name || 'Unknown Employee'),
           department: String(e.department || ''),
-          position: String(e.position || e.job_title || '')
+          position: String(e.position || e.job_title || ''),
+          is_active: Boolean(e.is_active ?? true),
+          is_supervisor: Boolean(e.is_supervisor ?? false)
         };
       });
       setEmployees(empList);
@@ -668,7 +684,15 @@ export function IncidentReport() {
   const handleSubmitMaster = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.vehicle_id) {
-      setErrorMsg('Please select a valid equipment vehicle.');
+      setErrorMsg('Please select a valid active equipment.');
+      return;
+    }
+    if (!formData.reported_by.trim()) {
+      setErrorMsg('Please select a valid active employee for "Reported by".');
+      return;
+    }
+    if (!formData.validated_by.trim()) {
+      setErrorMsg('Please select a valid active supervisor for "Validated by".');
       return;
     }
 
@@ -750,8 +774,16 @@ export function IncidentReport() {
 
   const handleSelectEmployee = (emp: EmployeeOption) => {
     if (employeeModalTarget === 'reported_by') {
+      if (emp.is_active === false) {
+        alert('Selected employee is inactive.');
+        return;
+      }
       setFormData(prev => ({ ...prev, reported_by: emp.full_name }));
     } else if (employeeModalTarget === 'validated_by') {
+      if (emp.is_active === false || !emp.is_supervisor) {
+        alert('Validated by must be an active employee and a supervisor (is_supervisor = true).');
+        return;
+      }
       setFormData(prev => ({ ...prev, validated_by: emp.full_name }));
     }
     setIsEmployeeModalOpen(false);
@@ -939,45 +971,155 @@ export function IncidentReport() {
 
   const filteredEmployees = useMemo(() => {
     const query = employeeSearchQuery.toLowerCase().trim();
-    if (!query) return employees;
-    return employees.filter(e => 
-      (e.full_name ?? '').toLowerCase().includes(query) ||
-      (e.employee_no ?? '').toLowerCase().includes(query) ||
-      (e.department ?? '').toLowerCase().includes(query) ||
-      (e.position ?? '').toLowerCase().includes(query)
-    );
-  }, [employees, employeeSearchQuery]);
+    return employees.filter(e => {
+      if (e.is_active === false) return false;
+      if (employeeModalTarget === 'validated_by' && !e.is_supervisor) {
+        return false;
+      }
+      if (!query) return true;
+
+      return (
+        (e.full_name ?? '').toLowerCase().includes(query) ||
+        (e.employee_no ?? '').toLowerCase().includes(query) ||
+        (e.department ?? '').toLowerCase().includes(query) ||
+        (e.position ?? '').toLowerCase().includes(query)
+      );
+    });
+  }, [employees, employeeSearchQuery, employeeModalTarget]);
 
   const selectedIncidentRecord = incidents.find(inc => inc.incident_id === selectedIncidentId) || null;
   const isLockedRecord = selectedIncidentRecord?.status_name === 'Completed' || selectedIncidentRecord?.status_name === 'Cancelled';
 
+  // Helper renderer for paginated tables
+  const renderPaginatedTable = (
+    dataList: Array<IncidentConditionRecord | IncidentActRecord | IncidentPersonalRecord | IncidentWorkRelatedRecord>, 
+    idKey: string, 
+    fmeaIdKey: string, 
+    parentIdKey: string
+  ) => {
+    const totalRecords = dataList.length;
+    const paginatedItems = dataList.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+    return (
+      <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-y-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-(--accent-subtle) text-(--text-muted) uppercase border-b border-(--border-main) sticky top-0 z-10 shadow-xs">
+                <th className="py-2 px-3 w-32">Detail Code</th>
+                <th className="py-2 px-3">Detail Description</th>
+                <th className="py-2 px-3">RPN</th>
+                <th className="py-2 px-3">Investigation Remarks</th>
+                <th className="py-2 px-3 text-right w-24">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+              {totalRecords === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-(--text-muted) text-xs italic">
+                    No records found for this category. Click &quot;Add Analysis Item&quot; above to begin.
+                  </td>
+                </tr>
+              ) : (
+                paginatedItems.map((row) => (
+                  <tr key={String(row[idKey])} className="hover:bg-(--accent-subtle) transition-colors">
+                    <td className="py-2 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">{String(row.detail_code || '—')}</td>
+                    <td className="py-2 px-3 text-(--text-primary) font-medium">{String(row.detail_description || '—')}</td>
+                    <td className="py-2 px-3 font-mono font-bold">{row.computed_rpn ?? '—'}</td>
+                    <td className="py-2 px-3 text-(--text-muted)">{String(row.remarks || '—')}</td>
+                    <td className="py-2 px-3 text-right space-x-2 shrink-0">
+                      <button 
+                        disabled={isLockedRecord} 
+                        onClick={() => handleOpenEditChild(String(row[idKey]), String(row[parentIdKey]), String(row.remarks || ''), String(row[fmeaIdKey] || ''))} 
+                        className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-(--text-primary) hover:bg-(--accent-subtle) cursor-pointer'}`}
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button 
+                        disabled={isLockedRecord} 
+                        onClick={() => handleDeleteChild(String(row[idKey]))} 
+                        className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:bg-(--accent-subtle) cursor-pointer'}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination Bar */}
+        <div className="flex items-center justify-between pt-2 px-1 shrink-0 text-xs text-(--text-secondary)">
+          <div className="flex items-center gap-2">
+            <span>Show:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="bg-(--bg-elevated) border border-(--border-main) rounded px-2 py-1 text-xs text-(--text-primary)"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+            </select>
+            <span>
+              Showing {totalRecords === 0 ? 0 : (currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalRecords)} of {totalRecords} entries
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1 || totalRecords === 0}
+              className="px-2.5 py-1 bg-(--bg-elevated) border border-(--border-main) rounded disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              Previous
+            </button>
+            <span className="px-2 font-mono">
+              Page {totalRecords === 0 ? 0 : currentPage} of {Math.max(Math.ceil(totalRecords / pageSize), 1)}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => prev + 1)}
+              disabled={currentPage * pageSize >= totalRecords || totalRecords === 0}
+              className="px-2.5 py-1 bg-(--bg-elevated) border border-(--border-main) rounded disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="flex flex-col h-full max-h-[calc(100vh-100px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-2.5 overflow-hidden">
-      <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-2.5">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-black text-white rounded-xl shadow-xs">
-            <AlertTriangle className="w-6 h-6 sm:w-7 sm:h-7" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-(--text-primary)">
-              Incident Reports & Cause Analysis
-            </h1>
-            <p className="text-xs sm:text-sm text-(--text-muted)">
-              Log equipment incidents and analyze root causes from FMEA taxonomy tables.
-            </p>
-          </div>
+    <div className="h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 flex flex-col overflow-hidden">
+      <div className="flex items-center gap-3 border-b border-(--border-main) pb-3 shrink-0">
+        <div className="bg-black text-white p-2 rounded-xl shadow-xs shrink-0">
+          <AlertTriangle className="w-6 h-6" />
+        </div>
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-(--text-primary)">
+            Incident Reports & Cause Analysis
+          </h1>
+          <p className="text-xs sm:text-sm text-(--text-muted)">
+            Log equipment incidents and analyze root causes from FMEA taxonomy tables.
+          </p>
         </div>
       </div>
 
       {successMsg && (
-        <div className="shrink-0 bg-(--accent-subtle) border border-(--border-main) text-(--text-primary) px-3.5 py-2 rounded-lg flex items-center gap-3 text-xs shadow-xs">
+        <div className="bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-4 py-2.5 rounded-lg flex items-center gap-3 text-xs shrink-0">
           <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="shrink-0 bg-red-50 dark:bg-red-950/50 border border-red-300 dark:border-red-800 text-red-800 dark:text-red-200 px-3.5 py-2 rounded-lg flex items-center gap-3 text-xs shadow-xs">
+        <div className="bg-red-50 dark:bg-red-950/50 border border-red-300 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-2.5 rounded-lg flex items-center gap-3 text-xs shrink-0">
           <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
@@ -1196,7 +1338,7 @@ export function IncidentReport() {
 
         <div className="shrink-0 flex gap-2 border-b border-(--border-main) pb-2 overflow-x-auto">
           <button
-            onClick={() => setActiveAnalysisTab('conditions')}
+            onClick={() => { setActiveAnalysisTab('conditions'); setCurrentPage(1); }}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap border ${
               activeAnalysisTab === 'conditions' ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
             }`}
@@ -1206,7 +1348,7 @@ export function IncidentReport() {
           </button>
 
           <button
-            onClick={() => setActiveAnalysisTab('acts')}
+            onClick={() => { setActiveAnalysisTab('acts'); setCurrentPage(1); }}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap border ${
               activeAnalysisTab === 'acts' ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
             }`}
@@ -1216,7 +1358,7 @@ export function IncidentReport() {
           </button>
 
           <button
-            onClick={() => setActiveAnalysisTab('personal')}
+            onClick={() => { setActiveAnalysisTab('personal'); setCurrentPage(1); }}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap border ${
               activeAnalysisTab === 'personal' ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
             }`}
@@ -1226,7 +1368,7 @@ export function IncidentReport() {
           </button>
 
           <button
-            onClick={() => setActiveAnalysisTab('workrelated')}
+            onClick={() => { setActiveAnalysisTab('workrelated'); setCurrentPage(1); }}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap border ${
               activeAnalysisTab === 'workrelated' ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
             }`}
@@ -1236,7 +1378,7 @@ export function IncidentReport() {
           </button>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           {loadingChild ? (
             <div className="p-8 text-center text-(--text-muted) flex items-center justify-center gap-2 text-xs">
               <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
@@ -1248,133 +1390,10 @@ export function IncidentReport() {
             </div>
           ) : (
             <>
-              {activeAnalysisTab === 'conditions' && (
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-(--accent-subtle) text-(--text-muted) uppercase border-b border-(--border-main) sticky top-0 z-10 shadow-xs">
-                      <th className="py-2 px-3 w-32">Detail Code</th>
-                      <th className="py-2 px-3">Condition Detail</th>
-                      <th className="py-2 px-3">RPN</th>
-                      <th className="py-2 px-3">Investigation Remarks</th>
-                      <th className="py-2 px-3 text-right w-24">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                    {incidentConditions.length === 0 ? (
-                      <tr><td colSpan={5} className="py-6 text-center text-(--text-muted) text-xs">No unsafe conditions recorded.</td></tr>
-                    ) : (
-                      incidentConditions.map((row) => (
-                        <tr key={row.incident_conditions_id} className="hover:bg-(--accent-subtle) transition-colors">
-                          <td className="py-2 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">{row.detail_code || '—'}</td>
-                          <td className="py-2 px-3 text-(--text-primary) font-medium">{row.detail_description || '—'}</td>
-                          <td className="py-2 px-3 font-mono font-bold">{row.computed_rpn ?? '—'}</td>
-                          <td className="py-2 px-3 text-(--text-muted)">{row.remarks || '—'}</td>
-                          <td className="py-2 px-3 text-right space-x-2 shrink-0">
-                            <button disabled={isLockedRecord} onClick={() => handleOpenEditChild(row.incident_conditions_id, row.condition_id, row.remarks, row.conditionsfmea_id)} className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-(--text-primary) hover:bg-(--accent-subtle) cursor-pointer'}`}><Edit2 className="w-3.5 h-3.5" /></button>
-                            <button disabled={isLockedRecord} onClick={() => handleDeleteChild(row.incident_conditions_id)} className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:bg-(--accent-subtle) cursor-pointer'}`}><Trash2 className="w-3.5 h-3.5" /></button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              )}
-
-              {activeAnalysisTab === 'acts' && (
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-(--accent-subtle) text-(--text-muted) uppercase border-b border-(--border-main) sticky top-0 z-10 shadow-xs">
-                      <th className="py-2 px-3 w-32">Detail Code</th>
-                      <th className="py-2 px-3">Act Detail</th>
-                      <th className="py-2 px-3">RPN</th>
-                      <th className="py-2 px-3">Investigation Remarks</th>
-                      <th className="py-2 px-3 text-right w-24">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                    {incidentActs.length === 0 ? (
-                      <tr><td colSpan={5} className="py-6 text-center text-(--text-muted) text-xs">No unsafe acts recorded.</td></tr>
-                    ) : (
-                      incidentActs.map((row) => (
-                        <tr key={row.incident_act_id} className="hover:bg-(--accent-subtle) transition-colors">
-                          <td className="py-2 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">{row.detail_code || '—'}</td>
-                          <td className="py-2 px-3 text-(--text-primary) font-medium">{row.detail_description || '—'}</td>
-                          <td className="py-2 px-3 font-mono font-bold">{row.computed_rpn ?? '—'}</td>
-                          <td className="py-2 px-3 text-(--text-muted)">{row.remarks || '—'}</td>
-                          <td className="py-2 px-3 text-right space-x-2 shrink-0">
-                            <button disabled={isLockedRecord} onClick={() => handleOpenEditChild(row.incident_act_id, row.act_id, row.remarks, row.actfmea_id)} className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-(--text-primary) hover:bg-(--accent-subtle) cursor-pointer'}`}><Edit2 className="w-3.5 h-3.5" /></button>
-                            <button disabled={isLockedRecord} onClick={() => handleDeleteChild(row.incident_act_id)} className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:bg-(--accent-subtle) cursor-pointer'}`}><Trash2 className="w-3.5 h-3.5" /></button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              )}
-
-              {activeAnalysisTab === 'personal' && (
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-(--accent-subtle) text-(--text-muted) uppercase border-b border-(--border-main) sticky top-0 z-10 shadow-xs">
-                      <th className="py-2 px-3 w-32">Detail Code</th>
-                      <th className="py-2 px-3">Factor Detail</th>
-                      <th className="py-2 px-3">RPN</th>
-                      <th className="py-2 px-3">Investigation Remarks</th>
-                      <th className="py-2 px-3 text-right w-24">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                    {incidentPersonal.length === 0 ? (
-                      <tr><td colSpan={5} className="py-6 text-center text-(--text-muted) text-xs">No personal factors recorded.</td></tr>
-                    ) : (
-                      incidentPersonal.map((row) => (
-                        <tr key={row.incident_personal_id} className="hover:bg-(--accent-subtle) transition-colors">
-                          <td className="py-2 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">{row.detail_code || '—'}</td>
-                          <td className="py-2 px-3 text-(--text-primary) font-medium">{row.detail_description || '—'}</td>
-                          <td className="py-2 px-3 font-mono font-bold">{row.computed_rpn ?? '—'}</td>
-                          <td className="py-2 px-3 text-(--text-muted)">{row.remarks || '—'}</td>
-                          <td className="py-2 px-3 text-right space-x-2 shrink-0">
-                            <button disabled={isLockedRecord} onClick={() => handleOpenEditChild(row.incident_personal_id, row.factor_id, row.remarks, row.factors_fmea_id)} className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-(--text-primary) hover:bg-(--accent-subtle) cursor-pointer'}`}><Edit2 className="w-3.5 h-3.5" /></button>
-                            <button disabled={isLockedRecord} onClick={() => handleDeleteChild(row.incident_personal_id)} className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:bg-(--accent-subtle) cursor-pointer'}`}><Trash2 className="w-3.5 h-3.5" /></button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              )}
-
-              {activeAnalysisTab === 'workrelated' && (
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-(--accent-subtle) text-(--text-muted) uppercase border-b border-(--border-main) sticky top-0 z-10 shadow-xs">
-                      <th className="py-2 px-3 w-32">Detail Code</th>
-                      <th className="py-2 px-3">Cause Detail</th>
-                      <th className="py-2 px-3">RPN</th>
-                      <th className="py-2 px-3">Investigation Remarks</th>
-                      <th className="py-2 px-3 text-right w-24">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                    {incidentWorkRelated.length === 0 ? (
-                      <tr><td colSpan={5} className="py-6 text-center text-(--text-muted) text-xs">No work-related causes recorded.</td></tr>
-                    ) : (
-                      incidentWorkRelated.map((row) => (
-                        <tr key={row.incident_workrelated_id} className="hover:bg-(--accent-subtle) transition-colors">
-                          <td className="py-2 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">{row.detail_code || '—'}</td>
-                          <td className="py-2 px-3 text-(--text-primary) font-medium">{row.detail_description || '—'}</td>
-                          <td className="py-2 px-3 font-mono font-bold">{row.computed_rpn ?? '—'}</td>
-                          <td className="py-2 px-3 text-(--text-muted)">{row.remarks || '—'}</td>
-                          <td className="py-2 px-3 text-right space-x-2 shrink-0">
-                            <button disabled={isLockedRecord} onClick={() => handleOpenEditChild(row.incident_workrelated_id, row.cause_id, row.remarks, row.cause_fmea_id)} className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-(--text-primary) hover:bg-(--accent-subtle) cursor-pointer'}`}><Edit2 className="w-3.5 h-3.5" /></button>
-                            <button disabled={isLockedRecord} onClick={() => handleDeleteChild(row.incident_workrelated_id)} className={`p-1 rounded ${isLockedRecord ? 'text-(--text-muted) cursor-not-allowed' : 'text-red-600 dark:text-red-400 hover:bg-(--accent-subtle) cursor-pointer'}`}><Trash2 className="w-3.5 h-3.5" /></button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              )}
+              {activeAnalysisTab === 'conditions' && renderPaginatedTable(incidentConditions, 'incident_conditions_id', 'conditionsfmea_id', 'condition_id')}
+              {activeAnalysisTab === 'acts' && renderPaginatedTable(incidentActs, 'incident_act_id', 'actfmea_id', 'act_id')}
+              {activeAnalysisTab === 'personal' && renderPaginatedTable(incidentPersonal, 'incident_personal_id', 'factors_fmea_id', 'factor_id')}
+              {activeAnalysisTab === 'workrelated' && renderPaginatedTable(incidentWorkRelated, 'incident_workrelated_id', 'cause_fmea_id', 'cause_id')}
             </>
           )}
         </div>
@@ -1424,7 +1443,7 @@ export function IncidentReport() {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+          <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 bg-(--accent-subtle) shrink-0">
               <h3 className="text-lg font-bold text-(--text-primary) flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4" />
@@ -1432,23 +1451,23 @@ export function IncidentReport() {
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer"><X className="w-5 h-5" /></button>
             </div>
-            <form onSubmit={handleSubmitMaster} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-6 overflow-y-auto flex-1 space-y-4">
+            <form onSubmit={handleSubmitMaster} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-6 overflow-y-auto flex-1 min-h-0 space-y-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-(--text-muted) uppercase tracking-wider">Selected Equipment <span className="text-red-500">*</span></label>
+                  <label className="text-xs font-semibold text-(--text-muted) uppercase tracking-wider">Selected Active Equipment <span className="text-red-500">*</span></label>
                   {selectedEquipment ? (
                     <div className="flex items-center justify-between bg-(--bg-surface) border border-(--border-main) p-3.5 rounded-xl">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full text-xs">
                         <div><span className="text-[11px] text-(--text-muted) uppercase block">Plate No</span><div className="font-bold text-(--text-primary) text-sm font-mono">{selectedEquipment.plate_no}</div></div>
                         <div><span className="text-[11px] text-(--text-muted) uppercase block">Current Reading</span><div className="font-semibold text-(--text-primary)">{selectedEquipment.service_rdg ?? '0'}</div></div>
-                        <div><span className="text-[11px] text-(--text-muted) uppercase block">Make / Model</span><div className="font-semibold text-(--text-primary)">{selectedEquipment.make_name || 'N/A'}</div></div>
+                        <div><span className="text-[11px] text-(--text-muted) uppercase block">Make / Model</span><div className="font-semibold text-(--text-primary)">{selectedEquipment.make_name || 'N/A'} {selectedEquipment.model_name ? `/ ${selectedEquipment.model_name}` : ''}</div></div>
                         <div><span className="text-[11px] text-(--text-muted) uppercase block">Type</span><div className="font-semibold text-(--text-primary)">{selectedEquipment.type_description || 'N/A'}</div></div>
                       </div>
                       <button type="button" onClick={() => { setSelectedEquipment(null); setFormData(prev => ({ ...prev, vehicle_id: '', vehicle_plate: '' })); }} className="text-(--text-muted) hover:text-red-500 p-2 cursor-pointer shrink-0"><X className="w-5 h-5" /></button>
                     </div>
                   ) : (
                     <button type="button" onClick={() => { setShowEquipmentPicker(true); fetchEquipmentList(); }} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-secondary) px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-between cursor-pointer">
-                      <span className="flex items-center gap-2"><Search className="w-4 h-4 text-(--text-primary)" /> Click here to select an equipment...</span>
+                      <span className="flex items-center gap-2"><Search className="w-4 h-4 text-(--text-primary)" /> Click here to select an active equipment...</span>
                       <span className="text-xs bg-(--accent-subtle) text-(--text-primary) px-2 py-0.5 rounded font-medium">Browse</span>
                     </button>
                   )}
@@ -1473,8 +1492,13 @@ export function IncidentReport() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Estimated Loss (₱)</label>
-                    <input type="number" step="0.01" value={formData.incident_loss} onChange={(e) => setFormData({ ...formData, incident_loss: parseFloat(e.target.value) || 0 })} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs font-mono" />
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Estimated Loss (₱) <span className="text-red-500">*</span></label>
+                    <input type="number" step="0.01" required value={formData.incident_loss} onChange={(e) => setFormData({ ...formData, incident_loss: parseFloat(e.target.value) || 0 })} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs font-mono" />
+                    {Number(formData.incident_loss) === 0 && (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1 font-medium">
+                        <AlertCircle className="w-3 h-3 shrink-0" /> Notice: Estimated Loss is currently set to ₱0.
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Status</label>
@@ -1486,30 +1510,30 @@ export function IncidentReport() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Incident Description</label>
+                  <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Incident Description <span className="text-red-500">*</span></label>
                   <textarea rows={3} required value={formData.incident_description} onChange={(e) => setFormData({ ...formData, incident_description: e.target.value })} placeholder="Describe what occurred..." className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3.5 py-2 text-xs" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Reported By</label>
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Reported By (Active Employee) <span className="text-red-500">*</span></label>
                     <div className="flex gap-2">
-                      <input type="text" value={formData.reported_by} onChange={(e) => setFormData({ ...formData, reported_by: e.target.value })} placeholder="Reporter name..." className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs" />
-                      <button type="button" onClick={() => handleOpenEmployeeModal('reported_by')} className="bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) px-3 py-2 rounded-lg text-xs font-semibold"><Search className="w-3.5 h-3.5" /></button>
+                      <input type="text" required readOnly value={formData.reported_by} placeholder="Select active employee..." className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs cursor-pointer" onClick={() => handleOpenEmployeeModal('reported_by')} />
+                      <button type="button" onClick={() => handleOpenEmployeeModal('reported_by')} className="bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer"><Search className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Validated By</label>
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Validated By (Supervisor) <span className="text-red-500">*</span></label>
                     <div className="flex gap-2">
-                      <input type="text" value={formData.validated_by} onChange={(e) => setFormData({ ...formData, validated_by: e.target.value })} placeholder="Validator name..." className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs" />
-                      <button type="button" onClick={() => handleOpenEmployeeModal('validated_by')} className="bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) px-3 py-2 rounded-lg text-xs font-semibold"><Search className="w-3.5 h-3.5" /></button>
+                      <input type="text" required readOnly value={formData.validated_by} placeholder="Select active supervisor..." className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs cursor-pointer" onClick={() => handleOpenEmployeeModal('validated_by')} />
+                      <button type="button" onClick={() => handleOpenEmployeeModal('validated_by')} className="bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer"><Search className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="flex justify-end gap-3 px-6 py-4 border-t border-(--border-main) bg-(--accent-subtle)">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-(--accent-subtle) text-(--text-primary) rounded-lg text-xs font-semibold">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold">Save Incident Report</button>
+              <div className="flex justify-end gap-3 px-6 py-4 border-t border-(--border-main) bg-(--accent-subtle) shrink-0">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-(--accent-subtle) text-(--text-primary) rounded-lg text-xs font-semibold cursor-pointer">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold cursor-pointer shadow-xs">Save Incident Report</button>
               </div>
             </form>
           </div>
@@ -1520,21 +1544,26 @@ export function IncidentReport() {
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 p-4">
           <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
             <div className="flex justify-between items-center px-6 py-4 border-b border-(--border-main) bg-(--accent-subtle)">
-              <h3 className="text-lg font-bold text-(--text-primary)">Select Equipment</h3>
-              <button type="button" onClick={() => setShowEquipmentPicker(false)} className="text-(--text-muted)"><X className="w-5 h-5" /></button>
+              <h3 className="text-lg font-bold text-(--text-primary)">Select Active Equipment</h3>
+              <button type="button" onClick={() => setShowEquipmentPicker(false)} className="text-(--text-muted) cursor-pointer"><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={(e) => { e.preventDefault(); fetchEquipmentList(equipmentSearchQuery); }} className="p-3 border-b border-(--border-main) bg-(--bg-surface) flex gap-2">
-              <input type="text" placeholder="Filter by Equipment ID..." value={equipmentSearchQuery} onChange={(e) => setEquipmentSearchQuery(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs" />
-              <button type="submit" className="bg-(--btn-primary-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-medium">Search</button>
+              <input type="text" placeholder="Filter by Make, Model, or Plate No..." value={equipmentSearchQuery} onChange={(e) => setEquipmentSearchQuery(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs" />
+              <button type="submit" className="bg-(--btn-primary-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer">Search</button>
             </form>
             <div className="p-4 overflow-y-auto flex-1 space-y-2">
               {loadingEquipment ? (
                 <div className="py-12 text-center text-(--text-muted)"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>
+              ) : equipmentList.length === 0 ? (
+                <div className="py-12 text-center text-(--text-muted) text-xs">No active equipment found.</div>
               ) : equipmentList.map((eq, index) => {
                 const vehId = String(eq.vehicle_id || eq.equipment_id || eq.id || '');
                 return (
                   <div key={vehId || index} onClick={() => { setSelectedEquipment(eq); setFormData(prev => ({ ...prev, vehicle_id: vehId, vehicle_plate: eq.plate_no })); setShowEquipmentPicker(false); }} className="flex items-center justify-between bg-(--bg-elevated) hover:bg-(--accent-subtle) border border-(--border-main) p-2.5 rounded-lg cursor-pointer">
-                    <div><div className="font-bold text-(--text-primary) text-xs font-mono">{eq.plate_no}</div><div className="text-[11px] text-(--text-muted)">{eq.make_name || 'N/A'}</div></div>
+                    <div>
+                      <div className="font-bold text-(--text-primary) text-xs font-mono">{eq.plate_no}</div>
+                      <div className="text-[11px] text-(--text-muted)">{eq.make_name || 'N/A'} {eq.model_name ? `/ ${eq.model_name}` : ''} ({eq.type_description || 'N/A'})</div>
+                    </div>
                     <div className="text-xs font-semibold text-(--text-secondary)">Rdg: {eq.service_rdg ?? '0'}</div>
                   </div>
                 );
@@ -1548,19 +1577,33 @@ export function IncidentReport() {
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-60">
           <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
             <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 bg-(--accent-subtle)">
-              <h3 className="text-lg font-bold text-(--text-primary)">Select Employee</h3>
-              <button onClick={() => setIsEmployeeModalOpen(false)} className="text-(--text-muted)"><X className="w-4 h-4" /></button>
+              <h3 className="text-lg font-bold text-(--text-primary)">
+                {employeeModalTarget === 'validated_by' ? 'Select Active Supervisor' : 'Select Active Employee'}
+              </h3>
+              <button onClick={() => setIsEmployeeModalOpen(false)} className="text-(--text-muted) cursor-pointer"><X className="w-4 h-4" /></button>
             </div>
             <div className="p-3 border-b border-(--border-main) bg-(--bg-surface)">
-              <input type="text" autoFocus placeholder="Search employee name..." value={employeeSearchQuery} onChange={(e) => setEmployeeSearchQuery(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs" />
+              <input type="text" autoFocus placeholder="Search employee name, department, position..." value={employeeSearchQuery} onChange={(e) => setEmployeeSearchQuery(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs" />
             </div>
             <div className="p-4 overflow-y-auto flex-1 space-y-2">
-              {filteredEmployees.map(emp => (
-                <div key={emp.employee_id} onClick={() => handleSelectEmployee(emp)} className="p-3 bg-(--bg-elevated) hover:bg-(--accent-subtle) border border-(--border-main) rounded-xl cursor-pointer flex justify-between items-center">
-                  <div><div className="text-xs font-bold text-(--text-primary)">{emp.full_name}</div><div className="text-[11px] text-(--text-muted)">{emp.position}</div></div>
-                  <span className="text-xs font-semibold text-(--text-primary)">Select</span>
-                </div>
-              ))}
+              {filteredEmployees.length === 0 ? (
+                <div className="text-center text-(--text-muted) text-xs py-8">No matching active employees found.</div>
+              ) : (
+                filteredEmployees.map(emp => (
+                  <div key={emp.employee_id} onClick={() => handleSelectEmployee(emp)} className="p-3 bg-(--bg-elevated) hover:bg-(--accent-subtle) border border-(--border-main) rounded-xl cursor-pointer flex justify-between items-center">
+                    <div>
+                      <div className="text-xs font-bold text-(--text-primary) flex items-center gap-2">
+                        {emp.full_name}
+                        {emp.is_supervisor && (
+                          <span className="bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 text-[10px] px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-800 font-semibold">Supervisor</span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-(--text-muted)">{emp.position || 'Employee'} {emp.department ? `• ${emp.department}` : ''}</div>
+                    </div>
+                    <span className="text-xs font-semibold text-(--text-primary)">Select</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -1582,8 +1625,8 @@ export function IncidentReport() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmitChild} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-3">
+            <form onSubmit={handleSubmitChild} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-4 sm:p-5 overflow-y-auto flex-1 min-h-0 space-y-3">
                 <div>
                   <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">Incident Ref</label>
                   <input type="text" readOnly value={`${selectedIncidentRecord?.incident_refno} (${selectedIncidentRecord?.vehicle_plate})`} className="w-full bg-(--bg-surface) border border-(--border-main) rounded-lg px-3 py-1.5 text-xs text-(--text-muted) cursor-not-allowed" />
