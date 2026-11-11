@@ -5,7 +5,8 @@ import {
   LayoutDashboard, Wrench, ClipboardList, FileText, ChevronDown, ChevronRight, Car,
   Settings, ShieldAlert, Calendar, Cpu, CheckSquare, Wrench as WrenchIcon, ClipboardCheck,
   LayoutGrid, Activity, Globe, Users, Layers, History, AlertTriangle, FileWarning, GitFork,
-  AlertCircle, ChevronLeft, ChevronRight as ChevronRightIcon, BookOpen, Sun, Moon, HelpCircle, Layers3
+  AlertCircle, ChevronLeft, ChevronRight as ChevronRightIcon, BookOpen, Sun, Moon, HelpCircle, Layers3,
+  MapPin, Compass
 } from 'lucide-react';
 
 export type ThemeMode = 'light' | 'dark' | 'mixed';
@@ -21,6 +22,9 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
   const currentPath = location.pathname;
 
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
+  const [isOperationsOpen, setIsOperationsOpen] = useState<boolean>(
+    currentPath.startsWith('/operations')
+  );
   const [isMaintenanceOpen, setIsMaintenanceOpen] = useState<boolean>(
     currentPath === '/daily-inspection' || currentPath === '/vehicles' || currentPath === '/component-history' || currentPath === '/maintenance-forecast'
   );
@@ -102,6 +106,36 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
           <LayoutDashboard className="w-4 h-4 shrink-0" />
           {!isMinimized && <span className="truncate">Dashboard</span>}
         </button>
+
+        {/* Operations Accordion */}
+        <div className="space-y-1">
+          <button
+            onClick={() => isMinimized ? (setIsMinimized(false), setIsOperationsOpen(true)) : setIsOperationsOpen(!isOperationsOpen)}
+            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2' : 'justify-between px-3 py-2'} rounded-xl text-xs sm:text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
+          >
+            <div className={`flex items-center ${isMinimized ? '' : 'gap-3'}`}>
+              <Compass className="w-4 h-4 text-(--sidebar-text-primary) shrink-0" />
+              {!isMinimized && <span className="truncate">Operations</span>}
+            </div>
+            {!isMinimized && (isOperationsOpen ? <ChevronDown className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" /> : <ChevronRight className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" />)}
+          </button>
+
+          {isOperationsOpen && !isMinimized && (
+            <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-(--sidebar-border)">
+              <button
+                onClick={() => navigate('/operations/daily-trip-assignment')}
+                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  currentPath === '/operations/daily-trip-assignment'
+                    ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
+                    : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
+                }`}
+              >
+                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Daily Trip Assignment</span>
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Maintenance Plan Accordion */}
         <div className="space-y-1">

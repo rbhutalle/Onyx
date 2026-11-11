@@ -115,6 +115,11 @@ export function JobOrderDashboard() {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Selected Month States for Chart Click Filtering
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string | null>(null);
+  const [selectedCostMonthKey, setSelectedCostMonthKey] = useState<string | null>(null);
+  const [selectedBreakdownMonthKey, setSelectedBreakdownMonthKey] = useState<string | null>(null);
+
   // Default dates (last 90 days)
   const defaultEndDate = useMemo(() => {
     const today = new Date();
@@ -129,6 +134,20 @@ export function JobOrderDashboard() {
 
   const [startDate, setStartDate] = useState<string>(defaultStartDate);
   const [endDate, setEndDate] = useState<string>(defaultEndDate);
+
+  const handleStartDateChange = (val: string) => {
+    setStartDate(val);
+    setSelectedMonthKey(null);
+    setSelectedCostMonthKey(null);
+    setSelectedBreakdownMonthKey(null);
+  };
+
+  const handleEndDateChange = (val: string) => {
+    setEndDate(val);
+    setSelectedMonthKey(null);
+    setSelectedCostMonthKey(null);
+    setSelectedBreakdownMonthKey(null);
+  };
 
   // Filter States
   const [filterCustomer, setFilterCustomer] = useState<string>('ALL');
@@ -521,12 +540,14 @@ export function JobOrderDashboard() {
       });
   }, [vehiclesData, allJobsCache, filterCustomer, filterMake, filterModel, filterJobOrderTypeId, filterStatusId, filterSupervisorId, startDate, endDate, defaultStartDate, defaultEndDate]);
 
-  // Compute job order type counts & costs based on filtered vehicles or all jobs cache within date range
+  // Compute job order type counts & costs based on filtered vehicles or all jobs cache within date range AND selectedMonthKey
   const jobOrderTypeMetrics = useMemo(() => {
     const typeCountMap = new Map<string, number>();
     const typeCostMap = new Map<string, number>();
     
     const validVehicleIds = new Set(filteredVehicles.map(v => v.vehicle_id));
+
+    let filteredTotalJoCount = 0;
 
     allJobsCache.forEach(j => {
       if (!j.vehicle_id || !validVehicleIds.has(String(j.vehicle_id))) return;
@@ -534,9 +555,13 @@ export function JobOrderDashboard() {
       const createdAt = String(j.created_at || '').substring(0, 10);
       if (createdAt && (createdAt < startDate || createdAt > endDate)) return;
 
+      if (selectedMonthKey && (!createdAt || createdAt.substring(0, 7) !== selectedMonthKey)) return;
+
       if (filterSupervisorId !== 'ALL' && String(j.assigned_supervisor) !== filterSupervisorId) return;
       if (filterJobOrderTypeId !== 'ALL' && String(j.type_id || '') !== filterJobOrderTypeId) return;
       if (filterStatusId !== 'ALL' && String(j.status_id || '') !== filterStatusId) return;
+
+      filteredTotalJoCount += 1;
 
       const rawType = j.joborder_type as Record<string, unknown> | null;
       let typeDesc = String(rawType?.type_desc || '');
@@ -588,9 +613,95 @@ export function JobOrderDashboard() {
       reworkCost,
       plannedCount,
       emergencyCount,
-      reworkCount
+      reworkCount,
+      filteredTotalJoCount
     };
-  }, [filteredVehicles, allJobsCache, jobOrderTypes, filterSupervisorId, filterJobOrderTypeId, filterStatusId, startDate, endDate]);
+  }, [filteredVehicles, allJobsCache, jobOrderTypes, filterSupervisorId, filterJobOrderTypeId, filterStatusId, startDate, endDate, selectedMonthKey]);
+
+  // Compute Job Order Costs sub-tab metrics dynamically filtered by selectedCostMonthKey
+  const jobOrderCostSubTabMetrics = useMemo(() => {
+    const validVehicleIds = new Set(filteredVehicles.map(v => v.vehicle_id));
+
+    let plannedCost = 0;
+    let emergencyCost = 0;
+    let reworkCost = 0;
+    let totalCost = 0;
+
+    allJobsCache.forEach(j => {
+      if (!j.vehicle_id || !validVehicleIds.has(String(j.vehicle_id))) return;
+      
+      const createdAt = String(j.created_at || '').substring(0, 10);
+      if (createdAt && (createdAt < startDate || createdAt > endDate)) return;
+
+      if (selectedCostMonthKey && (!createdAt || createdAt.substring(0, 7) !== selectedCostMonthKey)) return;
+
+      if (filterSupervisorId !== 'ALL' && String(j.assigned_supervisor) !== filterSupervisorId) return;
+      if (filterJobOrderTypeId !== 'ALL' && String(j.type_id || '') !== filterJobOrderTypeId) return;
+      if (filterStatusId !== 'ALL' && String(j.status_id || '') !== filterStatusId) return;
+
+      const rawType = j.joborder_type as Record<string, unknown> | null;
+      let typeDesc = String(rawType?.type_desc || '');
+      if (!typeDesc && j.type_id) {
+        const found = jobOrderTypes.find(t => t.type_id === String(j.type_id));
+        if (found) typeDesc = found.type_desc;
+      }
+      const lower = typeDesc.toLowerCase();
+      const cost = Number(j.total_cost || 0);
+
+      totalCost += cost;
+
+      if (lower.includes('plan')) plannedCost += cost;
+      else if (lower.includes('emerg') || lower.includes('unplan')) emergencyCost += cost;
+      else if (lower.includes('rework') || lower.includes('repeat')) reworkCost += cost;
+    });
+
+    return {
+      plannedCost,
+      emergencyCost,
+      reworkCost,
+      totalCost
+    };
+  }, [filteredVehicles, allJobsCache, jobOrderTypes, filterSupervisorId, filterJobOrderTypeId, filterStatusId, startDate, endDate, selectedCostMonthKey]);
+
+  // Compute Job Order Cost Breakdown sub-tab metrics dynamically filtered by selectedBreakdownMonthKey
+  const jobOrderBreakdownSubTabMetrics = useMemo(() => {
+    const validVehicleIds = new Set(filteredVehicles.map(v => v.vehicle_id));
+
+    let materialsCost = 0;
+    let laborCost = 0;
+    let contractCost = 0;
+    let totalCost = 0;
+
+    allJobsCache.forEach(j => {
+      if (!j.vehicle_id || !validVehicleIds.has(String(j.vehicle_id))) return;
+      
+      const createdAt = String(j.created_at || '').substring(0, 10);
+      if (createdAt && (createdAt < startDate || createdAt > endDate)) return;
+
+      if (selectedBreakdownMonthKey && (!createdAt || createdAt.substring(0, 7) !== selectedBreakdownMonthKey)) return;
+
+      if (filterSupervisorId !== 'ALL' && String(j.assigned_supervisor) !== filterSupervisorId) return;
+      if (filterJobOrderTypeId !== 'ALL' && String(j.type_id || '') !== filterJobOrderTypeId) return;
+      if (filterStatusId !== 'ALL' && String(j.status_id || '') !== filterStatusId) return;
+
+      const mat = Number(j.materials_cost || 0);
+      const lab = Number(j.labor_cost || 0);
+      const con = Number(j.contract_cost || 0);
+      const tot = Number(j.total_cost || 0);
+
+      materialsCost += mat;
+      laborCost += lab;
+      contractCost += con;
+      totalCost += tot;
+    });
+
+    return {
+      materialsCost,
+      laborCost,
+      contractCost,
+      totalCost
+    };
+  }, [filteredVehicles, allJobsCache, filterSupervisorId, filterJobOrderTypeId, filterStatusId, startDate, endDate, selectedBreakdownMonthKey]);
 
   // Compute Monthly Job Order Type Count Analysis (Planned vs Emergency vs Rework count per month)
   const monthlyJobOrderTypeCounts = useMemo(() => {
@@ -850,7 +961,7 @@ export function JobOrderDashboard() {
                       name="startDate"
                       type="date"
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
+                      onChange={(e) => handleStartDateChange(e.target.value)}
                       className="bg-(--bg-elevated) border border-(--border-main) px-2 py-1 rounded text-xs text-(--text-primary)"
                     />
                     <span>to</span>
@@ -859,7 +970,7 @@ export function JobOrderDashboard() {
                       name="endDate"
                       type="date"
                       value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
+                      onChange={(e) => handleEndDateChange(e.target.value)}
                       className="bg-(--bg-elevated) border border-(--border-main) px-2 py-1 rounded text-xs text-(--text-primary)"
                     />
                   </div>
@@ -1035,32 +1146,7 @@ export function JobOrderDashboard() {
               {/* Sub-Tab 1: Job Order Type */}
               {activeSubTab === 'type' && (
                 <div className="space-y-4 animate-fadeIn">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl space-y-1 shadow-xs">
-                      <div className="text-[10px] font-bold uppercase text-sky-600 dark:text-sky-400">Planned JO Count</div>
-                      <div className="text-lg font-extrabold text-sky-600 dark:text-sky-400 font-mono">{jobOrderTypeMetrics.plannedCount.toLocaleString()}</div>
-                      <div className="text-[10px] text-sky-600/80 dark:text-sky-400/80">Scheduled maintenance</div>
-                    </div>
-
-                    <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl space-y-1 shadow-xs">
-                      <div className="text-[10px] font-bold uppercase text-rose-600 dark:text-rose-400">Emergency JO Count</div>
-                      <div className="text-lg font-extrabold text-rose-600 dark:text-rose-400 font-mono">{jobOrderTypeMetrics.emergencyCount.toLocaleString()}</div>
-                      <div className="text-[10px] text-rose-600/80 dark:text-rose-400/80">Unplanned breakdowns</div>
-                    </div>
-
-                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-1 shadow-xs">
-                      <div className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">Rework JO Count</div>
-                      <div className="text-lg font-extrabold text-amber-600 dark:text-amber-400 font-mono">{jobOrderTypeMetrics.reworkCount.toLocaleString()}</div>
-                      <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">Repeat or corrective repairs</div>
-                    </div>
-
-                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl space-y-1 shadow-xs">
-                      <div className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400">Total Job Orders</div>
-                      <div className="text-lg font-extrabold text-blue-600 dark:text-blue-400 font-mono">{vehicleKpis.totalJo.toLocaleString()}</div>
-                      <div className="text-[10px] text-blue-600/80 dark:text-blue-400/80">Combined total count</div>
-                    </div>
-                  </div>
-
+                  {/* 1. Monthly Bar Chart */}
                   <div className="p-4 bg-(--bg-surface) border border-(--border-main) rounded-xl space-y-3 shadow-xs flex flex-col">
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-(--border-main) pb-2">
                       <div className="flex items-center gap-2">
@@ -1073,11 +1159,21 @@ export function JobOrderDashboard() {
                         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-sky-500 rounded-xs inline-block"></span>Planned</span>
                         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-rose-500 rounded-xs inline-block"></span>Emergency</span>
                         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-amber-500 rounded-xs inline-block"></span>Rework</span>
+                        {selectedMonthKey && (
+                          <button
+                            onClick={() => setSelectedMonthKey(null)}
+                            className="ml-2 px-2 py-0.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded font-bold text-[10px] hover:bg-rose-500/20 cursor-pointer"
+                          >
+                            Clear Month Filter
+                          </button>
+                        )}
                       </div>
                     </div>
 
                     <p className="text-[11px] text-(--text-muted)">
-                      Comparing monthly job order count frequency across the active period range ({startDate} to {endDate}).
+                      {selectedMonthKey
+                        ? `Showing KPI metrics for selected month: ${monthlyJobOrderTypeCounts.find(m => m.monthKey === selectedMonthKey)?.monthLabel || selectedMonthKey}. Click the active month bar to reset to full period.`
+                        : `Click any month bar to filter Job Order KPI Cards for that specific month (${startDate} to ${endDate}).`}
                     </p>
 
                     {monthlyJobOrderTypeCounts.length === 0 ? (
@@ -1095,14 +1191,22 @@ export function JobOrderDashboard() {
                               const plannedHeight = Math.max(4, Math.round((m.planned / maxCountVal) * 120));
                               const emergencyHeight = Math.max(4, Math.round((m.emergency / maxCountVal) * 120));
                               const reworkHeight = Math.max(4, Math.round((m.rework / maxCountVal) * 120));
+                              const isSelected = selectedMonthKey === m.monthKey;
 
                               return (
-                                <div key={idx} className="flex flex-col items-center flex-1 h-full justify-end group relative">
-                                  <div className="absolute left-1/2 -translate-x-1/2 top-2 hidden group-hover:flex flex-col bg-(--bg-elevated)/70 backdrop-blur-sm border border-(--border-main) p-2 rounded shadow-lg text-[10px] z-30 whitespace-nowrap pointer-events-none space-y-0.5">
+                                <button
+                                  key={idx}
+                                  onClick={() => setSelectedMonthKey(isSelected ? null : m.monthKey)}
+                                  className={`flex flex-col items-center flex-1 h-full justify-end group relative transition-all rounded-lg p-1 cursor-pointer ${
+                                    isSelected ? 'bg-sky-500/15 ring-2 ring-sky-500' : 'hover:bg-(--accent-subtle)'
+                                  }`}
+                                >
+                                  <div className="absolute left-1/2 -translate-x-1/2 top-2 hidden group-hover:flex flex-col bg-(--bg-elevated)/90 backdrop-blur-sm border border-(--border-main) p-2 rounded shadow-lg text-[10px] z-30 whitespace-nowrap pointer-events-none space-y-0.5">
                                     <span className="font-bold text-(--text-primary)">{m.monthLabel}</span>
                                     <span className="text-sky-500">Planned JOs: {m.planned.toLocaleString()}</span>
                                     <span className="text-rose-500">Emergency JOs: {m.emergency.toLocaleString()}</span>
                                     <span className="text-amber-500">Rework JOs: {m.rework.toLocaleString()}</span>
+                                    <span className="text-[9px] text-(--text-muted) italic mt-1">Click to filter KPIs</span>
                                   </div>
 
                                   <div className="flex items-end justify-center gap-1 w-full max-w-20 h-32 px-1">
@@ -1123,10 +1227,12 @@ export function JobOrderDashboard() {
                                     ></div>
                                   </div>
 
-                                  <span className="text-[10px] font-bold text-(--text-muted) mt-2 truncate w-full text-center">
+                                  <span className={`text-[10px] font-bold mt-2 truncate w-full text-center ${
+                                    isSelected ? 'text-sky-600 dark:text-sky-400 font-black underline' : 'text-(--text-muted)'
+                                  }`}>
                                     {m.monthLabel}
                                   </span>
-                                </div>
+                                </button>
                               );
                             });
                           })()}
@@ -1134,38 +1240,50 @@ export function JobOrderDashboard() {
                       </div>
                     )}
                   </div>
+
+                  {/* 2. Dynamically Filtered Job Order KPI Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl space-y-1 shadow-xs">
+                      <div className="text-[10px] font-bold uppercase text-sky-600 dark:text-sky-400">
+                        Planned JO Count {selectedMonthKey ? `(${monthlyJobOrderTypeCounts.find(m => m.monthKey === selectedMonthKey)?.monthLabel})` : ''}
+                      </div>
+                      <div className="text-lg font-extrabold text-sky-600 dark:text-sky-400 font-mono">{jobOrderTypeMetrics.plannedCount.toLocaleString()}</div>
+                      <div className="text-[10px] text-sky-600/80 dark:text-sky-400/80">Scheduled maintenance</div>
+                    </div>
+
+                    <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl space-y-1 shadow-xs">
+                      <div className="text-[10px] font-bold uppercase text-rose-600 dark:text-rose-400">
+                        Emergency JO Count {selectedMonthKey ? `(${monthlyJobOrderTypeCounts.find(m => m.monthKey === selectedMonthKey)?.monthLabel})` : ''}
+                      </div>
+                      <div className="text-lg font-extrabold text-rose-600 dark:text-rose-400 font-mono">{jobOrderTypeMetrics.emergencyCount.toLocaleString()}</div>
+                      <div className="text-[10px] text-rose-600/80 dark:text-rose-400/80">Unplanned breakdowns</div>
+                    </div>
+
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-1 shadow-xs">
+                      <div className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">
+                        Rework JO Count {selectedMonthKey ? `(${monthlyJobOrderTypeCounts.find(m => m.monthKey === selectedMonthKey)?.monthLabel})` : ''}
+                      </div>
+                      <div className="text-lg font-extrabold text-amber-600 dark:text-amber-400 font-mono">{jobOrderTypeMetrics.reworkCount.toLocaleString()}</div>
+                      <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">Repeat or corrective repairs</div>
+                    </div>
+
+                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl space-y-1 shadow-xs">
+                      <div className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400">
+                        Total Job Orders {selectedMonthKey ? `(${monthlyJobOrderTypeCounts.find(m => m.monthKey === selectedMonthKey)?.monthLabel})` : ''}
+                      </div>
+                      <div className="text-lg font-extrabold text-blue-600 dark:text-blue-400 font-mono">
+                        {(selectedMonthKey ? jobOrderTypeMetrics.filteredTotalJoCount : vehicleKpis.totalJo).toLocaleString()}
+                      </div>
+                      <div className="text-[10px] text-blue-600/80 dark:text-blue-400/80">Combined total count</div>
+                    </div>
+                  </div>
                 </div>
               )}
 
               {/* Sub-Tab 2: Job Order Costs */}
               {activeSubTab === 'costs' && (
                 <div className="space-y-4 animate-fadeIn">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl space-y-1 shadow-xs">
-                      <div className="text-[10px] font-bold uppercase text-sky-600 dark:text-sky-400">Planned JO Total Cost</div>
-                      <div className="text-lg font-extrabold text-sky-600 dark:text-sky-400">₱{jobOrderTypeMetrics.plannedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      <div className="text-[10px] text-sky-600/80 dark:text-sky-400/80">Scheduled maintenance</div>
-                    </div>
-
-                    <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl space-y-1 shadow-xs">
-                      <div className="text-[10px] font-bold uppercase text-rose-600 dark:text-rose-400">Emergency JO Total Cost</div>
-                      <div className="text-lg font-extrabold text-rose-600 dark:text-rose-400">₱{jobOrderTypeMetrics.emergencyCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      <div className="text-[10px] text-rose-600/80 dark:text-rose-400/80">Unplanned breakdowns</div>
-                    </div>
-
-                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-1 shadow-xs">
-                      <div className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">Rework JO Total Cost</div>
-                      <div className="text-lg font-extrabold text-amber-600 dark:text-amber-400">₱{jobOrderTypeMetrics.reworkCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">Repeat or corrective repairs</div>
-                    </div>
-
-                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-1 shadow-xs">
-                      <div className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">TOTAL JO Cost</div>
-                      <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">₱{vehicleKpis.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      <div className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">Combined maintenance cost</div>
-                    </div>
-                  </div>
-
+                  {/* 1. Monthly Comparative Cost Analysis Chart (Moved Above KPI Cards) */}
                   <div className="p-4 bg-(--bg-surface) border border-(--border-main) rounded-xl space-y-3 shadow-xs flex flex-col">
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-(--border-main) pb-2">
                       <div className="flex items-center gap-2">
@@ -1178,11 +1296,21 @@ export function JobOrderDashboard() {
                         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-sky-500 rounded-xs inline-block"></span>Planned</span>
                         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-rose-500 rounded-xs inline-block"></span>Emergency</span>
                         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-amber-500 rounded-xs inline-block"></span>Rework</span>
+                        {selectedCostMonthKey && (
+                          <button
+                            onClick={() => setSelectedCostMonthKey(null)}
+                            className="ml-2 px-2 py-0.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded font-bold text-[10px] hover:bg-rose-500/20 cursor-pointer"
+                          >
+                            Clear Month Filter
+                          </button>
+                        )}
                       </div>
                     </div>
 
                     <p className="text-[11px] text-(--text-muted)">
-                      Comparing monthly cost distribution across the active period range ({startDate} to {endDate}).
+                      {selectedCostMonthKey
+                        ? `Showing cost metrics for selected month: ${monthlyComparativeCosts.find(m => m.monthKey === selectedCostMonthKey)?.monthLabel || selectedCostMonthKey}. Click the active month bar to reset to full period.`
+                        : `Click any month bar to filter Job Order Cost KPI Cards for that specific month (${startDate} to ${endDate}).`}
                     </p>
 
                     {monthlyComparativeCosts.length === 0 ? (
@@ -1200,38 +1328,48 @@ export function JobOrderDashboard() {
                               const plannedHeight = Math.max(4, Math.round((m.planned / maxCostVal) * 120));
                               const emergencyHeight = Math.max(4, Math.round((m.emergency / maxCostVal) * 120));
                               const reworkHeight = Math.max(4, Math.round((m.rework / maxCostVal) * 120));
+                              const isSelected = selectedCostMonthKey === m.monthKey;
 
                               return (
-                                <div key={idx} className="flex flex-col items-center flex-1 h-full justify-end group relative">
-                                  <div className="absolute left-1/2 -translate-x-1/2 top-2 hidden group-hover:flex flex-col bg-(--bg-elevated)/70 backdrop-blur-sm border border-(--border-main) p-2 rounded shadow-lg text-[10px] z-30 whitespace-nowrap pointer-events-none space-y-0.5">
+                                <button
+                                  key={idx}
+                                  onClick={() => setSelectedCostMonthKey(isSelected ? null : m.monthKey)}
+                                  className={`flex flex-col items-center flex-1 h-full justify-end group relative transition-all rounded-lg p-1 cursor-pointer ${
+                                    isSelected ? 'bg-blue-500/15 ring-2 ring-blue-500' : 'hover:bg-(--accent-subtle)'
+                                  }`}
+                                >
+                                  <div className="absolute left-1/2 -translate-x-1/2 top-2 hidden group-hover:flex flex-col bg-(--bg-elevated)/90 backdrop-blur-sm border border-(--border-main) p-2 rounded shadow-lg text-[10px] z-30 whitespace-nowrap pointer-events-none space-y-0.5">
                                     <span className="font-bold text-(--text-primary)">{m.monthLabel}</span>
                                     <span className="text-sky-500">Planned: ₱{m.planned.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     <span className="text-rose-500">Emergency: ₱{m.emergency.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     <span className="text-amber-500">Rework: ₱{m.rework.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                    <span className="text-[9px] text-(--text-muted) italic mt-1">Click to filter KPIs</span>
                                   </div>
 
                                   <div className="flex items-end justify-center gap-1 w-full max-w-20 h-32 px-1">
                                     <div 
                                       className="w-3 bg-sky-500 rounded-t-sm transition-all duration-300 hover:opacity-90" 
                                       style={{ height: `${plannedHeight}px` }}
-                                      title={`Planned: ₱{m.planned.toLocaleString()}`}
+                                      title={`Planned: ₱${m.planned.toLocaleString()}`}
                                     ></div>
                                     <div 
                                       className="w-3 bg-rose-500 rounded-t-sm transition-all duration-300 hover:opacity-90" 
                                       style={{ height: `${emergencyHeight}px` }}
-                                      title={`Emergency: ₱{m.emergency.toLocaleString()}`}
+                                      title={`Emergency: ₱${m.emergency.toLocaleString()}`}
                                     ></div>
                                     <div 
                                       className="w-3 bg-amber-500 rounded-t-sm transition-all duration-300 hover:opacity-90" 
                                       style={{ height: `${reworkHeight}px` }}
-                                      title={`Rework: ₱{m.rework.toLocaleString()}`}
+                                      title={`Rework: ₱${m.rework.toLocaleString()}`}
                                     ></div>
                                   </div>
 
-                                  <span className="text-[10px] font-bold text-(--text-muted) mt-2 truncate w-full text-center">
+                                  <span className={`text-[10px] font-bold mt-2 truncate w-full text-center ${
+                                    isSelected ? 'text-blue-600 dark:text-blue-400 font-black underline' : 'text-(--text-muted)'
+                                  }`}>
                                     {m.monthLabel}
                                   </span>
-                                </div>
+                                </button>
                               );
                             });
                           })()}
@@ -1239,38 +1377,48 @@ export function JobOrderDashboard() {
                       </div>
                     )}
                   </div>
+
+                  {/* 2. Dynamically Filtered Job Order Costs KPI Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl space-y-1 shadow-xs">
+                      <div className="text-[10px] font-bold uppercase text-sky-600 dark:text-sky-400">
+                        Planned JO Total Cost {selectedCostMonthKey ? `(${monthlyComparativeCosts.find(m => m.monthKey === selectedCostMonthKey)?.monthLabel})` : ''}
+                      </div>
+                      <div className="text-lg font-extrabold text-sky-600 dark:text-sky-400">₱{jobOrderCostSubTabMetrics.plannedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div className="text-[10px] text-sky-600/80 dark:text-sky-400/80">Scheduled maintenance</div>
+                    </div>
+
+                    <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl space-y-1 shadow-xs">
+                      <div className="text-[10px] font-bold uppercase text-rose-600 dark:text-rose-400">
+                        Emergency JO Total Cost {selectedCostMonthKey ? `(${monthlyComparativeCosts.find(m => m.monthKey === selectedCostMonthKey)?.monthLabel})` : ''}
+                      </div>
+                      <div className="text-lg font-extrabold text-rose-600 dark:text-rose-400">₱{jobOrderCostSubTabMetrics.emergencyCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div className="text-[10px] text-rose-600/80 dark:text-rose-400/80">Unplanned breakdowns</div>
+                    </div>
+
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-1 shadow-xs">
+                      <div className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">
+                        Rework JO Total Cost {selectedCostMonthKey ? `(${monthlyComparativeCosts.find(m => m.monthKey === selectedCostMonthKey)?.monthLabel})` : ''}
+                      </div>
+                      <div className="text-lg font-extrabold text-amber-600 dark:text-amber-400">₱{jobOrderCostSubTabMetrics.reworkCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">Repeat or corrective repairs</div>
+                    </div>
+
+                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-1 shadow-xs">
+                      <div className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">
+                        TOTAL JO Cost {selectedCostMonthKey ? `(${monthlyComparativeCosts.find(m => m.monthKey === selectedCostMonthKey)?.monthLabel})` : ''}
+                      </div>
+                      <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">₱{jobOrderCostSubTabMetrics.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">Combined maintenance cost</div>
+                    </div>
+                  </div>
                 </div>
               )}
 
               {/* Sub-Tab 3: Job Order Cost Breakdown */}
               {activeSubTab === 'breakdown' && (
                 <div className="space-y-4 animate-fadeIn">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl space-y-1 shadow-xs">
-                      <div className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400">Materials Cost</div>
-                      <div className="text-lg font-extrabold text-blue-600 dark:text-blue-400">₱{vehicleKpis.totalMaterialsCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      <div className="text-[10px] text-blue-600/80 dark:text-blue-400/80">Total parts & materials</div>
-                    </div>
-
-                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-1 shadow-xs">
-                      <div className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">Labor Cost</div>
-                      <div className="text-lg font-extrabold text-amber-600 dark:text-amber-400">₱{vehicleKpis.totalLaborCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">Total labor charges</div>
-                    </div>
-
-                    <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl space-y-1 shadow-xs">
-                      <div className="text-[10px] font-bold uppercase text-purple-600 dark:text-purple-400">Contract Cost</div>
-                      <div className="text-lg font-extrabold text-purple-600 dark:text-purple-400">₱{vehicleKpis.totalContractCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      <div className="text-[10px] text-purple-600/80 dark:text-purple-400/80">Total outsourced services</div>
-                    </div>
-
-                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-1 shadow-xs">
-                      <div className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">TOTAL COST (Validation)</div>
-                      <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">₱{vehicleKpis.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      <div className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">Matls + Labor + Contract</div>
-                    </div>
-                  </div>
-
+                  {/* 1. Monthly Component Cost Analysis Chart (Moved Above KPI Cards) */}
                   <div className="p-4 bg-(--bg-surface) border border-(--border-main) rounded-xl space-y-3 shadow-xs flex flex-col">
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-(--border-main) pb-2">
                       <div className="flex items-center gap-2">
@@ -1283,11 +1431,21 @@ export function JobOrderDashboard() {
                         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-blue-500 rounded-xs inline-block"></span>Materials</span>
                         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-amber-500 rounded-xs inline-block"></span>Labor</span>
                         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-purple-500 rounded-xs inline-block"></span>Contract</span>
+                        {selectedBreakdownMonthKey && (
+                          <button
+                            onClick={() => setSelectedBreakdownMonthKey(null)}
+                            className="ml-2 px-2 py-0.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded font-bold text-[10px] hover:bg-rose-500/20 cursor-pointer"
+                          >
+                            Clear Month Filter
+                          </button>
+                        )}
                       </div>
                     </div>
 
                     <p className="text-[11px] text-(--text-muted)">
-                      Comparing monthly component expenditures (Materials, Labor, and Contract Costs) across the selected period range ({startDate} to {endDate}).
+                      {selectedBreakdownMonthKey
+                        ? `Showing cost breakdown for selected month: ${monthlyComponentComparativeCosts.find(m => m.monthKey === selectedBreakdownMonthKey)?.monthLabel || selectedBreakdownMonthKey}. Click the active month bar to reset to full period.`
+                        : `Click any month bar to filter Cost Breakdown KPI Cards for that specific month (${startDate} to ${endDate}).`}
                     </p>
 
                     {monthlyComponentComparativeCosts.length === 0 ? (
@@ -1305,44 +1463,89 @@ export function JobOrderDashboard() {
                               const matHeight = Math.max(4, Math.round((m.materials / maxCompVal) * 120));
                               const labHeight = Math.max(4, Math.round((m.labor / maxCompVal) * 120));
                               const conHeight = Math.max(4, Math.round((m.contract / maxCompVal) * 120));
+                              const isSelected = selectedBreakdownMonthKey === m.monthKey;
 
                               return (
-                                <div key={idx} className="flex flex-col items-center flex-1 h-full justify-end group relative">
-                                  <div className="absolute left-1/2 -translate-x-1/2 top-2 hidden group-hover:flex flex-col bg-(--bg-elevated)/70 backdrop-blur-sm border border-(--border-main) p-2 rounded shadow-lg text-[10px] z-30 whitespace-nowrap pointer-events-none space-y-0.5">
+                                <button
+                                  key={idx}
+                                  onClick={() => setSelectedBreakdownMonthKey(isSelected ? null : m.monthKey)}
+                                  className={`flex flex-col items-center flex-1 h-full justify-end group relative transition-all rounded-lg p-1 cursor-pointer ${
+                                    isSelected ? 'bg-purple-500/15 ring-2 ring-purple-500' : 'hover:bg-(--accent-subtle)'
+                                  }`}
+                                >
+                                  <div className="absolute left-1/2 -translate-x-1/2 top-2 hidden group-hover:flex flex-col bg-(--bg-elevated)/90 backdrop-blur-sm border border-(--border-main) p-2 rounded shadow-lg text-[10px] z-30 whitespace-nowrap pointer-events-none space-y-0.5">
                                     <span className="font-bold text-(--text-primary)">{m.monthLabel}</span>
                                     <span className="text-blue-500">Materials: ₱{m.materials.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     <span className="text-amber-500">Labor: ₱{m.labor.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     <span className="text-purple-500">Contract: ₱{m.contract.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                    <span className="text-[9px] text-(--text-muted) italic mt-1">Click to filter KPIs</span>
                                   </div>
 
                                   <div className="flex items-end justify-center gap-1 w-full max-w-20 h-32 px-1">
                                     <div 
                                       className="w-3 bg-blue-500 rounded-t-sm transition-all duration-300 hover:opacity-90" 
                                       style={{ height: `${matHeight}px` }}
-                                      title={`Materials: ₱{m.materials.toLocaleString()}`}
+                                      title={`Materials: ₱${m.materials.toLocaleString()}`}
                                     ></div>
                                     <div 
                                       className="w-3 bg-amber-500 rounded-t-sm transition-all duration-300 hover:opacity-90" 
                                       style={{ height: `${labHeight}px` }}
-                                      title={`Labor: ₱{m.labor.toLocaleString()}`}
+                                      title={`Labor: ₱${m.labor.toLocaleString()}`}
                                     ></div>
                                     <div 
                                       className="w-3 bg-purple-500 rounded-t-sm transition-all duration-300 hover:opacity-90" 
                                       style={{ height: `${conHeight}px` }}
-                                      title={`Contract: ₱{m.contract.toLocaleString()}`}
+                                      title={`Contract: ₱${m.contract.toLocaleString()}`}
                                     ></div>
                                   </div>
 
-                                  <span className="text-[10px] font-bold text-(--text-muted) mt-2 truncate w-full text-center">
+                                  <span className={`text-[10px] font-bold mt-2 truncate w-full text-center ${
+                                    isSelected ? 'text-purple-600 dark:text-purple-400 font-black underline' : 'text-(--text-muted)'
+                                  }`}>
                                     {m.monthLabel}
                                   </span>
-                                </div>
+                                </button>
                               );
                             });
                           })()}
                         </div>
                       </div>
                     )}
+                  </div>
+
+                  {/* 2. Dynamically Filtered Cost Breakdown KPI Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl space-y-1 shadow-xs">
+                      <div className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400">
+                        Materials Cost {selectedBreakdownMonthKey ? `(${monthlyComponentComparativeCosts.find(m => m.monthKey === selectedBreakdownMonthKey)?.monthLabel})` : ''}
+                      </div>
+                      <div className="text-lg font-extrabold text-blue-600 dark:text-blue-400">₱{jobOrderBreakdownSubTabMetrics.materialsCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div className="text-[10px] text-blue-600/80 dark:text-blue-400/80">Total parts & materials</div>
+                    </div>
+
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-1 shadow-xs">
+                      <div className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">
+                        Labor Cost {selectedBreakdownMonthKey ? `(${monthlyComponentComparativeCosts.find(m => m.monthKey === selectedBreakdownMonthKey)?.monthLabel})` : ''}
+                      </div>
+                      <div className="text-lg font-extrabold text-amber-600 dark:text-amber-400">₱{jobOrderBreakdownSubTabMetrics.laborCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">Total labor charges</div>
+                    </div>
+
+                    <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl space-y-1 shadow-xs">
+                      <div className="text-[10px] font-bold uppercase text-purple-600 dark:text-purple-400">
+                        Contract Cost {selectedBreakdownMonthKey ? `(${monthlyComponentComparativeCosts.find(m => m.monthKey === selectedBreakdownMonthKey)?.monthLabel})` : ''}
+                      </div>
+                      <div className="text-lg font-extrabold text-purple-600 dark:text-purple-400">₱{jobOrderBreakdownSubTabMetrics.contractCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div className="text-[10px] text-purple-600/80 dark:text-purple-400/80">Total outsourced services</div>
+                    </div>
+
+                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-1 shadow-xs">
+                      <div className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">
+                        TOTAL COST {selectedBreakdownMonthKey ? `(${monthlyComponentComparativeCosts.find(m => m.monthKey === selectedBreakdownMonthKey)?.monthLabel})` : ''}
+                      </div>
+                      <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">₱{jobOrderBreakdownSubTabMetrics.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">Matls + Labor + Contract</div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1440,7 +1643,6 @@ export function JobOrderDashboard() {
                         Vehicle Drill-Down Profile: {selectedVehicle.plate_no} ({selectedVehicle.make_name} {selectedVehicle.model_name})
                       </h3>
                     </div>
-                    {/* Close Panel Button - High Contrast Black / Dark Blue Text */}
                     <button
                       type="button"
                       onClick={() => setSelectedVehicle(null)}

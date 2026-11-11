@@ -18,11 +18,17 @@ import {
   Gauge,
   ChevronUp,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   RefreshCw,
   ChevronDown as ChevronDownIcon,
   Wrench,
-  History
+  History,
+  Flag,
+  Filter
 } from 'lucide-react';
+
+const ITEMS_PER_PAGE = 10;
 
 interface VehiclePmViewRecord {
   vehicle_id: string;
@@ -31,6 +37,7 @@ interface VehiclePmViewRecord {
   make_name?: string | null;
   model_name?: string | null;
   type_description?: string | null;
+  is_stationary?: boolean | null;
   [key: string]: unknown;
 }
 
@@ -47,6 +54,7 @@ interface VehicleRecord {
   service_rdg: number | null;
   has_initialized_rdg: boolean;
   is_active: boolean;
+  is_stationary?: boolean | null;
   [key: string]: unknown;
 }
 
@@ -95,6 +103,20 @@ interface VehicleLogRecord {
   daily_increment: number;
   current_rdg: number;
   remarks?: string | null;
+  [key: string]: unknown;
+}
+
+interface DailyInspectionFlagRecord {
+  logrisk_id?: string;
+  log_id?: string;
+  fmea_id?: string;
+  created_at: string;
+  remarks?: string | null;
+  fmea_analytics?: {
+    detail_description?: string | null;
+    risk_source?: string | null;
+    [key: string]: unknown;
+  } | null;
   [key: string]: unknown;
 }
 
@@ -158,20 +180,108 @@ interface StandardOption {
   [key: string]: unknown;
 }
 
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  itemsPerPage: number;
+  onPageChange: (page: number) => void;
+}
+
+function PaginationControls({
+  currentPage,
+  totalPages,
+  totalItems,
+  itemsPerPage,
+  onPageChange,
+}: PaginationProps) {
+  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+  const actualPages = Math.max(1, totalPages);
+
+  return (
+    <div className="shrink-0 flex items-center justify-between px-3 py-2 border-t border-(--border-main) bg-(--bg-surface) text-xs">
+      <div className="text-(--text-muted)">
+        Showing <span className="font-semibold text-(--text-primary)">{startItem}</span> to{' '}
+        <span className="font-semibold text-(--text-primary)">{endItem}</span> of{' '}
+        <span className="font-semibold text-(--text-primary)">{totalItems}</span> entries
+      </div>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage <= 1 || totalItems === 0}
+          className="p-1.5 rounded-lg border border-(--border-main) bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          title="Previous Page"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+
+        <div className="flex items-center gap-1 px-1">
+          {Array.from({ length: actualPages }, (_, i) => i + 1).map((page) => {
+            const isCurrent = page === currentPage;
+            return (
+              <button
+                key={page}
+                type="button"
+                onClick={() => onPageChange(page)}
+                disabled={totalItems === 0}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
+                  isCurrent
+                    ? 'bg-(--accent-subtle) border-(--text-primary) text-(--text-primary)'
+                    : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
+                } ${totalItems === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
+              >
+                {page}
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage >= actualPages || totalItems === 0}
+          className="p-1.5 rounded-lg border border-(--border-main) bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          title="Next Page"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function VehicleRegistry() {
-  const [activeTab, setActiveTab] = useState<'vehicles' | 'pm_status' | 'installed_components' | 'component_history' | 'daily_logs'>('vehicles');
+  const [activeTab, setActiveTab] = useState<'vehicles' | 'pm_status' | 'components' | 'daily_logs' | 'daily_flags'>('vehicles');
+  const [componentSubTab, setComponentSubTab] = useState<'installed' | 'history'>('installed');
 
   const [searchVehiclesList, setSearchVehiclesList] = useState<VehiclePmViewRecord[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<VehiclePmViewRecord | null>(null);
   const [showPicker, setShowPicker] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [pickerLoading, setPickerLoading] = useState<boolean>(false);
-  const [isSearchCollapsed, setIsSearchCollapsed] = useState<boolean>(false);
+  
+  // Starts collapsed by default
+  const [isSearchCollapsed, setIsSearchCollapsed] = useState<boolean>(true);
+
+  // Equipment Details tab filters
+  const [tableSearchId, setTableSearchId] = useState<string>('');
+  const [tableSearchModel, setTableSearchModel] = useState<string>('');
 
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [vehiclePms, setVehiclePms] = useState<VehiclePmRecord[]>([]);
   const [vehicleLogs, setVehicleLogs] = useState<VehicleLogRecord[]>([]);
+  const [dailyFlags, setDailyFlags] = useState<DailyInspectionFlagRecord[]>([]);
   const [componentHistory, setComponentHistory] = useState<ComponentHistoryRecord[]>([]);
+
+  // Pagination Pages
+  const [vehiclesPage, setVehiclesPage] = useState<number>(1);
+  const [pmPage, setPmPage] = useState<number>(1);
+  const [installedPage, setInstalledPage] = useState<number>(1);
+  const [historyPage, setHistoryPage] = useState<number>(1);
+  const [logsPage, setLogsPage] = useState<number>(1);
+  const [flagsPage, setFlagsPage] = useState<number>(1);
 
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [models, setModels] = useState<ModelOption[]>([]);
@@ -184,17 +294,14 @@ export function VehicleRegistry() {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Customer dropdown search filter states for modal
   const [customerSearchQuery, setCustomerSearchQuery] = useState<string>('');
   const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState<boolean>(false);
   const customerDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Vehicle Model dropdown search filter states for modal
   const [modelSearchQuery, setModelSearchQuery] = useState<string>('');
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState<boolean>(false);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
 
-  // PM Schedule Edit Modal state
   const [isPmModalOpen, setIsPmModalOpen] = useState<boolean>(false);
   const [editingPmId, setEditingPmId] = useState<string | null>(null);
   const [pmForm, setPmForm] = useState({
@@ -219,9 +326,35 @@ export function VehicleRegistry() {
     service_rdg: '',
     has_initialized_rdg: false,
     is_active: true,
+    is_stationary: false,
   });
 
-  // Close dropdowns on outside click
+  const resetAllPages = () => {
+    setVehiclesPage(1);
+    setPmPage(1);
+    setInstalledPage(1);
+    setHistoryPage(1);
+    setLogsPage(1);
+    setFlagsPage(1);
+  };
+
+  async function fetchAllVehicles() {
+    try {
+      const { data, error } = await supabase.from('vehicles').select('*').order('plate_no', { ascending: true });
+      if (error) throw error;
+      setVehicles(data || []);
+    } catch {
+      // Silent catch
+    }
+  }
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchAllVehicles();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target as Node)) {
@@ -235,7 +368,6 @@ export function VehicleRegistry() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Load dropdown options on mount
   useEffect(() => {
     let isMounted = true;
 
@@ -259,7 +391,7 @@ export function VehicleRegistry() {
           setStandards(stdRes.data || []);
         }
       } catch {
-        // Ignored unneeded error binding
+        // Silent catch
       }
     }
 
@@ -269,10 +401,11 @@ export function VehicleRegistry() {
     };
   }, []);
 
-  // Explicit fetch function called on-demand
   const fetchVehicleData = async (vehId: string) => {
     try {
       setErrorMsg(null);
+      resetAllPages();
+
       const [vehRes, pmRes, logRes, compRes] = await Promise.all([
         supabase.from('vehicles').select('*').eq('vehicle_id', vehId),
         supabase.from('vehicle_pm').select('*').eq('vehicle_id', vehId),
@@ -288,23 +421,87 @@ export function VehicleRegistry() {
       setVehiclePms(pmRes.data || []);
       setVehicleLogs(logRes.data || []);
       setComponentHistory(compRes.data || []);
+
+      const logIds = (logRes.data || []).map((l: VehicleLogRecord) => l.log_id);
+
+      if (logIds.length > 0) {
+        const { data: risksData, error: risksErr } = await supabase
+          .from('vehicle_daily_risks')
+          .select('logrisk_id, log_id, fmea_id, remarks, created_at')
+          .in('log_id', logIds)
+          .order('created_at', { ascending: false });
+
+        if (!risksErr && risksData && risksData.length > 0) {
+          const fmeaIds = risksData
+            .map((r: Record<string, unknown>) => r.fmea_id ? String(r.fmea_id) : null)
+            .filter((id): id is string => Boolean(id));
+
+          let fmeaMap: Record<string, { detail_description?: string; risk_source?: string }> = {};
+
+          if (fmeaIds.length > 0) {
+            const { data: fmeaData } = await supabase
+              .from('vw_comprehensive_fmea_analytics')
+              .select('fmea_id, detail_description, risk_source')
+              .in('fmea_id', fmeaIds);
+
+            if (fmeaData) {
+              fmeaMap = fmeaData.reduce((acc: Record<string, { detail_description?: string; risk_source?: string }>, item: Record<string, unknown>) => {
+                const key = String(item.fmea_id);
+                acc[key] = {
+                  detail_description: item.detail_description as string || undefined,
+                  risk_source: item.risk_source as string || undefined
+                };
+                return acc;
+              }, {});
+            }
+          }
+
+          const joinedFlags: DailyInspectionFlagRecord[] = risksData.map((r: Record<string, unknown>) => {
+            const fKey = r.fmea_id ? String(r.fmea_id) : '';
+            return {
+              logrisk_id: r.logrisk_id as string,
+              log_id: r.log_id as string,
+              fmea_id: fKey,
+              created_at: r.created_at as string,
+              remarks: r.remarks as string | null,
+              fmea_analytics: fmeaMap[fKey] || null
+            };
+          });
+
+          setDailyFlags(joinedFlags);
+        } else {
+          setDailyFlags([]);
+        }
+      } else {
+        setDailyFlags([]);
+      }
+
     } catch {
       setErrorMsg('Failed to load records for the selected Equipment.');
     }
   };
 
   const handleSelectVehicle = (v: VehiclePmViewRecord) => {
+    setTableSearchId('');
+    setTableSearchModel('');
+
     setSelectedVehicle(v);
     fetchVehicleData(v.vehicle_id);
     setShowPicker(false);
+    // Auto-collapse search card once a vehicle is selected
+    setIsSearchCollapsed(true);
   };
 
   const handleClearSelection = () => {
     setSelectedVehicle(null);
-    setVehicles([]);
+    setTableSearchId('');
+    setTableSearchModel('');
+    fetchAllVehicles();
     setVehiclePms([]);
     setVehicleLogs([]);
+    setDailyFlags([]);
     setComponentHistory([]);
+    resetAllPages();
   };
 
   const fetchPickerVehicles = async (queryToRun?: string) => {
@@ -318,7 +515,7 @@ export function VehicleRegistry() {
         .order('plate_no', { ascending: true })
         .limit(50);
 
-      if (activeQuery.trim()) {
+      if (activeQuery && activeQuery.trim() !== '') {
         query = query.ilike('plate_no', `%${activeQuery.trim()}%`);
       }
 
@@ -326,7 +523,7 @@ export function VehicleRegistry() {
       if (error) throw error;
       setSearchVehiclesList(data || []);
     } catch {
-      // Ignored unneeded error binding
+      // Silent catch
     } finally {
       setPickerLoading(false);
     }
@@ -353,16 +550,17 @@ export function VehicleRegistry() {
       service_rdg: '0',
       has_initialized_rdg: false,
       is_active: true,
+      is_stationary: false,
     });
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (item: VehicleRecord) => {
     setEditingId(item.vehicle_id);
-    const matchedCust = customers.find(c => c.customer_id === item.customer_id);
+    const matchedCust = customers.find((c: CustomerOption) => c.customer_id === item.customer_id);
     setCustomerSearchQuery(matchedCust ? `${matchedCust.customer_code || ''} - ${matchedCust.contact_person || ''}` : '');
 
-    const matchedModel = models.find(m => m.model_id === item.model_id);
+    const matchedModel = models.find((m: ModelOption) => m.model_id === item.model_id);
     setModelSearchQuery(matchedModel ? `${matchedModel.make_name || ''} ${matchedModel.name || ''}`.trim() : '');
 
     setVehicleForm({
@@ -377,6 +575,7 @@ export function VehicleRegistry() {
       service_rdg: item.service_rdg !== null ? String(item.service_rdg) : '0',
       has_initialized_rdg: item.has_initialized_rdg ?? false,
       is_active: item.is_active ?? true,
+      is_stationary: item.is_stationary ?? false,
     });
     setIsModalOpen(true);
   };
@@ -397,6 +596,8 @@ export function VehicleRegistry() {
 
       if (selectedVehicle) {
         fetchVehicleData(selectedVehicle.vehicle_id);
+      } else {
+        fetchAllVehicles();
       }
     } catch (err: unknown) {
       const errObj = err as Record<string, unknown>;
@@ -531,7 +732,7 @@ export function VehicleRegistry() {
 
       setSuccessMsg('Equipment deleted successfully!');
       setIsModalOpen(false);
-      handleClearSelection();
+      fetchAllVehicles();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: unknown) {
       const errObj = err as Record<string, unknown>;
@@ -549,8 +750,7 @@ export function VehicleRegistry() {
       return;
     }
 
-    // Validate that selected customer is active = true
-    const selectedCustomer = customers.find(c => c.customer_id === vehicleForm.customer_id);
+    const selectedCustomer = customers.find((c: CustomerOption) => c.customer_id === vehicleForm.customer_id);
     if (!selectedCustomer || selectedCustomer.is_active === false) {
       setErrorMsg('Validation failed: Selected customer is inactive or invalid.');
       return;
@@ -570,10 +770,10 @@ export function VehicleRegistry() {
         registration_date: vehicleForm.registration_date || null,
         service_rdg: vehicleForm.service_rdg !== '' ? Number(vehicleForm.service_rdg) : 0,
         is_active: vehicleForm.is_active,
+        is_stationary: vehicleForm.is_stationary,
       };
 
       let error = null;
-      let savedRecord = null;
 
       if (editingId) {
         const res = await supabase
@@ -582,14 +782,12 @@ export function VehicleRegistry() {
           .eq('vehicle_id', editingId)
           .select();
         error = res.error;
-        savedRecord = res.data?.[0];
       } else {
         const res = await supabase
           .from('vehicles')
           .insert([payload])
           .select();
         error = res.error;
-        savedRecord = res.data?.[0];
       }
 
       if (error) throw error;
@@ -598,9 +796,7 @@ export function VehicleRegistry() {
       setIsModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 4000);
 
-      if (savedRecord) {
-        handleSelectVehicle(savedRecord as VehiclePmViewRecord);
-      }
+      fetchAllVehiclesAfterSave();
     } catch (err: unknown) {
       const errObj = err as Record<string, unknown>;
       const errorDetail = (errObj?.message as string) || (errObj?.details as string) || JSON.stringify(err);
@@ -610,7 +806,15 @@ export function VehicleRegistry() {
     }
   };
 
-  const filteredCustomers = customers.filter(c => {
+  const fetchAllVehiclesAfterSave = () => {
+    if (selectedVehicle) {
+      fetchVehicleData(selectedVehicle.vehicle_id);
+    } else {
+      fetchAllVehicles();
+    }
+  };
+
+  const filteredCustomers = customers.filter((c: CustomerOption) => {
     const q = customerSearchQuery.toLowerCase();
     const codeMatch = (c.customer_code ?? '').toLowerCase().includes(q);
     const contactMatch = (c.contact_person ?? '').toLowerCase().includes(q);
@@ -618,15 +822,35 @@ export function VehicleRegistry() {
     return (codeMatch || contactMatch || nameMatch) && c.is_active !== false;
   });
 
-  const filteredModels = models.filter(m => {
+  const filteredModels = models.filter((m: ModelOption) => {
     const q = modelSearchQuery.toLowerCase();
     const modelNameMatch = (m.name ?? '').toLowerCase().includes(q);
     const makeNameMatch = (m.make_name ?? '').toLowerCase().includes(q);
     return modelNameMatch || makeNameMatch;
   });
 
-  const installedComponents = componentHistory.filter(c => c.installed_status === true);
-  const historicalComponents = componentHistory.filter(c => c.installed_status === false);
+  const filteredVehiclesList = vehicles.filter((item) => {
+    const matchedModel = models.find(m => m.model_id === item.model_id);
+    const modelStr = matchedModel ? `${matchedModel.make_name || ''} ${matchedModel.name || ''}`.toLowerCase() : '';
+    
+    const idQuery = tableSearchId.toLowerCase();
+    const modelQuery = tableSearchModel.toLowerCase();
+
+    const matchesId = !idQuery || item.plate_no.toLowerCase().includes(idQuery) || (item.conduction_no && item.conduction_no.toLowerCase().includes(idQuery));
+    const matchesModel = !modelQuery || modelStr.includes(modelQuery);
+
+    return matchesId && matchesModel;
+  });
+
+  const installedComponents = componentHistory.filter((c: ComponentHistoryRecord) => c.installed_status === true);
+  const historicalComponents = componentHistory.filter((c: ComponentHistoryRecord) => c.installed_status === false);
+
+  const paginatedVehicles = filteredVehiclesList.slice((vehiclesPage - 1) * ITEMS_PER_PAGE, vehiclesPage * ITEMS_PER_PAGE);
+  const paginatedPms = vehiclePms.slice((pmPage - 1) * ITEMS_PER_PAGE, pmPage * ITEMS_PER_PAGE);
+  const paginatedInstalled = installedComponents.slice((installedPage - 1) * ITEMS_PER_PAGE, installedPage * ITEMS_PER_PAGE);
+  const paginatedHistory = historicalComponents.slice((historyPage - 1) * ITEMS_PER_PAGE, historyPage * ITEMS_PER_PAGE);
+  const paginatedLogs = vehicleLogs.slice((logsPage - 1) * ITEMS_PER_PAGE, logsPage * ITEMS_PER_PAGE);
+  const paginatedFlags = dailyFlags.slice((flagsPage - 1) * ITEMS_PER_PAGE, flagsPage * ITEMS_PER_PAGE);
 
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
@@ -657,18 +881,30 @@ export function VehicleRegistry() {
         </div>
       )}
 
-      {/* Collapsible Vehicle Search / Picker Section */}
+      {/* Collapsible Search / Picker Section */}
       <div className="shrink-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl overflow-hidden">
         <div className="px-4 py-2.5 bg-(--accent-subtle) border-b border-(--border-main) flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Search className="w-4 h-4 text-(--text-primary)" />
             <span className="text-xs font-semibold text-(--text-primary) uppercase tracking-wider">
               Search & Selected Vehicle
             </span>
             {selectedVehicle && (
-              <span className="ml-2 text-xs bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) px-2 py-0.5 rounded font-mono font-bold">
-                {selectedVehicle.plate_no}
-              </span>
+              <div className="flex items-center gap-2 ml-2">
+                <span className="text-xs bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) px-2 py-0.5 rounded font-mono font-bold">
+                  {selectedVehicle.plate_no}
+                </span>
+                {(selectedVehicle.make_name || selectedVehicle.model_name) && (
+                  <span className="text-xs text-(--text-muted) font-medium">
+                    • {selectedVehicle.make_name || ''} {selectedVehicle.model_name ? selectedVehicle.model_name : ''}
+                  </span>
+                )}
+                {selectedVehicle.service_rdg !== null && (
+                  <span className="text-xs text-(--text-secondary) font-mono font-semibold">
+                    ({selectedVehicle.service_rdg} RDG)
+                  </span>
+                )}
+              </div>
             )}
           </div>
           <button 
@@ -743,7 +979,7 @@ export function VehicleRegistry() {
           }`}
         >
           <Car className="w-3.5 h-3.5" />
-          <span>Equipment Details ({vehicles.length})</span>
+          <span>Equipment Details ({filteredVehiclesList.length})</span>
         </button>
 
         <button
@@ -759,27 +995,15 @@ export function VehicleRegistry() {
         </button>
 
         <button
-          onClick={() => setActiveTab('installed_components')}
+          onClick={() => setActiveTab('components')}
           className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer rounded-t-lg whitespace-nowrap ${
-            activeTab === 'installed_components'
+            activeTab === 'components'
               ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
               : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
           }`}
         >
           <Wrench className="w-3.5 h-3.5" />
-          <span>Installed Components ({installedComponents.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('component_history')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer rounded-t-lg whitespace-nowrap ${
-            activeTab === 'component_history'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
-          }`}
-        >
-          <History className="w-3.5 h-3.5" />
-          <span>Component History ({historicalComponents.length})</span>
+          <span>Components ({installedComponents.length + historicalComponents.length})</span>
         </button>
 
         <button
@@ -793,16 +1017,65 @@ export function VehicleRegistry() {
           <Activity className="w-3.5 h-3.5" />
           <span>Daily Telemetry Logs ({vehicleLogs.length})</span>
         </button>
+
+        <button
+          onClick={() => setActiveTab('daily_flags')}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer rounded-t-lg whitespace-nowrap ${
+            activeTab === 'daily_flags'
+              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
+              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
+          }`}
+        >
+          <Flag className="w-3.5 h-3.5" />
+          <span>Daily Inspection Flags ({dailyFlags.length})</span>
+        </button>
       </div>
 
       {/* Main Container Body */}
       <div className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-4 overflow-hidden space-y-3">
         {activeTab === 'vehicles' && (
-          <div className="flex flex-col flex-1 min-h-0 space-y-2">
-            <div className="shrink-0 flex justify-end items-center">
+          <div className="flex flex-col flex-1 min-h-0 space-y-2.5">
+            {/* Filters & Add Action Bar */}
+            <div className="shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-(--bg-elevated) p-3 rounded-lg border border-(--border-main)">
+              <div className="flex items-center gap-2 flex-wrap flex-1">
+                <Filter className="w-4 h-4 text-(--text-muted)" />
+                <input
+                  type="text"
+                  placeholder="Filter by Equipment ID..."
+                  value={tableSearchId}
+                  onChange={(e) => {
+                    setTableSearchId(e.target.value);
+                    setVehiclesPage(1);
+                  }}
+                  className="bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary) w-full sm:w-48"
+                />
+                <input
+                  type="text"
+                  placeholder="Filter by Make/Model..."
+                  value={tableSearchModel}
+                  onChange={(e) => {
+                    setTableSearchModel(e.target.value);
+                    setVehiclesPage(1);
+                  }}
+                  className="bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary) w-full sm:w-48"
+                />
+                {(tableSearchId || tableSearchModel) && (
+                  <button
+                    onClick={() => {
+                      setTableSearchId('');
+                      setTableSearchModel('');
+                      setVehiclesPage(1);
+                    }}
+                    className="text-xs text-(--text-muted) hover:text-(--text-primary) underline cursor-pointer px-1"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+
               <button
                 onClick={handleOpenAdd}
-                className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Equipment</span>
@@ -815,6 +1088,7 @@ export function VehicleRegistry() {
                   <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
                     <th className="py-2 px-3">Equipment ID</th>
                     <th className="py-2 px-3">Model</th>
+                    <th className="py-2 px-3">Service Standard</th>
                     <th className="py-2 px-3">Service Reading</th>
                     <th className="py-2 px-3">Status</th>
                     <th className="py-2 px-3">Initialized</th>
@@ -822,13 +1096,14 @@ export function VehicleRegistry() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                  {vehicles.length === 0 ? (
+                  {filteredVehiclesList.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-6 text-center text-(--text-muted) text-xs">No Equipment selected or found. Please search an Equipment above.</td>
+                      <td colSpan={7} className="py-6 text-center text-(--text-muted) text-xs">No Equipment records found matching the filter.</td>
                     </tr>
                   ) : (
-                    vehicles.map((item) => {
+                    paginatedVehicles.map((item) => {
                       const matchedModel = models.find(m => m.model_id === item.model_id);
+                      const matchedStandard = standards.find(s => s.service_standard_id === item.service_standard_id);
                       return (
                         <tr key={item.vehicle_id} className="hover:bg-(--accent-subtle) transition-colors">
                           <td className="py-2 px-3">
@@ -839,11 +1114,27 @@ export function VehicleRegistry() {
                             <div className="text-(--text-secondary)">{matchedModel ? `${matchedModel.make_name || ''} ${matchedModel.name || ''}`.trim() : '—'}</div>
                             {item.year && <div className="text-[11px] text-(--text-muted)">{item.year}</div>}
                           </td>
+                          <td className="py-2 px-3 font-mono text-(--text-secondary)">
+                            {matchedStandard ? (
+                              <span className="px-2 py-0.5 bg-(--accent-subtle) border border-(--border-main) rounded text-[11px]">
+                                {matchedStandard.code}
+                              </span>
+                            ) : (
+                              '—'
+                            )}
+                          </td>
                           <td className="py-2 px-3 font-mono text-(--text-secondary)">{item.service_rdg ?? '0'}</td>
                           <td className="py-2 px-3">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${item.is_active ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted)'}`}>
-                              {item.is_active ? 'Active' : 'Inactive'}
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${item.is_active ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted)'}`}>
+                                {item.is_active ? 'Active' : 'Inactive'}
+                              </span>
+                              {item.is_stationary && (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-800">
+                                  Stationary
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="py-2 px-3">
                             <span className={`px-2 py-0.5 rounded text-[10px] font-medium inline-flex items-center gap-1 ${item.has_initialized_rdg ? 'bg-(--accent-subtle) text-(--text-primary) border border-(--border-main)' : 'bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800/50'}`}>
@@ -879,170 +1170,254 @@ export function VehicleRegistry() {
                 </tbody>
               </table>
             </div>
+
+            <PaginationControls
+              currentPage={vehiclesPage}
+              totalPages={Math.ceil(filteredVehiclesList.length / ITEMS_PER_PAGE)}
+              totalItems={filteredVehiclesList.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+              onPageChange={setVehiclesPage}
+            />
           </div>
         )}
 
         {activeTab === 'pm_status' && (
-          <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-2">
-            {vehiclePms.length === 0 ? (
-              <div className="py-12 text-center text-(--text-muted) text-xs bg-(--bg-elevated) rounded-xl border border-(--border-main)">
-                No PM schedule records found for the selected Equipment.
-              </div>
-            ) : (
-              vehiclePms.map((pm) => {
-                const pmLevels = [
-                  { level: 'PM 2', prev: pm.pm2_previous, curr: pm.pm2_current, next: pm.pm2_next, flag: pm.pm2_flag, date: pm.pm2_datecompleted },
-                  { level: 'PM 3', prev: pm.pm3_previous, curr: pm.pm3_current, next: pm.pm3_next, flag: pm.pm3_flag, date: pm.pm3_datecompleted },
-                  { level: 'PM 4', prev: pm.pm4_previous, curr: pm.pm4_current, next: pm.pm4_next, flag: pm.pm4_flag, date: pm.pm4_datecompleted },
-                  { level: 'PM 5', prev: pm.pm5_previous, curr: pm.pm5_current, next: pm.pm5_next, flag: pm.pm5_flag, date: pm.pm5_datecompleted },
-                  { level: 'PM 6', prev: pm.pm6_previous, curr: pm.pm6_current, next: pm.pm6_next, flag: pm.pm6_flag, date: pm.pm6_datecompleted },
-                  { level: 'PM 7', prev: pm.pm7_previous, curr: pm.pm7_current, next: pm.pm7_next, flag: pm.pm7_flag, date: pm.pm7_datecompleted },
-                ];
+          <div className="flex flex-col flex-1 min-h-0 space-y-2">
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-2">
+              {vehiclePms.length === 0 ? (
+                <div className="py-12 text-center text-(--text-muted) text-xs bg-(--bg-elevated) rounded-xl border border-(--border-main)">
+                  No PM schedule records found for the selected Equipment.
+                </div>
+              ) : (
+                paginatedPms.map((pm) => {
+                  const pmLevels = [
+                    { level: 'PM 2', prev: pm.pm2_previous, curr: pm.pm2_current, next: pm.pm2_next, flag: pm.pm2_flag, date: pm.pm2_datecompleted },
+                    { level: 'PM 3', prev: pm.pm3_previous, curr: pm.pm3_current, next: pm.pm3_next, flag: pm.pm3_flag, date: pm.pm3_datecompleted },
+                    { level: 'PM 4', prev: pm.pm4_previous, curr: pm.pm4_current, next: pm.pm4_next, flag: pm.pm4_flag, date: pm.pm4_datecompleted },
+                    { level: 'PM 5', prev: pm.pm5_previous, curr: pm.pm5_current, next: pm.pm5_next, flag: pm.pm5_flag, date: pm.pm5_datecompleted },
+                    { level: 'PM 6', prev: pm.pm6_previous, curr: pm.pm6_current, next: pm.pm6_next, flag: pm.pm6_flag, date: pm.pm6_datecompleted },
+                    { level: 'PM 7', prev: pm.pm7_previous, curr: pm.pm7_current, next: pm.pm7_next, flag: pm.pm7_flag, date: pm.pm7_datecompleted },
+                  ];
 
-                return (
-                  <div key={pm.vehicle_pm_id} className="space-y-4 bg-(--bg-elevated) border border-(--border-main) p-4 rounded-xl shadow-xs">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-(--border-main) pb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-black text-white rounded-xl shadow-xs">
-                          <Gauge className="w-4 h-4" />
+                  return (
+                    <div key={pm.vehicle_pm_id} className="space-y-4 bg-(--bg-elevated) border border-(--border-main) p-4 rounded-xl shadow-xs">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-(--border-main) pb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-black text-white rounded-xl shadow-xs">
+                            <Gauge className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-bold text-(--text-primary)">
+                              Preventive Maintenance Schedule — <span className="text-(--text-primary)">{selectedVehicle?.plate_no || 'Vehicle'}</span>
+                            </h3>
+                            <p className="text-xs text-(--text-muted)">Current Reading: <span className="font-mono text-amber-600 dark:text-amber-400 font-semibold">{pm.current_rdg ?? '0'}</span></p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="text-sm font-bold text-(--text-primary)">
-                            Preventive Maintenance Schedule — <span className="text-(--text-primary)">{selectedVehicle?.plate_no || 'Vehicle'}</span>
-                          </h3>
-                          <p className="text-xs text-(--text-muted)">Current Reading: <span className="font-mono text-amber-600 dark:text-amber-400 font-semibold">{pm.current_rdg ?? '0'}</span></p>
-                        </div>
+                         
+                        <button
+                          type="button"
+                          onClick={() => handleOpenPmEdit(pm)}
+                          title="Update PM Schedule"
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs shrink-0 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) cursor-pointer"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>Update PM Schedule</span>
+                        </button>
                       </div>
-                      
-                      <button
-                        type="button"
-                        onClick={() => handleOpenPmEdit(pm)}
-                        title="Update PM Schedule"
-                        className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs shrink-0 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) cursor-pointer"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        <span>Update PM Schedule</span>
-                      </button>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {pmLevels.map((pml, idx) => (
-                        <div key={idx} className={`p-3 rounded-lg border transition-all ${pml.flag ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/60' : 'bg-(--accent-subtle) border-(--border-main)'}`}>
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-bold text-xs text-(--text-primary)">{pml.level}</span>
-                            <span className={`text-[10px] uppercase font-semibold px-2 py-0.5 rounded ${pml.flag ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700' : 'bg-(--bg-elevated) text-(--text-secondary) border border-(--border-main)'}`}>
-                              {pml.flag ? 'Flagged / Due' : 'Normal'}
-                            </span>
-                          </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {pmLevels.map((pml, idx) => {
+                          const isDue = Boolean(pml.flag);
+                          return (
+                            <div 
+                              key={idx} 
+                              className={`p-4 rounded-xl border transition-all ${
+                                isDue 
+                                  ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/60 shadow-xs' 
+                                  : 'bg-(--bg-surface) border-(--border-main) shadow-xs'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-dashed border-(--border-main)">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[11px] font-extrabold px-2.5 py-1 rounded tracking-wide shadow-xs bg-(--accent-subtle) text-(--text-primary) border border-(--border-main)">
+                                    {pml.level}
+                                  </span>
+                                </div>
+                                <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded shadow-xs ${isDue ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700' : 'bg-(--accent-subtle) text-(--text-secondary) border border-(--border-main)'}`}>
+                                  {isDue ? 'Flagged / Due' : 'Normal'}
+                                </span>
+                              </div>
 
-                          <div className="space-y-1.5 text-xs font-mono">
-                            <div className="flex justify-between bg-(--bg-elevated) px-2 py-1 rounded border border-(--border-main)">
-                              <span className="text-(--text-muted) text-[11px]">Previous:</span>
-                              <span className="text-(--text-secondary)">{pml.prev ?? '—'}</span>
+                              <div className="space-y-2 text-xs font-mono">
+                                <div className="flex justify-between bg-(--bg-elevated) px-3 py-1.5 rounded-lg border border-(--border-main)">
+                                  <span className="text-(--text-muted) text-[11px]">Previous:</span>
+                                  <span className="text-(--text-secondary) font-semibold">{pml.prev ?? '—'}</span>
+                                </div>
+                                <div className="flex justify-between bg-(--bg-elevated) px-3 py-1.5 rounded-lg border border-(--border-main)">
+                                  <span className="text-(--text-muted) text-[11px]">Current:</span>
+                                  <span className="text-amber-600 dark:text-amber-400 font-bold">{pml.curr ?? '—'}</span>
+                                </div>
+                                <div className="flex justify-between bg-(--bg-elevated) px-3 py-1.5 rounded-lg border border-(--border-main)">
+                                  <span className="text-(--text-muted) text-[11px]">Next Target:</span>
+                                  <span className="text-(--text-primary) font-bold">{pml.next ?? '—'}</span>
+                                </div>
+                                <div className="flex justify-between bg-(--bg-elevated) px-3 py-1.5 rounded-lg border border-(--border-main)">
+                                  <span className="text-(--text-muted) text-[11px]">Completed:</span>
+                                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{pml.date ? new Date(pml.date).toLocaleDateString() : '—'}</span>
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex justify-between bg-(--bg-elevated) px-2 py-1 rounded border border-(--border-main)">
-                              <span className="text-(--text-muted) text-[11px]">Current:</span>
-                              <span className="text-amber-600 dark:text-amber-400 font-semibold">{pml.curr ?? '—'}</span>
-                            </div>
-                            <div className="flex justify-between bg-(--bg-elevated) px-2 py-1 rounded border border-(--border-main)">
-                              <span className="text-(--text-muted) text-[11px]">Next Target:</span>
-                              <span className="text-(--text-primary) font-semibold">{pml.next ?? '—'}</span>
-                            </div>
-                            <div className="flex justify-between bg-(--bg-elevated) px-2 py-1 rounded border border-(--border-main)">
-                              <span className="text-(--text-muted) text-[11px]">Completed:</span>
-                              <span className="text-emerald-600 dark:text-emerald-400">{pml.date ? new Date(pml.date).toLocaleDateString() : '—'}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                );
-              })
+                  );
+                })
+              )}
+            </div>
+
+            <PaginationControls
+              currentPage={pmPage}
+              totalPages={Math.ceil(vehiclePms.length / ITEMS_PER_PAGE)}
+              totalItems={vehiclePms.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+              onPageChange={setPmPage}
+            />
+          </div>
+        )}
+
+        {/* Components Tab with Sub-Tabs & Always-Visible Pagination */}
+        {activeTab === 'components' && (
+          <div className="flex flex-col flex-1 min-h-0 space-y-3 overflow-hidden">
+            {/* Sub-Tab Navigation Bar */}
+            <div className="shrink-0 flex items-center gap-2 bg-(--bg-elevated) p-1.5 rounded-lg border border-(--border-main)">
+              <button
+                type="button"
+                onClick={() => setComponentSubTab('installed')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+                  componentSubTab === 'installed'
+                    ? 'bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) shadow-xs'
+                    : 'text-(--text-muted) hover:text-(--text-primary)'
+                }`}
+              >
+                <Wrench className="w-3.5 h-3.5" />
+                <span>Installed Components ({installedComponents.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setComponentSubTab('history')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+                  componentSubTab === 'history'
+                    ? 'bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) shadow-xs'
+                    : 'text-(--text-muted) hover:text-(--text-primary)'
+                }`}
+              >
+                <History className="w-3.5 h-3.5" />
+                <span>Component History ({historicalComponents.length})</span>
+              </button>
+            </div>
+
+            {/* Sub-Tab Content: Installed Components */}
+            {componentSubTab === 'installed' && (
+              <div className="flex flex-col flex-1 min-h-0 space-y-2">
+                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
+                        <th className="py-2 px-3">Component</th>
+                        <th className="py-2 px-3">Install Date</th>
+                        <th className="py-2 px-3">Install Service Rdg</th>
+                        <th className="py-2 px-3">Install Remarks</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                      {installedComponents.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="py-6 text-center text-(--text-muted) text-xs">No installed components found for the selected Equipment.</td>
+                        </tr>
+                      ) : (
+                        paginatedInstalled.map((item, idx) => {
+                          const compCode = item.component_maintenance?.equipment_component_code || item.component_maintenance?.code || item.component_maintenance?.component_name || '—';
+
+                          return (
+                            <tr key={item.equipment_component_child_id || idx} className="hover:bg-(--accent-subtle) transition-colors">
+                              <td className="py-2 px-3 font-semibold text-(--text-primary)">{compCode}</td>
+                              <td className="py-2 px-3 font-mono text-(--text-muted)">{item.install_date || '—'}</td>
+                              <td className="py-2 px-3 font-mono text-(--text-secondary)">{item.install_srv_rdg ?? '—'}</td>
+                              <td className="py-2 px-3 text-(--text-muted)">{item.install_remarks || '—'}</td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <PaginationControls
+                  currentPage={installedPage}
+                  totalPages={Math.ceil(installedComponents.length / ITEMS_PER_PAGE)}
+                  totalItems={installedComponents.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={setInstalledPage}
+                />
+              </div>
+            )}
+
+            {/* Sub-Tab Content: Component History */}
+            {componentSubTab === 'history' && (
+              <div className="flex flex-col flex-1 min-h-0 space-y-2">
+                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
+                        <th className="py-2 px-3">Component</th>
+                        <th className="py-2 px-3">Install Date</th>
+                        <th className="py-2 px-3">Vehicle Install Rdg</th>
+                        <th className="py-2 px-3">Remove Date</th>
+                        <th className="py-2 px-3">Vehicle Remove Rdg</th>
+                        <th className="py-2 px-3">Component (Srv Run)</th>
+                        <th className="py-2 px-3">Remove Remarks</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                      {historicalComponents.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="py-6 text-center text-(--text-muted) text-xs">No component history found for the selected Equipment.</td>
+                        </tr>
+                      ) : (
+                        paginatedHistory.map((item, idx) => {
+                          const compCode = item.component_maintenance?.equipment_component_code || item.component_maintenance?.code || item.component_maintenance?.component_name || '—';
+
+                          return (
+                            <tr key={item.equipment_component_child_id || idx} className="hover:bg-(--accent-subtle) transition-colors">
+                              <td className="py-2 px-3 font-semibold text-(--text-primary)">{compCode}</td>
+                              <td className="py-2 px-3 font-mono text-(--text-muted)">{item.install_date || '—'}</td>
+                              <td className="py-2 px-3 font-mono text-(--text-secondary)">{item.install_srv_rdg ?? '—'}</td>
+                              <td className="py-2 px-3 font-mono text-(--text-muted)">{item.remove_date || '—'}</td>
+                              <td className="py-2 px-3 font-mono text-(--text-secondary)">{item.remove_srv_rdg ?? '—'}</td>
+                              <td className="py-2 px-3 font-mono text-amber-600 dark:text-amber-400">{item.srv_run ?? '—'}</td>
+                              <td className="py-2 px-3 text-(--text-muted)">{item.remove_remarks || '—'}</td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <PaginationControls
+                  currentPage={historyPage}
+                  totalPages={Math.ceil(historicalComponents.length / ITEMS_PER_PAGE)}
+                  totalItems={historicalComponents.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={setHistoryPage}
+                />
+              </div>
             )}
           </div>
         )}
 
-        {activeTab === 'installed_components' && (
-          <div className="flex flex-col flex-1 min-h-0 space-y-2">
-            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
-                    <th className="py-2 px-3">Component</th>
-                    <th className="py-2 px-3">Install Date</th>
-                    <th className="py-2 px-3">Install Service Rdg</th>
-                    <th className="py-2 px-3">Install Remarks</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                  {installedComponents.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="py-6 text-center text-(--text-muted) text-xs">No installed components found for the selected Equipment.</td>
-                    </tr>
-                  ) : (
-                    installedComponents.map((item, idx) => {
-                      const compCode = item.component_maintenance?.equipment_component_code || item.component_maintenance?.code || item.component_maintenance?.component_name || '—';
-
-                      return (
-                        <tr key={item.equipment_component_child_id || idx} className="hover:bg-(--accent-subtle) transition-colors">
-                          <td className="py-2 px-3 font-semibold text-(--text-primary)">{compCode}</td>
-                          <td className="py-2 px-3 font-mono text-(--text-muted)">{item.install_date || '—'}</td>
-                          <td className="py-2 px-3 font-mono text-(--text-secondary)">{item.install_srv_rdg ?? '—'}</td>
-                          <td className="py-2 px-3 text-(--text-muted)">{item.install_remarks || '—'}</td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'component_history' && (
-          <div className="flex flex-col flex-1 min-h-0 space-y-2">
-            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
-                    <th className="py-2 px-3">Component</th>
-                    <th className="py-2 px-3">Install Date</th>
-                    <th className="py-2 px-3">Vehicle Install Rdg</th>
-                    <th className="py-2 px-3">Remove Date</th>
-                    <th className="py-2 px-3">Vehicle Remove Rdg</th>
-                    <th className="py-2 px-3">Component (Srv Run)</th>
-                    <th className="py-2 px-3">Remove Remarks</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                  {historicalComponents.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-6 text-center text-(--text-muted) text-xs">No component history found for the selected Equipment.</td>
-                    </tr>
-                  ) : (
-                    historicalComponents.map((item, idx) => {
-                      const compCode = item.component_maintenance?.equipment_component_code || item.component_maintenance?.code || item.component_maintenance?.component_name || '—';
-
-                      return (
-                        <tr key={item.equipment_component_child_id || idx} className="hover:bg-(--accent-subtle) transition-colors">
-                          <td className="py-2 px-3 font-semibold text-(--text-primary)">{compCode}</td>
-                          <td className="py-2 px-3 font-mono text-(--text-muted)">{item.install_date || '—'}</td>
-                          <td className="py-2 px-3 font-mono text-(--text-secondary)">{item.install_srv_rdg ?? '—'}</td>
-                          <td className="py-2 px-3 font-mono text-(--text-muted)">{item.remove_date || '—'}</td>
-                          <td className="py-2 px-3 font-mono text-(--text-secondary)">{item.remove_srv_rdg ?? '—'}</td>
-                          <td className="py-2 px-3 font-mono text-amber-600 dark:text-amber-400">{item.srv_run ?? '—'}</td>
-                          <td className="py-2 px-3 text-(--text-muted)">{item.remove_remarks || '—'}</td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
+        {/* Daily Telemetry Logs with Always-Visible Pagination */}
         {activeTab === 'daily_logs' && (
           <div className="flex flex-col flex-1 min-h-0 space-y-2">
             <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
@@ -1063,7 +1438,7 @@ export function VehicleRegistry() {
                       <td colSpan={6} className="py-6 text-center text-(--text-muted) text-xs">No daily logs found for the selected Equipment.</td>
                     </tr>
                   ) : (
-                    vehicleLogs.map((log) => (
+                    paginatedLogs.map((log) => (
                       <tr key={log.log_id} className="hover:bg-(--accent-subtle) transition-colors">
                         <td className="py-2 px-3 font-mono text-[11px] text-(--text-muted) flex items-center gap-1.5">
                           <Calendar className="w-3.5 h-3.5 text-(--text-primary)" />
@@ -1080,11 +1455,75 @@ export function VehicleRegistry() {
                 </tbody>
               </table>
             </div>
+
+            <PaginationControls
+              currentPage={logsPage}
+              totalPages={Math.ceil(vehicleLogs.length / ITEMS_PER_PAGE)}
+              totalItems={vehicleLogs.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+              onPageChange={setLogsPage}
+            />
+          </div>
+        )}
+
+        {/* Daily Inspection Flags with Always-Visible Pagination */}
+        {activeTab === 'daily_flags' && (
+          <div className="flex flex-col flex-1 min-h-0 space-y-2">
+            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
+                    <th className="py-2 px-3">Date</th>
+                    <th className="py-2 px-3">Failure Cause (Risk Source)</th>
+                    <th className="py-2 px-3">Failure Mode (Detail)</th>
+                    <th className="py-2 px-3">Remarks</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                  {dailyFlags.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="py-6 text-center text-(--text-muted) text-xs">No daily inspection flags found for the selected Equipment.</td>
+                    </tr>
+                  ) : (
+                    paginatedFlags.map((flag, idx) => {
+                      const failureCause = flag.fmea_analytics?.risk_source || '—';
+                      const failureMode = flag.fmea_analytics?.detail_description || '—';
+                      const dateStr = flag.created_at ? new Date(flag.created_at).toLocaleDateString() : '—';
+
+                      return (
+                        <tr key={flag.logrisk_id || idx} className="hover:bg-(--accent-subtle) transition-colors">
+                          <td className="py-2 px-3 font-mono text-[11px] text-(--text-muted) whitespace-nowrap">
+                            {dateStr}
+                          </td>
+                          <td className="py-2 px-3 font-semibold text-(--text-primary)">
+                            {failureCause}
+                          </td>
+                          <td className="py-2 px-3 text-(--text-secondary)">
+                            {failureMode}
+                          </td>
+                          <td className="py-2 px-3 text-(--text-muted) text-xs">
+                            {flag.remarks || '—'}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <PaginationControls
+              currentPage={flagsPage}
+              totalPages={Math.ceil(dailyFlags.length / ITEMS_PER_PAGE)}
+              totalItems={dailyFlags.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+              onPageChange={setFlagsPage}
+            />
           </div>
         )}
       </div>
 
-      {/* PM Schedule Edit Modal */}
+      {/* PM Schedule Modal */}
       {isPmModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
@@ -1122,9 +1561,16 @@ export function VehicleRegistry() {
                     { label: 'PM 6', prevKey: 'pm6_previous', currKey: 'pm6_current', nextKey: 'pm6_next', flagKey: 'pm6_flag', dateKey: 'pm6_datecompleted' },
                     { label: 'PM 7', prevKey: 'pm7_previous', currKey: 'pm7_current', nextKey: 'pm7_next', flagKey: 'pm7_flag', dateKey: 'pm7_datecompleted' },
                   ].map((item, idx) => (
-                    <div key={idx} className="bg-(--bg-surface) border border-(--border-main) p-3.5 rounded-xl space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-(--text-primary)">{item.label}</span>
+                    <div 
+                      key={idx} 
+                      className="p-4 rounded-xl border space-y-3 bg-(--bg-surface) border-(--border-main) shadow-xs"
+                    >
+                      <div className="flex items-center justify-between pb-2.5 border-b border-dashed border-(--border-main)">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-xs px-2.5 py-1 rounded shadow-xs bg-(--accent-subtle) text-(--text-primary) border border-(--border-main)">
+                            {item.label}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-2">
                           <input
                             type="checkbox"
@@ -1137,7 +1583,7 @@ export function VehicleRegistry() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5 text-xs">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
                         <div>
                           <span className="block text-(--text-muted) mb-1 text-[11px] font-semibold">Previous</span>
                           <input
@@ -1227,7 +1673,10 @@ export function VehicleRegistry() {
                   type="text"
                   placeholder="Filter by Equipment ID..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    fetchPickerVehicles(e.target.value);
+                  }}
                   className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-9 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
                 />
               </div>
@@ -1298,7 +1747,7 @@ export function VehicleRegistry() {
             <form onSubmit={handleSubmitForm} className="flex flex-col flex-1 overflow-hidden">
               <div className="p-6 overflow-y-auto space-y-4 flex-1">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Customer Dropdown with Active Validation */}
+                  {/* Customer Dropdown */}
                   <div className="relative" ref={customerDropdownRef}>
                     <label className="block text-xs uppercase text-(--text-muted) font-semibold mb-1">Customer <span className="text-red-500">*</span></label>
                     <div 
@@ -1307,7 +1756,7 @@ export function VehicleRegistry() {
                     >
                       <span className={vehicleForm.customer_id ? 'text-(--text-primary)' : 'text-(--text-muted)'}>
                         {(() => {
-                          const matched = customers.find(c => c.customer_id === vehicleForm.customer_id);
+                          const matched = customers.find((c: CustomerOption) => c.customer_id === vehicleForm.customer_id);
                           if (matched) return `${matched.customer_code || ''} - ${matched.contact_person || ''}`;
                           return customers.length === 0 ? 'No active customers found' : 'Select Active Customer...';
                         })()}
@@ -1331,7 +1780,7 @@ export function VehicleRegistry() {
                           {filteredCustomers.length === 0 ? (
                             <div className="py-3 text-center text-xs text-(--text-muted)">No active customers found.</div>
                           ) : (
-                            filteredCustomers.map((c) => (
+                            filteredCustomers.map((c: CustomerOption) => (
                               <div
                                 key={c.customer_id}
                                 onClick={() => {
@@ -1351,7 +1800,7 @@ export function VehicleRegistry() {
                     )}
                   </div>
 
-                  {/* Vehicle Model Dropdown with Search & Make Display */}
+                  {/* Vehicle Model Dropdown */}
                   <div className="relative" ref={modelDropdownRef}>
                     <label className="block text-xs uppercase text-(--text-muted) font-semibold mb-1">Equipment Model <span className="text-red-500">*</span></label>
                     <div 
@@ -1360,7 +1809,7 @@ export function VehicleRegistry() {
                     >
                       <span className={vehicleForm.model_id ? 'text-(--text-primary)' : 'text-(--text-muted)'}>
                         {(() => {
-                          const matched = models.find(m => m.model_id === vehicleForm.model_id);
+                          const matched = models.find((m: ModelOption) => m.model_id === vehicleForm.model_id);
                           if (matched) return `${matched.make_name || ''} ${matched.name || ''}`.trim();
                           return 'Select Equipment Model...';
                         })()}
@@ -1384,7 +1833,7 @@ export function VehicleRegistry() {
                           {filteredModels.length === 0 ? (
                             <div className="py-3 text-center text-xs text-(--text-muted)">No models found.</div>
                           ) : (
-                            filteredModels.map((m) => (
+                            filteredModels.map((m: ModelOption) => (
                               <div
                                 key={m.model_id}
                                 onClick={() => {
@@ -1484,7 +1933,7 @@ export function VehicleRegistry() {
                     />
                   </div>
 
-                  <div className="flex items-center gap-6 pt-5">
+                  <div className="flex items-center gap-6 pt-5 flex-wrap">
                     <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
@@ -1494,6 +1943,17 @@ export function VehicleRegistry() {
                         className="rounded border-(--border-main) bg-(--bg-elevated) text-(--text-primary) focus:ring-0 w-4 h-4 cursor-pointer"
                       />
                       <label htmlFor="is_active_chk" className="text-xs uppercase text-(--text-muted) font-semibold cursor-pointer">Is Active</label>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="is_stationary_chk"
+                        checked={vehicleForm.is_stationary}
+                        onChange={(e) => setVehicleForm({ ...vehicleForm, is_stationary: e.target.checked })}
+                        className="rounded border-(--border-main) bg-(--bg-elevated) text-(--text-primary) focus:ring-0 w-4 h-4 cursor-pointer"
+                      />
+                      <label htmlFor="is_stationary_chk" className="text-xs uppercase text-(--text-muted) font-semibold cursor-pointer">Is Stationary</label>
                     </div>
 
                     <div className="flex items-center gap-2">

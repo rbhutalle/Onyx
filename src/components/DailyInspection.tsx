@@ -7,9 +7,10 @@ interface VehiclePm {
   service_rdg: number | null;
   make_name: string | null;
   model_name: string | null;
-  type_description: string | null;
+  type_description?: string | null;
   id?: string;
   vehicle_id?: string;
+  is_active?: boolean;
   [key: string]: unknown;
 }
 
@@ -57,7 +58,7 @@ export function DailyInspection() {
   const [loading, setLoading] = useState<boolean>(false);
   const [showPicker, setShowPicker] = useState<boolean>(false);
   const [pickerSearchQuery, setPickerSearchQuery] = useState<string>('');
-  const [searchCurrentDayOnly, setSearchCurrentDayOnly] = useState<boolean>(false);
+  const [searchNoLogsCurrentDay, setSearchNoLogsCurrentDay] = useState<boolean>(false);
 
   const [selectedVehicle, setSelectedVehicle] = useState<VehiclePm | null>(null);
   const [capturedLogId, setCapturedLogId] = useState<string | null>(null);
@@ -105,54 +106,39 @@ export function DailyInspection() {
   const numericCurrent = Number(currentRdg) || 0;
   const computedIncrement = numericCurrent >= numericPrevious ? numericCurrent - numericPrevious : 0;
 
-  const fetchVehicles = useCallback(async (queryParam?: string, currentDayOnly?: boolean) => {
+  const fetchVehicles = useCallback(async (queryParam?: string, noLogsCurrentDay?: boolean) => {
     try {
       setLoading(true);
       setErrorMsg(null);
       const activeQuery = (queryParam !== undefined ? queryParam : pickerSearchQuery) ?? '';
-      const isCurrentDayOnly = currentDayOnly !== undefined ? currentDayOnly : searchCurrentDayOnly;
+      const isNoLogsToday = noLogsCurrentDay !== undefined ? noLogsCurrentDay : searchNoLogsCurrentDay;
 
-      let targetVehicleIds: string[] = [];
-
-      if (isCurrentDayOnly) {
-        const { data: logsData, error: logsError } = await supabase
-          .from('vehicle_daily_logs')
-          .select('vehicle_id')
-          .eq('log_date', todayDateStr);
-
-        if (logsError) throw logsError;
-        targetVehicleIds = Array.from(new Set((logsData || []).map(l => l.vehicle_id).filter(Boolean)));
-
-        if (targetVehicleIds.length === 0) {
-          setVehicles([]);
-          setLoading(false);
-          return;
-        }
-      }
+      // Query from the specialized view if noLogsToday is checked, otherwise from vw_vehicle_pm_details
+      const tableName = isNoLogsToday ? 'vw_vehicles_without_today_logs' : 'vw_vehicle_pm_details';
 
       let query = supabase
-        .from('vw_vehicle_pm_details')
+        .from(tableName)
         .select('*')
-        .order('plate_no', { ascending: true })
-        .limit(50);
+        .order('plate_no', { ascending: true });
 
-      if (isCurrentDayOnly && targetVehicleIds.length > 0) {
-        query = query.in('vehicle_id', targetVehicleIds);
+      if (!isNoLogsToday) {
+        query = query.eq('is_active', true);
       }
 
       if (activeQuery.trim()) {
         query = query.ilike('plate_no', `%${activeQuery.trim()}%`);
       }
 
-      const { data, error: fetchError } = await query;
+      const { data, error: fetchError } = await query.limit(50);
       if (fetchError) throw fetchError;
+      
       setVehicles(data || []);
     } catch {
       setErrorMsg('Failed to load vehicle records. Please try again later.');
     } finally {
       setLoading(false);
     }
-  }, [pickerSearchQuery, searchCurrentDayOnly, todayDateStr]);
+  }, [pickerSearchQuery, searchNoLogsCurrentDay]);
 
   const fetchDailyRisks = useCallback(async () => {
     try {
@@ -160,7 +146,7 @@ export function DailyInspection() {
         supabase.from('vehicle_daily_risks').select('*').order('created_at', { ascending: false }).limit(100),
         supabase.from('vs_fmea_items').select('*'),
         supabase.from('vehicle_daily_logs').select('log_id, log_date, vehicle_id'),
-        supabase.from('vw_vehicle_pm_details').select('*')
+        supabase.from('vw_vehicle_pm_details').select('*').eq('is_active', true)
       ]);
 
       if (risksRes.error) throw risksRes.error;
@@ -262,12 +248,14 @@ export function DailyInspection() {
       const { data: vehiclesData, error: vehiclesErr } = await supabase
         .from('vehicles')
         .select('vehicle_id, plate_no')
+        .eq('is_active', true)
         .in('vehicle_id', Array.from(validVehicleIds));
 
       if (vehiclesErr) {
         const { data: pmData, error: pmErr } = await supabase
           .from('vw_vehicle_pm_details')
-          .select('vehicle_id, id, plate_no')
+          .select('vehicle_id, id, plate_no, is_active')
+          .eq('is_active', true)
           .in('vehicle_id', Array.from(validVehicleIds));
 
         if (pmErr) throw pmErr;
@@ -342,6 +330,7 @@ export function DailyInspection() {
       let query = supabase
         .from('vw_vehicle_pm_details')
         .select('*')
+        .eq('is_active', true)
         .in('vehicle_id', targetVehicleIds);
 
       if (searchStr.trim()) {
@@ -366,6 +355,7 @@ export function DailyInspection() {
         const { data, error: fetchError } = await supabase
           .from('vw_vehicle_pm_details')
           .select('*')
+          .eq('is_active', true)
           .order('plate_no', { ascending: true })
           .limit(50);
 
@@ -373,7 +363,7 @@ export function DailyInspection() {
         if (isMounted) setVehicles(data || []);
       } catch {
         if (isMounted) {
-          setErrorMsg('Failed to load vehicle records. Please try again later.');
+          setErrorMsg('Failed to load Equipment records. Please try again later.');
         }
       }
 
@@ -391,7 +381,7 @@ export function DailyInspection() {
 
   const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    fetchVehicles(pickerSearchQuery, searchCurrentDayOnly);
+    fetchVehicles(pickerSearchQuery, searchNoLogsCurrentDay);
   };
 
   const handleSelectVehicle = async (v: VehiclePm) => {
@@ -419,7 +409,7 @@ export function DailyInspection() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedVehicle) {
-      setErrorMsg('Please select a vehicle first.');
+      setErrorMsg('Please select a Equipment first.');
       return;
     }
     if (!currentRdg || isNaN(Number(currentRdg))) {
@@ -438,7 +428,7 @@ export function DailyInspection() {
 
       const vehicleId = selectedVehicle.id || selectedVehicle.vehicle_id;
       if (!vehicleId) {
-        throw new Error('Vehicle ID is missing from the selected record.');
+        throw new Error('Equipment ID is missing from the selected record.');
       }
 
       const { data: rpcData, error: rpcError } = await supabase.rpc('record_vehicle_daily_log', {
@@ -578,7 +568,7 @@ export function DailyInspection() {
         </div>
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-(--text-primary)">Daily Inspection & Telemetry</h1>
-          <p className="text-xs sm:text-sm text-(--text-muted)">Record daily meter increments and monitor vehicle risk inspection flags.</p>
+          <p className="text-xs sm:text-sm text-(--text-muted)">Record daily meter increments and monitor equipment risk inspection flags.</p>
         </div>
       </div>
 
@@ -636,7 +626,7 @@ export function DailyInspection() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-(--text-secondary) uppercase tracking-wider flex">
-                    Selected Vehicle <span className="text-red-500 ml-1">*</span>
+                    Selected Equipment <span className="text-red-500 ml-1">*</span>
                   </span>
                   {capturedLogId && (
                     <span className="text-[10px] font-semibold bg-(--accent-subtle) text-(--text-primary) px-2.5 py-0.5 rounded-full border border-(--border-main)">
@@ -669,7 +659,7 @@ export function DailyInspection() {
                       type="button"
                       onClick={() => { setSelectedVehicle(null); setCapturedLogId(null); setPreviousRdgInput(''); }}
                       className="text-(--text-muted) hover:text-red-600 dark:hover:text-red-400 p-1.5 transition-colors cursor-pointer shrink-0"
-                      title="Change vehicle"
+                      title="Change Equipment"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -677,12 +667,15 @@ export function DailyInspection() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setShowPicker(true)}
+                    onClick={() => {
+                      fetchVehicles(pickerSearchQuery, searchNoLogsCurrentDay);
+                      setShowPicker(true);
+                    }}
                     className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) px-4 py-3 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer"
                   >
                     <span className="flex items-center gap-2">
                       <Search className="w-4 h-4 text-(--text-primary)" />
-                      {vehicles.length > 0 ? `Search / Select Vehicle (${vehicles.length} loaded)...` : 'Search / Select Vehicle...'}
+                      {vehicles.length > 0 ? `Search / Select Equipment (${vehicles.length} loaded)...` : 'Search / Select Equipment...'}
                     </span>
                     <span className="text-xs bg-(--accent-subtle) text-(--text-primary) px-2 py-1 rounded font-semibold">Browse</span>
                   </button>
@@ -783,7 +776,7 @@ export function DailyInspection() {
               <div>
                 <h2 className="text-xs font-bold text-(--text-primary) flex items-center gap-2">
                   <Layers className="w-4 h-4 text-(--text-primary)" />
-                  Vehicle Daily Risks & Inspection Flags
+                  Equipment Daily Risks & Inspection Flags
                 </h2>
                 <p className="text-[11px] text-(--text-muted)">Manage flags linked to daily operations logs.</p>
               </div>
@@ -820,7 +813,7 @@ export function DailyInspection() {
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="border-b border-(--border-main) text-(--text-muted) text-[11px] uppercase bg-(--bg-elevated) sticky top-0 z-10 font-semibold shadow-xs">
-                    <th className="py-2 px-3">Vehicle Plate</th>
+                    <th className="py-2 px-3">Equipment ID</th>
                     <th className="py-2 px-3">Log Date</th>
                     <th className="py-2 px-3">Detail Code</th>
                     <th className="py-2 px-3">Detail Description</th>
@@ -877,7 +870,7 @@ export function DailyInspection() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs p-4">
           <div className="bg-(--bg-surface) border border-(--border-main) rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
             <div className="flex justify-between items-center px-6 py-4 border-b border-(--border-main) bg-(--bg-elevated) shrink-0">
-              <h3 className="text-lg font-bold text-(--text-primary)">Search Vehicle</h3>
+              <h3 className="text-lg font-bold text-(--text-primary)">Search Equipment ID</h3>
               <button
                 type="button"
                 onClick={() => setShowPicker(false)}
@@ -910,13 +903,17 @@ export function DailyInspection() {
               <div className="flex items-center gap-2 pt-1">
                 <input
                   type="checkbox"
-                  id="currentDayOnlyCheckbox"
-                  checked={searchCurrentDayOnly}
-                  onChange={(e) => setSearchCurrentDayOnly(e.target.checked)}
+                  id="noLogsCurrentDayCheckbox"
+                  checked={searchNoLogsCurrentDay}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setSearchNoLogsCurrentDay(checked);
+                    fetchVehicles(pickerSearchQuery, checked);
+                  }}
                   className="rounded border-(--border-main) text-(--text-primary) bg-(--bg-elevated) cursor-pointer"
                 />
-                <label htmlFor="currentDayOnlyCheckbox" className="text-xs text-(--text-secondary) cursor-pointer select-none">
-                  Show vehicles with logs for the current day only
+                <label htmlFor="noLogsCurrentDayCheckbox" className="text-xs text-(--text-secondary) cursor-pointer select-none">
+                  Show equipment with NO logs for the current day only
                 </label>
               </div>
             </form>
@@ -925,11 +922,11 @@ export function DailyInspection() {
               {loading ? (
                 <div className="py-12 text-center text-(--text-muted) flex items-center justify-center gap-2 text-xs">
                   <Loader2 className="w-5 h-5 animate-spin text-(--text-primary)" />
-                  <span>Loading vehicle records...</span>
+                  <span>Loading equipment records...</span>
                 </div>
               ) : vehicles.length === 0 ? (
                 <div className="py-12 text-center text-(--text-muted) text-xs italic">
-                  No vehicle records found.
+                  No active equipment records found matching criteria.
                 </div>
               ) : (
                 vehicles.map((v, index) => (
@@ -994,7 +991,7 @@ export function DailyInspection() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <span className="block font-semibold uppercase text-(--text-secondary)">Select Vehicle (Plate No)</span>
+                  <span className="block font-semibold uppercase text-(--text-secondary)">Select Equipment (Plate No)</span>
                   <select
                     value={searchFlagVehicleId}
                     onChange={(e) => setSearchFlagVehicleId(e.target.value)}
@@ -1002,7 +999,7 @@ export function DailyInspection() {
                     className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary) disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="">
-                      {!searchFlagDate ? '— Select date first —' : dateFilteredVehicles.length === 0 ? 'No vehicles with records on this date' : 'Select Vehicle Plate No'}
+                      {!searchFlagDate ? '— Select date first —' : dateFilteredVehicles.length === 0 ? 'No equipment with records on this date' : 'Select Equipment ID'}
                     </option>
                     {dateFilteredVehicles.map(v => (
                       <option key={v.vehicle_id} value={v.vehicle_id}>
@@ -1061,7 +1058,7 @@ export function DailyInspection() {
               <div className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto flex-1 min-h-0">
                 <div className="space-y-1.5">
                   <span className="block font-semibold uppercase text-(--text-secondary)">
-                    Search Vehicle (Current Day Logs) <span className="text-red-500">*</span>
+                    Search Equipment (Current Day Logs) <span className="text-red-500">*</span>
                   </span>
                   
                   {selectedFlagVehicle ? (
@@ -1092,7 +1089,7 @@ export function DailyInspection() {
                     >
                       <span className="flex items-center gap-2">
                         <Search className="w-3.5 h-3.5 text-(--text-primary)" />
-                        Search vehicle with logs for current day...
+                        Search equipment with logs for current day...
                       </span>
                       <span className="text-xs bg-(--accent-subtle) text-(--text-primary) px-2 py-0.5 rounded font-semibold">Search</span>
                     </button>
@@ -1107,7 +1104,7 @@ export function DailyInspection() {
                     onChange={(e) => setSelectedLogId(e.target.value)}
                     className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                   >
-                    <option value="">{dailyLogsList.length === 0 ? '— Select vehicle first —' : 'Select Current Day Log'}</option>
+                    <option value="">{dailyLogsList.length === 0 ? '— Select equipment first —' : 'Select Current Day Log'}</option>
                     {dailyLogsList.map((log) => (
                       <option key={log.log_id} value={log.log_id}>
                         Log Date: {log.log_date}
@@ -1190,7 +1187,7 @@ export function DailyInspection() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs p-4">
           <div className="bg-(--bg-surface) border border-(--border-main) rounded-2xl w-full max-w-xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
             <div className="flex justify-between items-center px-6 py-4 border-b border-(--border-main) bg-(--bg-elevated) shrink-0">
-              <h3 className="text-lg font-bold text-(--text-primary)">Search Vehicle (Current Day Logs)</h3>
+              <h3 className="text-lg font-bold text-(--text-primary)">Search Equipment (Current Day Logs)</h3>
               <button
                 type="button"
                 onClick={() => setShowFlagVehiclePicker(false)}
@@ -1220,11 +1217,11 @@ export function DailyInspection() {
               {loading ? (
                 <div className="py-12 text-center text-(--text-muted) flex items-center justify-center gap-2 text-xs">
                   <Loader2 className="w-5 h-5 animate-spin text-(--text-primary)" />
-                  <span>Loading vehicles with current day logs...</span>
+                  <span>Loading Equipment with current day logs...</span>
                 </div>
               ) : flagVehiclesList.length === 0 ? (
                 <div className="py-12 text-center text-(--text-muted) text-xs italic">
-                  No vehicles found with logs for the current day.
+                  No equipment found with logs for the current day.
                 </div>
               ) : (
                 flagVehiclesList.map((v, index) => (
