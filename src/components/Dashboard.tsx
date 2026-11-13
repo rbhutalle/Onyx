@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { 
   LayoutDashboard, 
@@ -18,7 +18,9 @@ import {
   PauseCircle,
   Activity,
   PlayCircle,
-  CheckCircle2
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 /* --- Interfaces --- */
@@ -86,6 +88,7 @@ interface WorkOrderRegisterRecord {
   plate_no: string;
   priority_level: string;
   current_status: string;
+  date_requested: string;
   date_started: string | null;
   expected_completion: string | null;
   date_completed: string | null;
@@ -105,6 +108,7 @@ interface OverdueJobOrderRecord {
   plate_no: string;
   priority_level: string;
   current_status: string;
+  date_requested: string;
   expected_completion: string;
   date_started: string | null;
   days_delayed: number;
@@ -126,6 +130,14 @@ export function Dashboard() {
   const [dateLoading, setDateLoading] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Pagination states for each table
+  const [itemizedPmPage, setItemizedPmPage] = useState<number>(1);
+  const [uninspectedPage, setUninspectedPage] = useState<number>(1);
+  const [ongoingJoPage, setOngoingJoPage] = useState<number>(1);
+  const [notStartedJoPage, setNotStartedJoPage] = useState<number>(1);
+  const [overdueJoPage, setOverdueJoPage] = useState<number>(1);
+  const pageSize = 10;
 
   // Initialize with current local date
   const [selectedInspectionDate, setSelectedInspectionDate] = useState<string>(() => {
@@ -423,7 +435,15 @@ export function Dashboard() {
         return String(j.date_completed).substring(0, 10) === requestedDate;
       }).length;
 
-      const notYetStartedRecords = filteredCreatedRecords.filter(j => j.date_started === null);
+      // Filtering logic for Not Yet Started Job Orders
+      const notYetStartedRecords = masterList.filter(j => {
+        if (!j.created_at) return false;
+        const createdDate = String(j.created_at).substring(0, 10);
+        const isCreatedBeforeOrOn = createdDate <= requestedDate;
+        const isNotStarted = j.date_started === null;
+        const isNotCompleted = j.date_completed === null || String(j.date_completed).substring(0, 10) > requestedDate;
+        return isCreatedBeforeOrOn && isNotStarted && isNotCompleted;
+      });
       const notYetStartedCount = notYetStartedRecords.length;
 
       const completionRate = totalCreated > 0 ? Number(((completedCount / totalCreated) * 100).toFixed(2)) : 0;
@@ -437,7 +457,27 @@ export function Dashboard() {
         completion_rate_percentage: completionRate
       });
 
-      const ongoingRecords = filteredCreatedRecords.filter(j => j.date_completed === null && j.date_started !== null);
+      // Filtering logic for Ongoing Job Orders (Currently Active & Not Delayed)
+      const ongoingRecords = masterList.filter(j => {
+        if (!j.created_at || !j.expected_completion) return false;
+        const createdDate = String(j.created_at).substring(0, 10);
+        const expCompDate = String(j.expected_completion).substring(0, 10);
+        
+        const isCreatedBeforeOrOn = createdDate <= requestedDate;
+        const isStarted = j.date_started !== null;
+        const isNotCompleted = j.date_completed === null || String(j.date_completed).substring(0, 10) > requestedDate;
+        
+        // Exclude if already delayed (expected completion is strictly less than requested date)
+        const isNotDelayed = expCompDate >= requestedDate;
+
+        const rawStat = j.joborder_status as Record<string, unknown> | Record<string, unknown>[] | null;
+        const stat = Array.isArray(rawStat) ? rawStat[0] : rawStat;
+        const statusName = String(stat?.status_name || '').toLowerCase();
+        const isInProgressStatus = statusName.includes('in-progress') || statusName.includes('in progress');
+
+        return isCreatedBeforeOrOn && isStarted && isNotCompleted && isNotDelayed && isInProgressStatus;
+      });
+
       const ongoingList: WorkOrderRegisterRecord[] = ongoingRecords.map(j => {
         const rawPrio = j.joborder_priority as Record<string, unknown> | Record<string, unknown>[] | null;
         const prio = Array.isArray(rawPrio) ? rawPrio[0] : rawPrio;
@@ -457,6 +497,7 @@ export function Dashboard() {
           plate_no: String(veh?.plate_no || 'N/A'),
           priority_level: String(prio?.priority_desc || 'Unassigned'),
           current_status: String(stat?.status_name || 'Ongoing'),
+          date_requested: j.created_at ? String(j.created_at).substring(0, 10) : '—',
           date_started: j.date_started ? String(j.date_started).substring(0, 10) : null,
           expected_completion: j.expected_completion ? String(j.expected_completion).substring(0, 10) : null,
           date_completed: j.date_completed ? String(j.date_completed).substring(0, 10) : null,
@@ -485,6 +526,7 @@ export function Dashboard() {
           plate_no: String(veh?.plate_no || 'N/A'),
           priority_level: String(prio?.priority_desc || 'Unassigned'),
           current_status: String(stat?.status_name || 'Pending'),
+          date_requested: j.created_at ? String(j.created_at).substring(0, 10) : '—',
           date_started: j.date_started ? String(j.date_started).substring(0, 10) : null,
           expected_completion: j.expected_completion ? String(j.expected_completion).substring(0, 10) : null,
           date_completed: j.date_completed ? String(j.date_completed).substring(0, 10) : null,
@@ -531,6 +573,7 @@ export function Dashboard() {
             plate_no: String(veh?.plate_no || 'N/A'),
             priority_level: String(prio?.priority_desc || 'Normal'),
             current_status: String(stat?.status_name || 'Open'),
+            date_requested: j.created_at ? String(j.created_at).substring(0, 10) : '—',
             expected_completion: expCompDateStr,
             date_started: j.date_started ? String(j.date_started).substring(0, 10) : null,
             days_delayed: daysDelayed,
@@ -587,6 +630,11 @@ export function Dashboard() {
 
   const handleDateChange = (newDate: string) => {
     setSelectedInspectionDate(newDate);
+    setItemizedPmPage(1);
+    setUninspectedPage(1);
+    setOngoingJoPage(1);
+    setNotStartedJoPage(1);
+    setOverdueJoPage(1);
   };
 
   const handleManualRefresh = async () => {
@@ -604,7 +652,66 @@ export function Dashboard() {
     return item.pm_code === selectedPmFilter;
   });
 
+  // Paginated slices
+  const paginatedItemizedPms = useMemo(() => {
+    const start = (itemizedPmPage - 1) * pageSize;
+    return filteredItemizedPms.slice(start, start + pageSize);
+  }, [filteredItemizedPms, itemizedPmPage]);
+
+  const paginatedUninspected = useMemo(() => {
+    const start = (uninspectedPage - 1) * pageSize;
+    return uninspectedVehicles.slice(start, start + pageSize);
+  }, [uninspectedVehicles, uninspectedPage]);
+
+  const paginatedOngoingJo = useMemo(() => {
+    const start = (ongoingJoPage - 1) * pageSize;
+    return ongoingWorkOrderRegister.slice(start, start + pageSize);
+  }, [ongoingWorkOrderRegister, ongoingJoPage]);
+
+  const paginatedNotStartedJo = useMemo(() => {
+    const start = (notStartedJoPage - 1) * pageSize;
+    return notYetStartedRegister.slice(start, start + pageSize);
+  }, [notYetStartedRegister, notStartedJoPage]);
+
+  const paginatedOverdueJo = useMemo(() => {
+    const start = (overdueJoPage - 1) * pageSize;
+    return overdueQueue.slice(start, start + pageSize);
+  }, [overdueQueue, overdueJoPage]);
+
   const maxPmCount = Math.max(...pmCodeSummaries.map(p => p.total_pm_count), 1);
+
+  // Pagination Controls component helper
+  const renderPagination = (currentPage: number, totalItems: number, onPageChange: (p: number) => void) => {
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    if (totalPages <= 1) return null;
+
+    return (
+      <div className="flex items-center justify-between pt-2 px-1 text-xs text-(--text-muted)">
+        <div>
+          Showing {Math.min((currentPage - 1) * pageSize + 1, totalItems)} to {Math.min(currentPage * pageSize, totalItems)} of {totalItems} entries
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="p-1 rounded-lg border border-(--border-main) bg-(--bg-elevated) hover:bg-(--accent-subtle) disabled:opacity-40 cursor-pointer"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="font-mono font-semibold px-2">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="p-1 rounded-lg border border-(--border-main) bg-(--bg-elevated) hover:bg-(--accent-subtle) disabled:opacity-40 cursor-pointer"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   const handleExportHtml = () => {
     const printWindow = window.open('', '_blank');
@@ -799,13 +906,14 @@ export function Dashboard() {
       `;
 
       const ongoingRows = ongoingWorkOrderRegister.length === 0
-        ? `<tr><td colspan="8" style="text-align: center; padding: 10px; color: #64748b;">No ongoing job orders found.</td></tr>`
+        ? `<tr><td colspan="9" style="text-align: center; padding: 10px; color: #64748b;">No ongoing job orders found.</td></tr>`
         : ongoingWorkOrderRegister.map((r, idx) => `
           <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
             <td style="padding: 6px 8px; font-weight: 700; font-family: monospace; color: #0f172a; border-bottom: 1px solid #e2e8f0;">${r.job_order_no}</td>
             <td style="padding: 6px 8px; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0;">${r.plate_no}</td>
             <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${r.priority_level}</td>
             <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${r.current_status}</td>
+            <td style="padding: 6px 8px; font-family: monospace; border-bottom: 1px solid #e2e8f0;">${r.date_requested}</td>
             <td style="padding: 6px 8px; font-family: monospace; color: #047857; font-weight: 600; border-bottom: 1px solid #e2e8f0;">${r.date_started || '—'}</td>
             <td style="padding: 6px 8px; font-family: monospace; border-bottom: 1px solid #e2e8f0;">${r.expected_completion || '—'}</td>
             <td style="padding: 6px 8px; font-family: monospace; border-bottom: 1px solid #e2e8f0;">${r.date_completed || '—'}</td>
@@ -814,13 +922,14 @@ export function Dashboard() {
         `).join('');
 
       const notStartedRows = notYetStartedRegister.length === 0
-        ? `<tr><td colspan="8" style="text-align: center; padding: 10px; color: #64748b;">No pending/unstarted job orders found.</td></tr>`
+        ? `<tr><td colspan="9" style="text-align: center; padding: 10px; color: #64748b;">No pending/unstarted job orders found.</td></tr>`
         : notYetStartedRegister.map((r, idx) => `
           <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
             <td style="padding: 6px 8px; font-weight: 700; font-family: monospace; color: #0f172a; border-bottom: 1px solid #e2e8f0;">${r.job_order_no}</td>
             <td style="padding: 6px 8px; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0;">${r.plate_no}</td>
             <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${r.priority_level}</td>
             <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${r.current_status}</td>
+            <td style="padding: 6px 8px; font-family: monospace; border-bottom: 1px solid #e2e8f0;">${r.date_requested}</td>
             <td style="padding: 6px 8px; font-family: monospace; color: #b45309; font-weight: 600; border-bottom: 1px solid #e2e8f0;">${r.date_started || '—'}</td>
             <td style="padding: 6px 8px; font-family: monospace; border-bottom: 1px solid #e2e8f0;">${r.expected_completion || '—'}</td>
             <td style="padding: 6px 8px; font-family: monospace; border-bottom: 1px solid #e2e8f0;">${r.date_completed || '—'}</td>
@@ -833,7 +942,7 @@ export function Dashboard() {
         <table>
           <thead>
             <tr>
-              <th>JO Number</th><th>Plate No</th><th>Priority</th><th>Status</th><th>Date Started</th><th>Expected Comp.</th><th>Date Completed</th><th>Supervisor</th>
+              <th>JO Number</th><th>Plate No</th><th>Priority</th><th>Status</th><th>Date Requested</th><th>Date Started</th><th>Expected Comp.</th><th>Date Completed</th><th>Supervisor</th>
             </tr>
           </thead>
           <tbody>${ongoingRows}</tbody>
@@ -843,7 +952,7 @@ export function Dashboard() {
         <table>
           <thead>
             <tr>
-              <th>JO Number</th><th>Plate No</th><th>Priority</th><th>Status</th><th>Date Started</th><th>Expected Comp.</th><th>Date Completed</th><th>Supervisor</th>
+              <th>JO Number</th><th>Plate No</th><th>Priority</th><th>Status</th><th>Date Requested</th><th>Date Started</th><th>Expected Comp.</th><th>Date Completed</th><th>Supervisor</th>
             </tr>
           </thead>
           <tbody>${notStartedRows}</tbody>
@@ -859,13 +968,14 @@ export function Dashboard() {
       `;
 
       const overdueRows = overdueQueue.length === 0
-        ? `<tr><td colspan="7" style="text-align: center; padding: 12px; color: #64748b;">No overdue job orders recorded.</td></tr>`
+        ? `<tr><td colspan="8" style="text-align: center; padding: 12px; color: #64748b;">No overdue job orders recorded.</td></tr>`
         : overdueQueue.map((r, idx) => `
           <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
             <td style="padding: 8px 10px; font-weight: 700; font-family: monospace; color: #0f172a; border-bottom: 1px solid #e2e8f0;">${r.job_order_no}</td>
             <td style="padding: 8px 10px; font-weight: 600; border-bottom: 1px solid #e2e8f0;">${r.plate_no}</td>
             <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0;">${r.priority_level}</td>
             <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0;">${r.current_status}</td>
+            <td style="padding: 8px 10px; font-family: monospace; border-bottom: 1px solid #e2e8f0;">${r.date_requested}</td>
             <td style="padding: 8px 10px; font-family: monospace; font-weight: 700; color: #b91c1c; border-bottom: 1px solid #e2e8f0;">${r.expected_completion}</td>
             <td style="padding: 8px 10px; font-family: monospace; font-weight: 800; color: #b91c1c; border-bottom: 1px solid #e2e8f0;">+${r.days_delayed} Days</td>
             <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0;">${r.assigned_supervisor}</td>
@@ -877,7 +987,7 @@ export function Dashboard() {
         <table>
           <thead>
             <tr>
-              <th>JO Number</th><th>Plate No</th><th>Priority Level</th><th>Current Status</th><th>Target Completion</th><th>Days Delayed</th><th>Assigned Supervisor</th>
+              <th>JO Number</th><th>Plate No</th><th>Priority Level</th><th>Current Status</th><th>Date Requested</th><th>Target Completion</th><th>Days Delayed</th><th>Assigned Supervisor</th>
             </tr>
           </thead>
           <tbody>${overdueRows}</tbody>
@@ -1102,7 +1212,10 @@ export function Dashboard() {
                           <select
                             id="pm-code-filter-select"
                             value={selectedPmFilter}
-                            onChange={(e) => setSelectedPmFilter(e.target.value)}
+                            onChange={(e) => {
+                              setSelectedPmFilter(e.target.value);
+                              setItemizedPmPage(1);
+                            }}
                             className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2.5 py-1 focus:outline-none"
                           >
                             <option value="ALL">All PM Codes</option>
@@ -1125,7 +1238,7 @@ export function Dashboard() {
                       </div>
                     </div>
 
-                    <div className="overflow-x-auto max-h-72 overflow-y-auto border border-(--border-main) rounded-lg">
+                    <div className="overflow-x-auto border border-(--border-main) rounded-lg">
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
                           <tr className="border-b border-(--border-main) text-(--text-muted) text-[10px] uppercase bg-(--bg-elevated) sticky top-0 z-10 shadow-xs">
@@ -1138,35 +1251,44 @@ export function Dashboard() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-(--border-main)">
-                          {filteredItemizedPms.map((item, idx) => (
-                            <tr key={idx} className="hover:bg-(--accent-subtle) transition-colors">
-                              <td className="p-2.5 font-bold text-(--text-primary)">{item.plate_no}</td>
-                              <td className="p-2.5 font-mono font-semibold">{item.pm_code}</td>
-                              <td className="p-2.5 text-right font-mono text-(--text-primary)">{item.current_rdg.toLocaleString()}</td>
-                              <td className="p-2.5 text-right font-mono text-blue-600 dark:text-blue-400">{item.trigger_rdg.toLocaleString()}</td>
-                              <td className="p-2.5 text-right font-mono font-semibold">{item.pm_current.toLocaleString()}</td>
-                              <td className="p-2.5 text-center">
-                                {item.pm_status === 'PAST DUE' && (
-                                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800">
-                                    PAST DUE
-                                  </span>
-                                )}
-                                {item.pm_status === 'CURRENTLY DUE' && (
-                                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-                                    CURRENTLY DUE
-                                  </span>
-                                )}
-                                {item.pm_status === 'DUE TO THRESHOLD' && (
-                                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800">
-                                    DUE TO THRESHOLD
-                                  </span>
-                                )}
+                          {paginatedItemizedPms.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="p-6 text-center text-(--text-muted) italic">
+                                No flagged PM items found.
                               </td>
                             </tr>
-                          ))}
+                          ) : (
+                            paginatedItemizedPms.map((item, idx) => (
+                              <tr key={idx} className="hover:bg-(--accent-subtle) transition-colors">
+                                <td className="p-2.5 font-bold text-(--text-primary)">{item.plate_no}</td>
+                                <td className="p-2.5 font-mono font-semibold">{item.pm_code}</td>
+                                <td className="p-2.5 text-right font-mono text-(--text-primary)">{item.current_rdg.toLocaleString()}</td>
+                                <td className="p-2.5 text-right font-mono text-blue-600 dark:text-blue-400">{item.trigger_rdg.toLocaleString()}</td>
+                                <td className="p-2.5 text-right font-mono font-semibold">{item.pm_current.toLocaleString()}</td>
+                                <td className="p-2.5 text-center">
+                                  {item.pm_status === 'PAST DUE' && (
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800">
+                                      PAST DUE
+                                    </span>
+                                  )}
+                                  {item.pm_status === 'CURRENTLY DUE' && (
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                                      CURRENTLY DUE
+                                    </span>
+                                  )}
+                                  {item.pm_status === 'DUE TO THRESHOLD' && (
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800">
+                                      DUE TO THRESHOLD
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))
+                          )}
                         </tbody>
                       </table>
                     </div>
+                    {renderPagination(itemizedPmPage, filteredItemizedPms.length, setItemizedPmPage)}
                   </div>
                 </div>
               )}
@@ -1285,7 +1407,7 @@ export function Dashboard() {
                       </div>
                     </div>
 
-                    <div className="overflow-x-auto max-h-72 overflow-y-auto border border-(--border-main) rounded-lg">
+                    <div className="overflow-x-auto border border-(--border-main) rounded-lg">
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
                           <tr className="border-b border-(--border-main) text-(--text-muted) text-[10px] uppercase bg-(--bg-elevated) sticky top-0 z-10 shadow-xs">
@@ -1295,14 +1417,14 @@ export function Dashboard() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-(--border-main)">
-                          {uninspectedVehicles.length === 0 ? (
+                          {paginatedUninspected.length === 0 ? (
                             <tr>
                               <td colSpan={3} className="p-6 text-center text-emerald-600 dark:text-emerald-400 font-semibold italic">
                                 100% Compliance! All active fleet units have been inspected for {selectedInspectionDate}.
                               </td>
                             </tr>
                           ) : (
-                            uninspectedVehicles.map((u, idx) => (
+                            paginatedUninspected.map((u, idx) => (
                               <tr key={idx} className="hover:bg-red-500/5 transition-colors">
                                 <td className="p-2.5 font-bold text-(--text-primary)">{u.plate_no}</td>
                                 <td className="p-2.5 text-right font-mono text-(--text-primary)">{u.service_rdg.toLocaleString()}</td>
@@ -1317,6 +1439,7 @@ export function Dashboard() {
                         </tbody>
                       </table>
                     </div>
+                    {renderPagination(uninspectedPage, uninspectedVehicles.length, setUninspectedPage)}
                   </div>
                 </div>
               )}
@@ -1435,7 +1558,7 @@ export function Dashboard() {
                           </div>
                         </div>
 
-                        <div className="overflow-x-auto max-h-72 overflow-y-auto border border-(--border-main) rounded-lg">
+                        <div className="overflow-x-auto border border-(--border-main) rounded-lg">
                           <table className="w-full text-left text-xs border-collapse">
                             <thead>
                               <tr className="border-b border-(--border-main) text-(--text-muted) text-[10px] uppercase bg-(--bg-elevated) sticky top-0 z-10">
@@ -1443,6 +1566,7 @@ export function Dashboard() {
                                 <th className="p-2.5">Plate No</th>
                                 <th className="p-2.5">Priority</th>
                                 <th className="p-2.5">Status</th>
+                                <th className="p-2.5">Date Requested</th>
                                 <th className="p-2.5">Date Started</th>
                                 <th className="p-2.5">Expected Comp.</th>
                                 <th className="p-2.5">Date Completed</th>
@@ -1450,19 +1574,20 @@ export function Dashboard() {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-(--border-main)">
-                              {ongoingWorkOrderRegister.length === 0 ? (
+                              {paginatedOngoingJo.length === 0 ? (
                                 <tr>
-                                  <td colSpan={8} className="p-6 text-center text-(--text-muted) italic">
+                                  <td colSpan={9} className="p-6 text-center text-(--text-muted) italic">
                                     No ongoing job orders found.
                                   </td>
                                 </tr>
                               ) : (
-                                ongoingWorkOrderRegister.map((r, idx) => (
+                                paginatedOngoingJo.map((r, idx) => (
                                   <tr key={idx} className="hover:bg-(--accent-subtle) transition-colors">
                                     <td className="p-2.5 font-mono font-bold text-(--text-primary)">{r.job_order_no}</td>
                                     <td className="p-2.5 font-semibold text-(--text-primary)">{r.plate_no}</td>
                                     <td className="p-2.5">{r.priority_level}</td>
                                     <td className="p-2.5">{r.current_status}</td>
+                                    <td className="p-2.5 font-mono text-(--text-secondary)">{r.date_requested}</td>
                                     <td className="p-2.5 font-mono text-emerald-600 dark:text-emerald-400 font-semibold">{r.date_started || '—'}</td>
                                     <td className="p-2.5 font-mono text-(--text-secondary)">{r.expected_completion || '—'}</td>
                                     <td className="p-2.5 font-mono text-(--text-secondary)">{r.date_completed || '—'}</td>
@@ -1473,6 +1598,7 @@ export function Dashboard() {
                             </tbody>
                           </table>
                         </div>
+                        {renderPagination(ongoingJoPage, ongoingWorkOrderRegister.length, setOngoingJoPage)}
                       </div>
 
                       {/* Table 2: Not yet Started Job Orders */}
@@ -1486,7 +1612,7 @@ export function Dashboard() {
                           </div>
                         </div>
 
-                        <div className="overflow-x-auto max-h-72 overflow-y-auto border border-(--border-main) rounded-lg">
+                        <div className="overflow-x-auto border border-(--border-main) rounded-lg">
                           <table className="w-full text-left text-xs border-collapse">
                             <thead>
                               <tr className="border-b border-(--border-main) text-(--text-muted) text-[10px] uppercase bg-(--bg-elevated) sticky top-0 z-10">
@@ -1494,6 +1620,7 @@ export function Dashboard() {
                                 <th className="p-2.5">Plate No</th>
                                 <th className="p-2.5">Priority</th>
                                 <th className="p-2.5">Status</th>
+                                <th className="p-2.5">Date Requested</th>
                                 <th className="p-2.5">Date Started</th>
                                 <th className="p-2.5">Expected Comp.</th>
                                 <th className="p-2.5">Date Completed</th>
@@ -1501,19 +1628,20 @@ export function Dashboard() {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-(--border-main)">
-                              {notYetStartedRegister.length === 0 ? (
+                              {paginatedNotStartedJo.length === 0 ? (
                                 <tr>
-                                  <td colSpan={8} className="p-6 text-center text-(--text-muted) italic">
+                                  <td colSpan={9} className="p-6 text-center text-(--text-muted) italic">
                                     No pending/unstarted job orders found.
                                   </td>
                                 </tr>
                               ) : (
-                                notYetStartedRegister.map((r, idx) => (
+                                paginatedNotStartedJo.map((r, idx) => (
                                   <tr key={idx} className="hover:bg-(--accent-subtle) transition-colors">
                                     <td className="p-2.5 font-mono font-bold text-(--text-primary)">{r.job_order_no}</td>
                                     <td className="p-2.5 font-semibold text-(--text-primary)">{r.plate_no}</td>
                                     <td className="p-2.5">{r.priority_level}</td>
                                     <td className="p-2.5">{r.current_status}</td>
+                                    <td className="p-2.5 font-mono text-(--text-secondary)">{r.date_requested}</td>
                                     <td className="p-2.5 font-mono text-amber-600 dark:text-amber-400 font-semibold">{r.date_started || '—'}</td>
                                     <td className="p-2.5 font-mono text-(--text-secondary)">{r.expected_completion || '—'}</td>
                                     <td className="p-2.5 font-mono text-(--text-secondary)">{r.date_completed || '—'}</td>
@@ -1524,6 +1652,7 @@ export function Dashboard() {
                             </tbody>
                           </table>
                         </div>
+                        {renderPagination(notStartedJoPage, notYetStartedRegister.length, setNotStartedJoPage)}
                       </div>
                     </div>
                   )}
@@ -1561,7 +1690,7 @@ export function Dashboard() {
                           </div>
                         </div>
 
-                        <div className="overflow-x-auto max-h-80 overflow-y-auto border border-(--border-main) rounded-lg">
+                        <div className="overflow-x-auto border border-(--border-main) rounded-lg">
                           <table className="w-full text-left text-xs border-collapse">
                             <thead>
                               <tr className="border-b border-(--border-main) text-(--text-muted) text-[10px] uppercase bg-(--bg-elevated) sticky top-0 z-10">
@@ -1569,25 +1698,27 @@ export function Dashboard() {
                                 <th className="p-2.5">Plate No</th>
                                 <th className="p-2.5">Priority</th>
                                 <th className="p-2.5">Status</th>
+                                <th className="p-2.5">Date Requested</th>
                                 <th className="p-2.5">Target Completion</th>
                                 <th className="p-2.5">Days Delayed</th>
                                 <th className="p-2.5">Supervisor</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-(--border-main)">
-                              {overdueQueue.length === 0 ? (
+                              {paginatedOverdueJo.length === 0 ? (
                                 <tr>
-                                  <td colSpan={7} className="p-6 text-center text-(--text-muted) italic">
+                                  <td colSpan={8} className="p-6 text-center text-(--text-muted) italic">
                                     No overdue job orders recorded for this evaluation date.
                                   </td>
                                 </tr>
                               ) : (
-                                overdueQueue.map((r, idx) => (
+                                paginatedOverdueJo.map((r, idx) => (
                                   <tr key={idx} className="hover:bg-red-500/10 transition-colors">
                                     <td className="p-2.5 font-mono font-bold text-(--text-primary)">{r.job_order_no}</td>
                                     <td className="p-2.5 font-semibold text-(--text-primary)">{r.plate_no}</td>
                                     <td className="p-2.5 font-semibold text-amber-600 dark:text-amber-400">{r.priority_level}</td>
                                     <td className="p-2.5">{r.current_status}</td>
+                                    <td className="p-2.5 font-mono text-(--text-secondary)">{r.date_requested}</td>
                                     <td className="p-2.5 font-mono text-red-600 dark:text-red-400 font-bold">{r.expected_completion}</td>
                                     <td className="p-2.5 font-mono font-extrabold text-red-600 dark:text-red-400">+{r.days_delayed} Days</td>
                                     <td className="p-2.5 text-(--text-secondary)">{r.assigned_supervisor}</td>
@@ -1597,6 +1728,7 @@ export function Dashboard() {
                             </tbody>
                           </table>
                         </div>
+                        {renderPagination(overdueJoPage, overdueQueue.length, setOverdueJoPage)}
                       </div>
                     </div>
                   )}
