@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { ClipboardList, Search, Calendar, Gauge, FileText, Loader2, CheckCircle, X, AlertCircle, Car, Flag, Plus, Trash2, Layers } from 'lucide-react';
+import { ClipboardList, Search, Calendar, Gauge, FileText, Loader2, CheckCircle, X, AlertCircle, Car, Flag, Plus, Trash2, Layers, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface VehiclePm {
   plate_no: string;
@@ -50,11 +50,20 @@ interface FmeaOption {
   [key: string]: unknown;
 }
 
+interface OperationsStatusOption {
+  operations_id: string;
+  status_name: string;
+  description?: string | null;
+}
+
 export function DailyInspection() {
   const [activeTab, setActiveTab] = useState<'form' | 'flags'>('form');
 
   // Inspection Form States
   const [vehicles, setVehicles] = useState<VehiclePm[]>([]);
+  const [operationsStatuses, setOperationsStatuses] = useState<OperationsStatusOption[]>([]);
+  const [selectedOperationsId, setSelectedOperationsId] = useState<string>('');
+  
   const [loading, setLoading] = useState<boolean>(false);
   const [showPicker, setShowPicker] = useState<boolean>(false);
   const [pickerSearchQuery, setPickerSearchQuery] = useState<string>('');
@@ -75,6 +84,10 @@ export function DailyInspection() {
   const [dailyRisks, setDailyRisks] = useState<DailyRiskRecord[]>([]);
   const [filteredDailyRisks, setFilteredDailyRisks] = useState<DailyRiskRecord[]>([]);
   const [isAddFlagModalOpen, setIsAddFlagModalOpen] = useState<boolean>(false);
+
+  // Pagination States for Inspection Flags Table
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 10;
 
   // Search Flags Modal States
   const [isSearchFlagsModalOpen, setIsSearchFlagsModalOpen] = useState<boolean>(false);
@@ -106,6 +119,14 @@ export function DailyInspection() {
   const numericCurrent = Number(currentRdg) || 0;
   const computedIncrement = numericCurrent >= numericPrevious ? numericCurrent - numericPrevious : 0;
 
+  // Pagination calculations for Inspection Flags
+  const totalPages = Math.max(1, Math.ceil(filteredDailyRisks.length / itemsPerPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedDailyRisks = filteredDailyRisks.slice(
+    (safeCurrentPage - 1) * itemsPerPage,
+    safeCurrentPage * itemsPerPage
+  );
+
   const fetchVehicles = useCallback(async (queryParam?: string, noLogsCurrentDay?: boolean) => {
     try {
       setLoading(true);
@@ -113,7 +134,6 @@ export function DailyInspection() {
       const activeQuery = (queryParam !== undefined ? queryParam : pickerSearchQuery) ?? '';
       const isNoLogsToday = noLogsCurrentDay !== undefined ? noLogsCurrentDay : searchNoLogsCurrentDay;
 
-      // Query from the specialized view if noLogsToday is checked, otherwise from vw_vehicle_pm_details
       const tableName = isNoLogsToday ? 'vw_vehicles_without_today_logs' : 'vw_vehicle_pm_details';
 
       let query = supabase
@@ -140,10 +160,24 @@ export function DailyInspection() {
     }
   }, [pickerSearchQuery, searchNoLogsCurrentDay]);
 
+  const fetchOperationsStatuses = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('operations_status')
+        .select('*')
+        .order('status_name', { ascending: true });
+
+      if (error) throw error;
+      setOperationsStatuses(data || []);
+    } catch {
+      // Error handling
+    }
+  }, []);
+
   const fetchDailyRisks = useCallback(async () => {
     try {
       const [risksRes, fmeaRes, logsRes, vehiclesRes] = await Promise.all([
-        supabase.from('vehicle_daily_risks').select('*').order('created_at', { ascending: false }).limit(100),
+        supabase.from('vehicle_daily_risks').select('*').order('created_at', { ascending: false }).limit(500),
         supabase.from('vs_fmea_items').select('*'),
         supabase.from('vehicle_daily_logs').select('log_id, log_date, vehicle_id'),
         supabase.from('vw_vehicle_pm_details').select('*').eq('is_active', true)
@@ -186,6 +220,7 @@ export function DailyInspection() {
 
       setDailyRisks(formatted);
       setFilteredDailyRisks(formatted.filter(r => r.log_date === todayDateStr));
+      setCurrentPage(1);
     } catch {
       // Error handling
     }
@@ -352,7 +387,6 @@ export function DailyInspection() {
     
     async function initLoad() {
       try {
-        // Fetch initially using default searchNoLogsCurrentDay = true
         const { data, error: fetchError } = await supabase
           .from('vw_vehicles_without_today_logs')
           .select('*')
@@ -368,6 +402,7 @@ export function DailyInspection() {
       }
 
       if (isMounted) {
+        fetchOperationsStatuses();
         fetchDailyRisks();
       }
     }
@@ -377,7 +412,7 @@ export function DailyInspection() {
     return () => {
       isMounted = false;
     };
-  }, [fetchDailyRisks]);
+  }, [fetchOperationsStatuses, fetchDailyRisks]);
 
   const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -412,6 +447,10 @@ export function DailyInspection() {
       setErrorMsg('Please select a Equipment first.');
       return;
     }
+    if (!selectedOperationsId) {
+      setErrorMsg('Please select an Operating Status.');
+      return;
+    }
     if (!currentRdg || isNaN(Number(currentRdg))) {
       setErrorMsg('Please enter a valid numeric current reading.');
       return;
@@ -431,18 +470,38 @@ export function DailyInspection() {
         throw new Error('Equipment ID is missing from the selected record.');
       }
 
-      const { data: rpcData, error: rpcError } = await supabase.rpc('record_vehicle_daily_log', {
-        p_current_rdg: numericCurrent,
-        p_daily_increment: computedIncrement,
-        p_log_date: logDate,
-        p_previous_rdg: numericPrevious,
-        p_remarks: remarks.trim() || null,
-        p_vehicle_id: vehicleId
-      });
+      let rpcData: string | { log_id: string } | null = null;
+      let rpcError: unknown = null;
+
+      try {
+        const res = await supabase.rpc('record_vehicle_daily_log', {
+          p_current_rdg: numericCurrent,
+          p_daily_increment: computedIncrement,
+          p_log_date: logDate,
+          p_previous_rdg: numericPrevious,
+          p_remarks: remarks.trim() || null,
+          p_vehicle_id: vehicleId,
+          p_operations_id: selectedOperationsId
+        });
+        rpcData = res.data as string | { log_id: string } | null;
+        rpcError = res.error;
+      } catch {
+        const res = await supabase.from('vehicle_daily_logs').upsert({
+          vehicle_id: vehicleId,
+          log_date: logDate,
+          previous_rdg: numericPrevious,
+          current_rdg: numericCurrent,
+          daily_increment: computedIncrement,
+          remarks: remarks.trim() || null,
+          operations_id: selectedOperationsId
+        }, { onConflict: 'vehicle_id,log_date' }).select('log_id').single();
+        rpcData = res.data;
+        rpcError = res.error;
+      }
 
       if (rpcError) throw rpcError;
       if (rpcData) {
-        setCapturedLogId(rpcData);
+        setCapturedLogId(typeof rpcData === 'string' ? rpcData : rpcData.log_id);
       }
 
       setSuccessMsg(`Daily inspection successfully recorded for plate ${selectedVehicle.plate_no}!`);
@@ -450,6 +509,7 @@ export function DailyInspection() {
 
       setCurrentRdg('');
       setRemarks('');
+      setSelectedOperationsId('');
       await fetchVehicles();
     } catch {
       setErrorMsg('Failed to record daily inspection. Please verify your inputs.');
@@ -540,6 +600,7 @@ export function DailyInspection() {
     }
 
     setFilteredDailyRisks(result);
+    setCurrentPage(1);
     setIsSearchFlagsModalOpen(false);
   };
 
@@ -548,6 +609,7 @@ export function DailyInspection() {
     setSearchFlagVehicleId('');
     setDateFilteredVehicles([]);
     setFilteredDailyRisks(dailyRisks.filter(r => r.log_date === todayDateStr));
+    setCurrentPage(1);
     setIsSearchFlagsModalOpen(false);
   };
 
@@ -682,7 +744,8 @@ export function DailyInspection() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Single Line: Log Date* and Operating Status* */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <span className="text-xs font-semibold text-(--text-secondary) uppercase tracking-wider flex items-center gap-1">
                     <Calendar className="w-3.5 h-3.5 text-(--text-primary)" />
@@ -697,6 +760,29 @@ export function DailyInspection() {
                   />
                 </div>
 
+                <div className="space-y-1.5">
+                  <span className="text-xs font-semibold text-(--text-secondary) uppercase tracking-wider flex items-center gap-1">
+                    <Activity className="w-3.5 h-3.5 text-(--text-primary)" />
+                    Operating Status <span className="text-red-500">*</span>
+                  </span>
+                  <select
+                    required
+                    value={selectedOperationsId}
+                    onChange={(e) => setSelectedOperationsId(e.target.value)}
+                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) px-3.5 py-2 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
+                  >
+                    <option value="">— Select Operating Status —</option>
+                    {operationsStatuses.map((op) => (
+                      <option key={op.operations_id} value={op.operations_id}>
+                        {op.status_name} {op.description ? `(${op.description})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Next Line: Readings & Increment */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
                   <span className="text-xs font-semibold text-(--text-secondary) uppercase tracking-wider flex items-center gap-1">
                     <Gauge className="w-3.5 h-3.5 text-(--text-primary)" />
@@ -769,7 +855,7 @@ export function DailyInspection() {
           </div>
         )}
 
-        {/* TAB 2: INSPECTION FLAGS TABLE */}
+        {/* TAB 2: INSPECTION FLAGS TABLE (With Always-On Pagination) */}
         {activeTab === 'flags' && (
           <div className="flex flex-col flex-1 min-h-0 space-y-3 overflow-hidden">
             <div className="flex flex-wrap justify-between items-center gap-3 border-b border-(--border-main) pb-3 shrink-0">
@@ -808,39 +894,39 @@ export function DailyInspection() {
               </div>
             </div>
 
-            {/* Scrollable Table Wrapper */}
-            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
+            {/* Scrollable table body */}
+            <div className="flex-1 min-h-0 overflow-y-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="border-b border-(--border-main) text-(--text-muted) text-[11px] uppercase bg-(--bg-elevated) sticky top-0 z-10 font-semibold shadow-xs">
-                    <th className="py-2 px-3">Equipment ID</th>
-                    <th className="py-2 px-3">Log Date</th>
-                    <th className="py-2 px-3">Detail Code</th>
-                    <th className="py-2 px-3">Detail Description</th>
-                    <th className="py-2 px-3">Current Control</th>
-                    <th className="py-2 px-3">Remarks</th>
-                    <th className="py-2 px-3 text-right">Actions</th>
+                    <th className="py-2.5 px-3">Equipment ID</th>
+                    <th className="py-2.5 px-3">Log Date</th>
+                    <th className="py-2.5 px-3">Detail Code</th>
+                    <th className="py-2.5 px-3">Detail Description</th>
+                    <th className="py-2.5 px-3">Current Control</th>
+                    <th className="py-2.5 px-3">Remarks</th>
+                    <th className="py-2.5 px-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                  {filteredDailyRisks.length === 0 ? (
+                  {paginatedDailyRisks.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="text-center py-12 px-3 text-(--text-muted) italic">
-                        No inspection risk flags found for the current day.
+                        No inspection risk flags found for the current filter.
                       </td>
                     </tr>
                   ) : (
-                    filteredDailyRisks.map((risk) => {
+                    paginatedDailyRisks.map((risk) => {
                       const isToday = risk.log_date === todayDateStr;
                       return (
                         <tr key={risk.logrisk_id} className="hover:bg-(--accent-subtle) transition-colors">
-                          <td className="py-2 px-3 font-bold text-(--text-primary)">{risk.plate_no || '—'}</td>
-                          <td className="py-2 px-3">{risk.log_date || '—'}</td>
-                          <td className="py-2 px-3 font-mono font-semibold text-(--text-primary)">{risk.detail_code || '—'}</td>
-                          <td className="py-2 px-3 text-(--text-secondary)">{risk.detail_description || '—'}</td>
-                          <td className="py-2 px-3 text-(--text-muted)">{risk.current_control || '—'}</td>
-                          <td className="py-2 px-3 text-(--text-secondary)">{risk.remarks || '—'}</td>
-                          <td className="py-2 px-3 text-right">
+                          <td className="py-2.5 px-3 font-bold text-(--text-primary)">{risk.plate_no || '—'}</td>
+                          <td className="py-2.5 px-3">{risk.log_date || '—'}</td>
+                          <td className="py-2.5 px-3 font-mono font-semibold text-(--text-primary)">{risk.detail_code || '—'}</td>
+                          <td className="py-2.5 px-3 text-(--text-secondary)">{risk.detail_description || '—'}</td>
+                          <td className="py-2.5 px-3 text-(--text-muted)">{risk.current_control || '—'}</td>
+                          <td className="py-2.5 px-3 text-(--text-secondary)">{risk.remarks || '—'}</td>
+                          <td className="py-2.5 px-3 text-right">
                             <button
                               onClick={() => handleDeleteFlag(risk.logrisk_id)}
                               disabled={!isToday}
@@ -860,6 +946,47 @@ export function DailyInspection() {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Always-On Pagination Footer */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-(--border-main) text-xs text-(--text-secondary) shrink-0">
+              <div>
+                Showing{' '}
+                <span className="font-semibold text-(--text-primary)">
+                  {filteredDailyRisks.length === 0 ? 0 : (safeCurrentPage - 1) * itemsPerPage + 1}
+                </span>{' '}
+                to{' '}
+                <span className="font-semibold text-(--text-primary)">
+                  {Math.min(safeCurrentPage * itemsPerPage, filteredDailyRisks.length)}
+                </span>{' '}
+                of{' '}
+                <span className="font-semibold text-(--text-primary)">{filteredDailyRisks.length}</span>{' '}
+                records
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={safeCurrentPage <= 1}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-(--border-main) bg-(--bg-surface) text-(--text-primary) hover:bg-(--accent-subtle) disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer font-medium transition-colors"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>Prev</span>
+                </button>
+                <span className="px-2.5 py-1 font-semibold text-(--text-primary)">
+                  Page {safeCurrentPage} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={safeCurrentPage >= totalPages}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-(--border-main) bg-(--bg-surface) text-(--text-primary) hover:bg-(--accent-subtle) disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer font-medium transition-colors"
+                >
+                  <span>Next</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -996,13 +1123,24 @@ export function DailyInspection() {
                     value={searchFlagVehicleId}
                     onChange={(e) => setSearchFlagVehicleId(e.target.value)}
                     disabled={!searchFlagDate}
-                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary) disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={`w-full bg-(--bg-elevated) border border-(--border-main) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary) disabled:opacity-50 disabled:cursor-not-allowed ${
+                      searchFlagDate && dateFilteredVehicles.length === 0 
+                        ? 'text-red-600 dark:text-red-400 font-semibold' 
+                        : 'text-(--text-primary)'
+                    }`}
                   >
-                    <option value="">
-                      {!searchFlagDate ? '— Select date first —' : dateFilteredVehicles.length === 0 ? 'No equipment with records on this date' : 'Select Equipment ID'}
+                    <option 
+                      value="" 
+                      className={searchFlagDate && dateFilteredVehicles.length === 0 ? 'text-red-600 dark:text-red-400 font-semibold' : ''}
+                    >
+                      {!searchFlagDate 
+                        ? '— Select date first —' 
+                        : dateFilteredVehicles.length === 0 
+                          ? 'No equipment with records on this date' 
+                          : 'Select Equipment ID'}
                     </option>
                     {dateFilteredVehicles.map(v => (
-                      <option key={v.vehicle_id} value={v.vehicle_id}>
+                      <option key={v.vehicle_id} value={v.vehicle_id} className="text-(--text-primary)">
                         {v.plate_no}
                       </option>
                     ))}

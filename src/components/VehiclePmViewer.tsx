@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Car, X, AlertCircle, Loader2, ClipboardList, Calendar, Search } from 'lucide-react';
+import {
+  Car,
+  X,
+  AlertCircle,
+  Loader2,
+  ClipboardList,
+  Calendar,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 
 interface EquipmentPm {
   plate_no: string;
@@ -9,6 +19,7 @@ interface EquipmentPm {
   model_name: string | null;
   type_description: string | null;
   timezone?: string | null;
+  is_active?: boolean;
   id?: string;
   vehicle_id?: string;
   vehicle_uuid?: string;
@@ -38,6 +49,10 @@ export function VehiclePmViewer() {
   const [selectedEquipment, setSelectedEquipment] = useState<EquipmentPm | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
+  // Main Page Pagination State
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+
   // Modal Tab State: 'pm' or 'logs'
   const [activeTab, setActiveTab] = useState<'pm' | 'logs'>('pm');
 
@@ -45,6 +60,10 @@ export function VehiclePmViewer() {
   const [dailyLogs, setDailyLogs] = useState<DailyLogItem[]>([]);
   const [operationsMap, setOperationsMap] = useState<Record<string, string>>({});
   const [logsLoading, setLogsLoading] = useState<boolean>(false);
+
+  // Modal Daily Logs Pagination State
+  const [logsCurrentPage, setLogsCurrentPage] = useState<number>(1);
+  const [logsPageSize, setLogsPageSize] = useState<number>(10);
 
   const fetchEquipment = async (queryToRun?: string) => {
     try {
@@ -55,8 +74,8 @@ export function VehiclePmViewer() {
       let query = supabase
         .from('vw_vehicle_pm_details')
         .select('*')
-        .order('plate_no', { ascending: true })
-        .limit(50);
+        .eq('is_active', true)
+        .order('plate_no', { ascending: true });
 
       if (activeQuery.trim()) {
         query = query.ilike('plate_no', `%${activeQuery.trim()}%`);
@@ -64,9 +83,10 @@ export function VehiclePmViewer() {
 
       const { data, error: fetchError } = await query;
       if (fetchError) throw fetchError;
-      
+
       const updatedEquipment = data || [];
       setEquipmentList(updatedEquipment);
+      setCurrentPage(1);
 
       // Live-sync selectedEquipment if modal is open so readings and flags update instantly
       setSelectedEquipment((prevSelected) => {
@@ -78,11 +98,11 @@ export function VehiclePmViewer() {
         return matched || prevSelected;
       });
     } catch (err: unknown) {
-      const errorMessage = 
-        err && typeof err === 'object' && 'message' in err 
-          ? String((err as { message: unknown }).message) 
-          : err instanceof Error 
-            ? err.message 
+      const errorMessage =
+        err && typeof err === 'object' && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : err instanceof Error
+            ? err.message
             : String(err);
       console.error('Error fetching equipment PM details:', errorMessage);
       setError('Failed to load equipment records. Please verify table/view access.');
@@ -98,18 +118,18 @@ export function VehiclePmViewer() {
         const { data, error: fetchError } = await supabase
           .from('vw_vehicle_pm_details')
           .select('*')
-          .order('plate_no', { ascending: true })
-          .limit(50);
+          .eq('is_active', true)
+          .order('plate_no', { ascending: true });
 
         if (fetchError) throw fetchError;
         if (isMounted) setEquipmentList(data || []);
       } catch (err: unknown) {
         if (isMounted) {
-          const errorMessage = 
-            err && typeof err === 'object' && 'message' in err 
-              ? String((err as { message: unknown }).message) 
-              : err instanceof Error 
-                ? err.message 
+          const errorMessage =
+            err && typeof err === 'object' && 'message' in err
+              ? String((err as { message: unknown }).message)
+              : err instanceof Error
+                ? err.message
                 : String(err);
           console.error('Error fetching equipment PM details:', errorMessage);
           setError('Failed to load equipment records. Please verify table/view access.');
@@ -134,6 +154,7 @@ export function VehiclePmViewer() {
     async function fetchEquipmentLogsAndStatuses() {
       try {
         setLogsLoading(true);
+        setLogsCurrentPage(1);
 
         const [logsRes, statusRes] = await Promise.all([
           supabase
@@ -143,7 +164,7 @@ export function VehiclePmViewer() {
             .order('log_date', { ascending: false }),
           supabase
             .from('operations_status')
-            .select('operations_id, status_name')
+            .select('operations_id, status_name'),
         ]);
 
         if (logsRes.error) throw logsRes.error;
@@ -193,15 +214,15 @@ export function VehiclePmViewer() {
       if (rpcError) throw rpcError;
 
       alert(`PM ${pmNum} successfully marked as completed for equipment ID ${selectedEquipment.plate_no}!`);
-      
+
       // Refresh list and sync selected modal equipment state
       await fetchEquipment();
     } catch (err: unknown) {
-      const errorMessage = 
-        err && typeof err === 'object' && 'message' in err 
-          ? String((err as { message: unknown }).message) 
-          : err instanceof Error 
-            ? err.message 
+      const errorMessage =
+        err && typeof err === 'object' && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : err instanceof Error
+            ? err.message
             : String(err);
 
       console.error('Error completing PM:', err);
@@ -230,6 +251,20 @@ export function VehiclePmViewer() {
       return String(val);
     }
   };
+
+  // Main Table Pagination Calculations
+  const totalItems = equipmentList.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const displayedEquipment = equipmentList.slice(startIndex, endIndex);
+
+  // Modal Daily Logs Pagination Calculations
+  const totalLogItems = dailyLogs.length;
+  const totalLogPages = Math.ceil(totalLogItems / logsPageSize) || 1;
+  const logsStartIndex = (logsCurrentPage - 1) * logsPageSize;
+  const logsEndIndex = Math.min(logsStartIndex + logsPageSize, totalLogItems);
+  const displayedLogs = dailyLogs.slice(logsStartIndex, logsEndIndex);
 
   return (
     <div className="h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 flex flex-col overflow-hidden">
@@ -297,18 +332,18 @@ export function VehiclePmViewer() {
                     <td colSpan={5} className="py-12 text-center text-(--text-muted)">
                       <div className="flex justify-center items-center gap-2">
                         <Loader2 className="w-5 h-5 animate-spin text-(--text-primary)" />
-                        <span>Loading equipment records...</span>
+                        <span>Loading active equipment records...</span>
                       </div>
                     </td>
                   </tr>
-                ) : equipmentList.length === 0 ? (
+                ) : displayedEquipment.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-12 text-center text-(--text-muted)">
-                      No equipment records found.
+                      No active equipment records found.
                     </td>
                   </tr>
                 ) : (
-                  equipmentList.map((equipment, index) => {
+                  displayedEquipment.map((equipment, index) => {
                     const hasAnyFlag = [2, 3, 4, 5, 6, 7].some((pmNum) => {
                       const rawFlag = equipment[`pm${pmNum}_flag`];
                       return rawFlag === true || String(rawFlag ?? '').toLowerCase() === 'true' || rawFlag === 1;
@@ -320,6 +355,7 @@ export function VehiclePmViewer() {
                         onClick={() => {
                           setSelectedEquipment(equipment);
                           setActiveTab('pm');
+                          setLogsCurrentPage(1);
                         }}
                         className={`transition-colors cursor-pointer group ${
                           hasAnyFlag
@@ -358,6 +394,62 @@ export function VehiclePmViewer() {
               </tbody>
             </table>
           </div>
+
+          {/* Main Page Pagination Toolbar */}
+          {!loading && totalItems > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-(--border-main) text-xs text-(--text-muted) shrink-0">
+              <div className="flex items-center gap-3">
+                <span>
+                  Showing <strong className="text-(--text-primary)">{startIndex + 1}</strong> to{' '}
+                  <strong className="text-(--text-primary)">{endIndex}</strong> of{' '}
+                  <strong className="text-(--text-primary)">{totalItems}</strong> records
+                </span>
+
+                <div className="flex items-center gap-1.5 ml-2">
+                  <span>Per page:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded px-2 py-1 focus:outline-none focus:border-(--text-primary) cursor-pointer"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-2.5 py-1 rounded-lg border border-(--border-main) bg-(--bg-elevated) text-(--text-secondary) hover:bg-(--accent-subtle) disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>Prev</span>
+                </button>
+
+                <span className="px-3 py-1 font-mono text-(--text-secondary)">
+                  Page {currentPage} of {totalPages}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage >= totalPages}
+                  className="px-2.5 py-1 rounded-lg border border-(--border-main) bg-(--bg-elevated) text-(--text-secondary) hover:bg-(--accent-subtle) disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <span>Next</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -384,7 +476,7 @@ export function VehiclePmViewer() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-4 sm:p-6 space-y-4 flex-1 min-h-0 overflow-y-auto">
+            <div className="p-4 sm:p-6 space-y-4 flex-1 min-h-0 flex flex-col overflow-y-auto">
               
               {/* Summary Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-(--bg-elevated) p-4 rounded-xl border border-(--border-main) shrink-0 text-xs">
@@ -424,7 +516,10 @@ export function VehiclePmViewer() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('logs')}
+                  onClick={() => {
+                    setActiveTab('logs');
+                    setLogsCurrentPage(1);
+                  }}
                   className={`pb-2.5 text-xs font-semibold transition-colors border-b-2 cursor-pointer flex items-center gap-2 ${
                     activeTab === 'logs'
                       ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
@@ -500,58 +595,116 @@ export function VehiclePmViewer() {
                 </div>
               )}
 
-              {/* Tab 2: Daily Inspection Log */}
+              {/* Tab 2: Daily Inspection Log with Pagination */}
               {activeTab === 'logs' && (
-                <div className="border border-(--border-main) rounded-lg overflow-hidden bg-(--bg-surface)">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="border-b border-(--border-main) bg-(--bg-elevated) text-(--text-muted) text-[11px] uppercase tracking-wider font-semibold sticky top-0 z-10">
-                        <th className="py-2 px-3">Log Date</th>
-                        <th className="py-2 px-3">Previous Reading</th>
-                        <th className="py-2 px-3">Daily Increment</th>
-                        <th className="py-2 px-3">Current Reading</th>
-                        <th className="py-2 px-3">Operations Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                      {logsLoading ? (
-                        <tr>
-                          <td colSpan={5} className="py-12 text-center text-(--text-muted)">
-                            <div className="flex justify-center items-center gap-2">
-                              <Loader2 className="w-5 h-5 animate-spin text-(--text-primary)" />
-                              <span>Loading inspection logs...</span>
-                            </div>
-                          </td>
+                <div className="flex flex-col flex-1 min-h-0 space-y-2">
+                  <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-(--border-main) bg-(--bg-elevated) text-(--text-muted) text-[11px] uppercase tracking-wider font-semibold sticky top-0 z-10">
+                          <th className="py-2 px-3">Log Date</th>
+                          <th className="py-2 px-3">Previous Reading</th>
+                          <th className="py-2 px-3">Daily Increment</th>
+                          <th className="py-2 px-3">Current Reading</th>
+                          <th className="py-2 px-3">Operations Status</th>
                         </tr>
-                      ) : dailyLogs.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="py-12 text-center text-(--text-muted) italic">
-                            No inspection logs found for this equipment.
-                          </td>
-                        </tr>
-                      ) : (
-                        dailyLogs.map((log) => {
-                          const statusName = log.operations_id && operationsMap[log.operations_id] 
-                            ? operationsMap[log.operations_id] 
-                            : '—';
+                      </thead>
+                      <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                        {logsLoading ? (
+                          <tr>
+                            <td colSpan={5} className="py-12 text-center text-(--text-muted)">
+                              <div className="flex justify-center items-center gap-2">
+                                <Loader2 className="w-5 h-5 animate-spin text-(--text-primary)" />
+                                <span>Loading inspection logs...</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : displayedLogs.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="py-12 text-center text-(--text-muted) italic">
+                              No inspection logs found for this equipment.
+                            </td>
+                          </tr>
+                        ) : (
+                          displayedLogs.map((log) => {
+                            const statusName = log.operations_id && operationsMap[log.operations_id] 
+                              ? operationsMap[log.operations_id] 
+                              : '—';
 
-                          return (
-                            <tr key={log.log_id} className="hover:bg-(--accent-subtle) transition-colors">
-                              <td className="py-2 px-3 font-semibold text-(--text-primary)">{log.log_date}</td>
-                              <td className="py-2 px-3 font-mono">{log.previous_rdg ?? '—'}</td>
-                              <td className="py-2 px-3 font-mono text-emerald-600 dark:text-emerald-400">+{log.daily_increment ?? '0'}</td>
-                              <td className="py-2 px-3 font-mono">{log.current_rdg ?? '—'}</td>
-                              <td className="py-2 px-3">
-                                <span className="inline-block px-2 py-0.5 bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) rounded text-[11px] font-medium">
-                                  {statusName}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
+                            return (
+                              <tr key={log.log_id} className="hover:bg-(--accent-subtle) transition-colors">
+                                <td className="py-2 px-3 font-semibold text-(--text-primary)">{log.log_date}</td>
+                                <td className="py-2 px-3 font-mono">{log.previous_rdg ?? '—'}</td>
+                                <td className="py-2 px-3 font-mono text-emerald-600 dark:text-emerald-400">+{log.daily_increment ?? '0'}</td>
+                                <td className="py-2 px-3 font-mono">{log.current_rdg ?? '—'}</td>
+                                <td className="py-2 px-3">
+                                  <span className="inline-block px-2 py-0.5 bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) rounded text-[11px] font-medium">
+                                    {statusName}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Modal Daily Logs Pagination Toolbar */}
+                  {!logsLoading && totalLogItems > 0 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-(--border-main) text-xs text-(--text-muted) shrink-0">
+                      <div className="flex items-center gap-3">
+                        <span>
+                          Showing <strong className="text-(--text-primary)">{logsStartIndex + 1}</strong> to{' '}
+                          <strong className="text-(--text-primary)">{logsEndIndex}</strong> of{' '}
+                          <strong className="text-(--text-primary)">{totalLogItems}</strong> records
+                        </span>
+
+                        <div className="flex items-center gap-1.5 ml-2">
+                          <span>Per page:</span>
+                          <select
+                            value={logsPageSize}
+                            onChange={(e) => {
+                              setLogsPageSize(Number(e.target.value));
+                              setLogsCurrentPage(1);
+                            }}
+                            className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded px-2 py-1 focus:outline-none focus:border-(--text-primary) cursor-pointer"
+                          >
+                            <option value={5}>5</option>
+                            <option value={10}>10</option>
+                            <option value={20}>20</option>
+                            <option value={50}>50</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setLogsCurrentPage((prev) => Math.max(prev - 1, 1))}
+                          disabled={logsCurrentPage === 1}
+                          className="px-2.5 py-1 rounded-lg border border-(--border-main) bg-(--bg-elevated) text-(--text-secondary) hover:bg-(--accent-subtle) disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                          <span>Prev</span>
+                        </button>
+
+                        <span className="px-3 py-1 font-mono text-(--text-secondary)">
+                          Page {logsCurrentPage} of {totalLogPages}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => setLogsCurrentPage((prev) => Math.min(prev + 1, totalLogPages))}
+                          disabled={logsCurrentPage >= totalLogPages}
+                          className="px-2.5 py-1 rounded-lg border border-(--border-main) bg-(--bg-elevated) text-(--text-secondary) hover:bg-(--accent-subtle) disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <span>Next</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

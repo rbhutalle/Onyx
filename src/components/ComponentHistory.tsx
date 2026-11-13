@@ -99,13 +99,16 @@ interface ModelOption {
 }
 
 interface VehicleOption {
+  id?: string;
   vehicle_id: string;
   plate_no?: string;
   equipment_code?: string;
   label?: string;
   name?: string;
-  make_name?: string;
-  model_name?: string;
+  make_id?: string | null;
+  model_id?: string | null;
+  make_name?: string | null;
+  model_name?: string | null;
   srv_rdg?: number | null;
   service_rdg?: number | null;
   [key: string]: unknown;
@@ -232,26 +235,35 @@ export function ComponentHistory() {
     return makeStr || modelStr || '—';
   };
 
-  // Helper to format vehicle label with Plate No and Make/Model
+  // Helper to format equipment label with Equipment ID and Make / Model
   const formatVehicleLabel = (veh: VehicleOption): string => {
-    const plate = veh.plate_no || veh.equipment_code || 'No Plate';
-    const make = veh.make_name || '';
-    const model = veh.model_name || '';
-    const makeModelStr = make && model ? `${make} ${model}` : (make || model);
-    const label = veh.label || veh.name || '';
+    const equipment = veh.plate_no || veh.equipment_code || veh.label || veh.name || 'No Plate';
 
-    const parts = [plate];
-    if (makeModelStr) parts.push(makeModelStr);
-    if (label && label !== plate) parts.push(`(${label})`);
+    let makeStr = veh.make_name || '';
+    let modelStr = veh.model_name || '';
 
-    return parts.join(' — ');
+    if (!makeStr && veh.make_id) {
+      const foundMake = makes.find(m => m.make_id === veh.make_id || m.id === veh.make_id);
+      makeStr = String(foundMake?.make_name ?? foundMake?.name ?? foundMake?.make_code ?? '');
+    }
+
+    if (!modelStr && veh.model_id) {
+      const foundModel = models.find(m => m.model_id === veh.model_id || m.id === veh.model_id);
+      modelStr = String(foundModel?.model_name ?? foundModel?.name ?? foundModel?.model_code ?? '');
+    }
+
+    const makeModelStr = makeStr && modelStr
+      ? `${makeStr} / ${modelStr}`
+      : (makeStr || modelStr);
+
+    return makeModelStr ? `${equipment} — ${makeModelStr}` : equipment;
   };
 
-  // Helper to get formatted vehicle display name
+  // Helper to get formatted equipment display name
   const getVehicleDisplay = (vehicleId?: string | null): string => {
     if (!vehicleId) return '—';
-    const veh = vehicles.find(v => v.vehicle_id === vehicleId);
-    if (!veh) return 'Vehicle Record';
+    const veh = vehicles.find(v => v.vehicle_id === vehicleId || v.id === vehicleId);
+    if (!veh) return 'Equipment Record';
     return formatVehicleLabel(veh);
   };
 
@@ -296,7 +308,7 @@ export function ComponentHistory() {
           supabase.from('equipment_component').select('*'),
           supabase.from('vehicle_makes').select('*'),
           supabase.from('vehicle_models').select('*'),
-          supabase.from('vehicles').select('*').eq('is_active', true),
+          supabase.from('vw_vehicle_pm_details').select('*').eq('is_active', true).order('plate_no', { ascending: true }),
         ]);
 
         if (isMounted) {
@@ -304,7 +316,12 @@ export function ComponentHistory() {
           setBaseComponents(compRes.data || []);
           setMakes(makeRes.data || []);
           setModels(modelRes.data || []);
-          setVehicles(vehRes.data || []);
+          setVehicles(
+            (vehRes.data || []).map((v: VehicleOption) => ({
+              ...v,
+              vehicle_id: v.vehicle_id || v.id || '',
+            }))
+          );
         }
       } catch {
         // Error handling
@@ -419,7 +436,7 @@ export function ComponentHistory() {
   // Dynamic service reading selection handler
   const handleVehicleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newVehicleId = e.target.value;
-    const selectedVeh = vehicles.find(v => v.vehicle_id === newVehicleId);
+    const selectedVeh = vehicles.find(v => v.vehicle_id === newVehicleId || v.id === newVehicleId);
     
     // Check both srv_rdg and service_rdg schema columns
     const readingValue = selectedVeh && selectedVeh.srv_rdg !== null && selectedVeh.srv_rdg !== undefined
@@ -473,7 +490,7 @@ export function ComponentHistory() {
     if (activeRecord) {
       setEditingId(activeRecord.equipment_component_child_id);
       
-      const currentVeh = vehicles.find(v => v.vehicle_id === activeRecord.vehicle_id);
+      const currentVeh = vehicles.find(v => v.vehicle_id === activeRecord.vehicle_id || v.id === activeRecord.vehicle_id);
       const currentRdg = currentVeh 
         ? String(currentVeh.srv_rdg ?? currentVeh.service_rdg ?? '') 
         : '';
@@ -535,7 +552,7 @@ export function ComponentHistory() {
       return;
     }
     if (!historyForm.vehicle_id) {
-      setErrorMsg('Vehicle selection is required.');
+      setErrorMsg('Equipment selection is required.');
       return;
     }
 
@@ -603,11 +620,8 @@ export function ComponentHistory() {
 
   const filteredVehicles = vehicles.filter(v => {
     const q = (vehicleSearchQuery ?? '').toLowerCase();
-    const plate = (v.plate_no ?? v.equipment_code ?? '').toLowerCase();
-    const label = (v.label ?? v.name ?? '').toLowerCase();
-    const make = (v.make_name ?? '').toLowerCase();
-    const model = (v.model_name ?? '').toLowerCase();
-    return plate.includes(q) || label.includes(q) || make.includes(q) || model.includes(q);
+    const labelFormatted = formatVehicleLabel(v).toLowerCase();
+    return labelFormatted.includes(q);
   });
 
   const totalItems = historyRecords.length;
@@ -675,9 +689,8 @@ export function ComponentHistory() {
         {selectedComponent ? (
           <div className="bg-(--bg-elevated) border border-(--border-main) rounded-xl p-3 shadow-xs transition-all">
             {/* Header Summary Row */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs">
-                {/* Displays Component Code when collapsed */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2 text-xs min-w-0">
                 <span className="font-bold text-(--text-primary)">
                   {selectedComponent.equipment_component_code}
                 </span>
@@ -685,6 +698,19 @@ export function ComponentHistory() {
                   <span className="text-(--text-secondary) hidden sm:inline">
                     — {selectedComponent.equipment_component_desc}
                   </span>
+                )}
+
+                {isSummaryCollapsed && (
+                  <>
+                    <span className="text-(--text-muted)">•</span>
+                    <span className="font-mono text-(--text-secondary)">
+                      S/N: {selectedComponent.serial_no || '—'}
+                    </span>
+                    <span className="text-(--text-muted)">•</span>
+                    <span className="text-(--text-secondary) truncate">
+                      {getSystemDisplay(selectedComponent)} / {getComponentDisplay(selectedComponent)}
+                    </span>
+                  </>
                 )}
               </div>
 
@@ -808,7 +834,7 @@ export function ComponentHistory() {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-(--border-main) bg-(--bg-elevated) text-(--text-muted) text-[11px] uppercase tracking-wider font-semibold sticky top-0 z-10 shadow-xs">
-                  <th className="py-2 px-3">Vehicle</th>
+                  <th className="py-2 px-3">Equipment</th>
                   <th className="py-2 px-3">Status</th>
                   <th className="py-2 px-3 font-mono">Install Date</th>
                   <th className="py-2 px-3 font-mono">Install Service Rdg</th>
@@ -1101,10 +1127,10 @@ export function ComponentHistory() {
                   )}
                 </div>
 
-                {/* Vehicle Selection */}
+                {/* Equipment Selection */}
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold uppercase text-(--text-secondary)">
-                    Vehicle {editingId ? '(Read-only)' : <span className="text-red-500">*</span>}
+                    Equipment {editingId ? '(Read-only)' : <span className="text-red-500">*</span>}
                   </label>
                   
                   {!editingId && (
@@ -1112,7 +1138,7 @@ export function ComponentHistory() {
                       <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
                       <input
                         type="text"
-                        placeholder="Type to filter vehicles by plate, make, model, or label..."
+                        placeholder="Type to filter equipment by plate, make, or model..."
                         value={vehicleSearchQuery}
                         onChange={(e) => setVehicleSearchQuery(e.target.value)}
                         className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
@@ -1127,7 +1153,7 @@ export function ComponentHistory() {
                     onChange={handleVehicleChange}
                     className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary) disabled:opacity-75 disabled:cursor-not-allowed"
                   >
-                    <option value="">-- Select Target Vehicle --</option>
+                    <option value="">-- Select Target Equipment --</option>
                     {(editingId ? vehicles : filteredVehicles).map((v) => (
                       <option key={v.vehicle_id} value={v.vehicle_id}>
                         {formatVehicleLabel(v)}

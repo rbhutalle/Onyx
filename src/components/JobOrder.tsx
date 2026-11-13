@@ -5,14 +5,14 @@ import {
   Plus, 
   CheckCircle, 
   AlertCircle, 
-  X,
-  Edit2,
-  Trash2,
-  Layers,
-  Wrench,
-  Users,
-  Search,
-  Car,
+  X, 
+  Edit2, 
+  Trash2, 
+  Layers, 
+  Wrench, 
+  Users, 
+  Search, 
+  Car, 
   Loader2,
   ChevronDown,
   ChevronUp,
@@ -114,6 +114,7 @@ interface VehiclePm {
   make_name?: string | null;
   model_name?: string | null;
   type_description?: string | null;
+  is_active?: boolean;
   id?: string;
   vehicle_id?: string;
   [key: string]: unknown;
@@ -329,6 +330,7 @@ export function JobOrder() {
     return () => { isMounted = false; };
   }, []);
 
+  // Select Equipment - only is_active = true
   const fetchPickerVehicles = async (queryToRun?: string) => {
     try {
       setLoadingVehicles(true);
@@ -337,6 +339,7 @@ export function JobOrder() {
       let query = supabase
         .from('vw_vehicle_pm_details')
         .select('*')
+        .eq('is_active', true)
         .order('plate_no', { ascending: true })
         .limit(50);
 
@@ -361,6 +364,7 @@ export function JobOrder() {
         const { data, error: fetchError } = await supabase
           .from('vw_vehicle_pm_details')
           .select('*')
+          .eq('is_active', true)
           .order('plate_no', { ascending: true })
           .limit(50);
 
@@ -462,6 +466,7 @@ export function JobOrder() {
     }
   };
 
+  // Search Job Order - pre-populate table from In-Progress
   const handleOpenJobOrderSearch = async () => {
     const inProgressStatus = statuses.find(s => {
       const name = (s.status_name ?? '').toLowerCase();
@@ -474,6 +479,8 @@ export function JobOrder() {
     setPickerJobOrders([]);
     setPickerVehicleMap({});
     setShowJobOrderPicker(true);
+
+    await fetchPickerJobOrders('', defaultStatusId);
   };
 
   const handleJobOrderSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -657,6 +664,9 @@ export function JobOrder() {
     }
   };
 
+  // Active employees only for Resources
+  const activeEmployees = employees.filter(emp => emp.is_active === true);
+
   const handleOpenAddChild = () => {
     if (!currentJobOrder) return;
     setChildEditingId(null);
@@ -665,7 +675,7 @@ export function JobOrder() {
 
     setResourceForm({ 
       job_order_task_id: taskDetails[0]?.job_order_task_id || '', 
-      employee_id: employees[0]?.employee_id || '', 
+      employee_id: activeEmployees[0]?.employee_id || '', 
       charged_time: '0', 
       assigned_date: new Date().toISOString().split('T')[0] 
     });
@@ -977,15 +987,29 @@ export function JobOrder() {
         </div>
       )}
 
-      {/* HEADER CARD (Master Job Order Viewer - Fixed Height) */}
+{/* HEADER CARD (Master Job Order Viewer - Fixed Height) */}
       <div className="bg-(--bg-elevated) border border-(--border-main) shadow-xs rounded-xl p-4 shrink-0 space-y-3">
-        <div className="flex items-center justify-between border-b border-(--border-main) pb-3">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-(--text-primary) bg-(--accent-subtle) border border-(--border-main) px-3 py-1 rounded-lg shadow-xs">
+        <div className={`flex flex-wrap items-center justify-between gap-2 ${!isHeaderCollapsed ? 'border-b border-(--border-main) pb-3' : ''}`}>
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="text-xs font-bold uppercase tracking-wider text-(--text-primary) bg-(--accent-subtle) border border-(--border-main) px-3 py-1 rounded-lg shadow-xs shrink-0">
               {currentJobOrder ? `JO #${currentJobOrder.job_order_no}` : 'No JO Selected'}
             </span>
-          </div>
 
+            {isHeaderCollapsed && currentJobOrder && (
+              <div className="flex items-center gap-2 text-xs truncate">
+                <span className="font-bold text-(--text-primary)">
+                  {selectedPickerVehicle?.plate_no || '—'}
+                </span>
+                <span className="text-(--text-muted)">•</span>
+                <span className="text-(--text-secondary) truncate">
+                  {selectedPickerVehicle
+                    ? `${selectedPickerVehicle.make_name || 'N/A'}${selectedPickerVehicle.model_name ? ` / ${selectedPickerVehicle.model_name}` : ''}`
+                    : '—'}
+                </span>
+              </div>
+            )}
+          </div>
+          
           <div className="flex items-center gap-2">
             <button
               onClick={handleOpenJobOrderSearch}
@@ -1402,7 +1426,11 @@ export function JobOrder() {
               <select
                 required
                 value={jobOrderSearchStatus}
-                onChange={(e) => setJobOrderSearchStatus(e.target.value)}
+                onChange={(e) => {
+                  const newStatus = e.target.value;
+                  setJobOrderSearchStatus(newStatus);
+                  fetchPickerJobOrders(jobOrderSearchQuery, newStatus);
+                }}
                 className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
               >
                 {statuses.map(s => (
@@ -1426,7 +1454,7 @@ export function JobOrder() {
                 </div>
               ) : pickerJobOrders.length === 0 ? (
                 <div className="py-12 text-center text-xs text-(--text-muted)">
-                  {jobOrderSearchQuery.trim() ? 'No job orders found matching your criteria.' : 'Enter a search term and click Search to find job orders.'}
+                  No job orders found matching your criteria.
                 </div>
               ) : (
                 pickerJobOrders.map((jo, index) => {
@@ -1799,7 +1827,7 @@ export function JobOrder() {
                 </div>
               ) : pickerVehicles.length === 0 ? (
                 <div className="py-12 text-center text-xs text-(--text-muted)">
-                  No Equipment records found.
+                  No active Equipment records found.
                 </div>
               ) : (
                 pickerVehicles.map((v, index) => (
@@ -1840,11 +1868,11 @@ export function JobOrder() {
         </div>
       )}
 
-      {/* CHILD FORM MODAL */}
+      {/* CHILD FORM MODAL — Larger width (max-w-2xl) & single scrollbar */}
       {isChildModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-(--bg-surface) border border-(--border-main) rounded-2xl w-full max-w-lg max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 shrink-0 bg-(--bg-elevated)">
+          <div className="bg-(--bg-surface) border border-(--border-main) rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 shrink-0 bg-(--bg-elevated) rounded-t-2xl">
               <h3 className="text-lg font-bold text-(--text-primary)">
                 {childEditingId ? 'Edit Details' : 'Add Details'} ({activeChildTab === 'contracts' ? 'Contracted Job' : activeChildTab})
               </h3>
@@ -1853,8 +1881,8 @@ export function JobOrder() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmitChildForm} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-              <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
+            <form onSubmit={handleSubmitChildForm} className="flex flex-col flex-1 min-h-0">
+              <div className="p-6 flex-1 space-y-4 min-h-75">
                 {activeChildTab === 'tasks' && (
                   <>
                     <div className="relative" ref={taskStandardDropdownRef}>
@@ -1881,7 +1909,7 @@ export function JobOrder() {
                       </div>
 
                       {showTaskStandardDropdown && (
-                        <div className="absolute left-0 right-0 top-full mt-1 bg-(--bg-surface) border border-(--border-main) rounded-xl shadow-2xl z-30 max-h-56 overflow-y-auto">
+                        <div className="absolute left-0 right-0 top-full mt-1 bg-(--bg-surface) border border-(--border-main) rounded-xl shadow-2xl z-30 max-h-60 overflow-y-auto">
                           <div 
                             onClick={() => {
                               setTaskDetailForm({ task_standard_id: '', standard_time: '' });
@@ -1985,7 +2013,7 @@ export function JobOrder() {
                         className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                       >
                         <option value="">Select Employee</option>
-                        {employees.map(emp => (
+                        {activeEmployees.map(emp => (
                           <option key={emp.employee_id} value={emp.employee_id}>
                             {emp.employee_name ?? emp.name ?? `${emp.first_name ?? ''} ${emp.last_name ?? ''}`}
                           </option>
@@ -2049,7 +2077,7 @@ export function JobOrder() {
                           type="number"
                           step="any"
                           required
-                          value={contractForm.unit_price ?? contractForm.unit_price}
+                          value={contractForm.unit_price}
                           onChange={(e) => setContractForm({ ...contractForm, unit_price: e.target.value })}
                           className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                         />
@@ -2071,7 +2099,7 @@ export function JobOrder() {
               </div>
 
               {activeChildTab !== 'materials' && (
-                <div className="flex justify-end gap-3 px-6 py-4 border-t border-(--border-main) shrink-0 bg-(--bg-elevated)">
+                <div className="flex justify-end gap-3 px-6 py-4 border-t border-(--border-main) shrink-0 bg-(--bg-elevated) rounded-b-2xl">
                   <button
                     type="button"
                     onClick={() => setIsChildModalOpen(false)}

@@ -30,8 +30,6 @@ interface ComponentMaintenanceRecord {
   serial_no?: string | null;
   is_active: boolean;
   cost?: number | null;
-  srv_rdg?: number | null;
-  cost_rdg?: number | null;
   is_scrapped?: boolean;
   system_display?: string;
   component_display?: string;
@@ -127,8 +125,6 @@ export function ComponentRegistry() {
     serial_no: '',
     is_active: true,
     cost: '0',
-    srv_rdg: '0',
-    cost_rdg: '0',
   });
 
   // Close dropdowns on outside click
@@ -288,8 +284,6 @@ export function ComponentRegistry() {
       serial_no: '',
       is_active: true,
       cost: '0',
-      srv_rdg: '0',
-      cost_rdg: '0',
     });
     setIsModalOpen(true);
   };
@@ -319,8 +313,6 @@ export function ComponentRegistry() {
       serial_no: item.serial_no || '',
       is_active: item.is_active ?? true,
       cost: item.cost !== null && item.cost !== undefined ? String(item.cost) : '0',
-      srv_rdg: item.srv_rdg !== null && item.srv_rdg !== undefined ? String(item.srv_rdg) : '0',
-      cost_rdg: item.cost_rdg !== null && item.cost_rdg !== undefined ? String(item.cost_rdg) : '0',
     });
     setIsModalOpen(true);
   };
@@ -365,8 +357,6 @@ export function ComponentRegistry() {
         serial_no: componentForm.serial_no.trim() || null,
         is_active: componentForm.is_active,
         cost: componentForm.cost !== '' ? Number(componentForm.cost) : 0,
-        srv_rdg: componentForm.srv_rdg !== '' ? Number(componentForm.srv_rdg) : 0,
-        cost_rdg: componentForm.cost_rdg !== '' ? Number(componentForm.cost_rdg) : 0,
       };
 
       if (editingId) {
@@ -583,7 +573,7 @@ export function ComponentRegistry() {
                   <th className="py-2 px-3">System / Component</th>
                   <th className="py-2 px-3">Make / Model</th>
                   <th className="py-2 px-3">Status</th>
-                  <th className="py-2 px-3 font-mono">Cost & Readings</th>
+                  <th className="py-2 px-3 font-mono">Cost</th>
                   <th className="py-2 px-3 text-right w-28">Actions</th>
                 </tr>
               </thead>
@@ -637,9 +627,8 @@ export function ComponentRegistry() {
                             {item.is_active ? 'Active' : 'Inactive'}
                           </span>
                         </td>
-                        <td className="py-2 px-3 font-mono text-[11px]">
-                          <div className="text-(--text-secondary)">Cost: ${Number(item.cost ?? 0).toLocaleString()}</div>
-                          <div className="text-(--text-muted)">Srv Rdg: {item.srv_rdg ?? 0} | Cost Rdg: {item.cost_rdg ?? 0}</div>
+                        <td className="py-2 px-3 font-mono text-(--text-secondary)">
+                          ₱{Number(item.cost ?? 0).toLocaleString()}
                         </td>
                         <td className="py-2 px-3 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-2">
@@ -990,7 +979,7 @@ export function ComponentRegistry() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Equipment Component Code <span className="text-red-500">*</span></label>
                     <input
@@ -1013,38 +1002,15 @@ export function ComponentRegistry() {
                       className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs font-mono"
                     />
                   </div>
-                </div>
 
-                {/* Cost & Read-Only Readings Section */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Cost ($)</label>
+                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Cost (₱)</label>
                     <input
                       type="number"
                       step="any"
                       value={componentForm.cost}
                       onChange={(e) => setComponentForm({ ...componentForm, cost: e.target.value })}
                       className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Service Reading (Srv Rdg)</label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={componentForm.srv_rdg}
-                      readOnly
-                      className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none font-mono opacity-75 cursor-not-allowed select-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Cost Reading (Cost Rdg)</label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={componentForm.cost_rdg}
-                      readOnly
-                      className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none font-mono opacity-75 cursor-not-allowed select-none"
                     />
                   </div>
                 </div>

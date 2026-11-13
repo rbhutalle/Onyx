@@ -20,7 +20,10 @@ import {
   Activity,
   BarChart3,
   Shield,
+  ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   PieChart as PieIcon,
   ArrowLeft,
   Table as TableIcon,
@@ -51,10 +54,13 @@ interface OperationalIncidentRiskRecord {
   ref_id: string;
   ref_no: string;
   source: 'IRS' | 'INS';
+  effective_date?: string;
+  incident_date?: string;
   event_date: string;
   vehicle_id: string;
   plate_no: string;
   description: string;
+  impact_or_effect?: string | null;
   severity_level: string;
   severity_num?: number;
   occurrence_num?: number;
@@ -114,6 +120,98 @@ interface IncidentReportFlatRecord {
 type MainTab = 'risk' | 'reliability';
 type RiskSubTab = 'exec_fmea' | 'op_incidents' | 'rca_breakdown';
 type ReliabilitySubTab = 'bad_actors' | 'reliability';
+type ReliabilityKpiFilter = 'ALL' | 'UNINSTALLED' | 'INSTALLED' | 'COST';
+
+/* Reusable Table Pagination Controls */
+interface TablePaginationProps {
+  totalItems: number;
+  currentPage: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  pageSizeOptions?: number[];
+}
+
+function TablePagination({
+  totalItems,
+  currentPage,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+  pageSizeOptions = [10, 25, 50, 100]
+}: TablePaginationProps) {
+  if (totalItems === 0) return null;
+
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safePage = Math.min(Math.max(1, currentPage), totalPages);
+  const startItem = (safePage - 1) * pageSize + 1;
+  const endItem = Math.min(safePage * pageSize, totalItems);
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-(--bg-elevated) border-t border-(--border-main) text-[11px] text-(--text-muted)">
+      <div className="flex items-center gap-2">
+        <span>
+          Showing <strong className="text-(--text-primary) font-mono">{startItem}</strong>–
+          <strong className="text-(--text-primary) font-mono">{endItem}</strong> of{' '}
+          <strong className="text-(--text-primary) font-mono">{totalItems.toLocaleString()}</strong>
+        </span>
+        <span className="text-(--border-main)">|</span>
+        <label className="flex items-center gap-1.5">
+          <span>Rows:</span>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              onPageSizeChange(Number(e.target.value));
+              onPageChange(1);
+            }}
+            className="bg-(--bg-surface) border border-(--border-main) text-(--text-primary) rounded px-1.5 py-0.5 text-[11px] font-mono focus:outline-none cursor-pointer"
+          >
+            {pageSizeOptions.map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => onPageChange(safePage - 1)}
+          disabled={safePage <= 1}
+          className="flex items-center gap-0.5 px-2 py-1 rounded border border-(--border-main) bg-(--bg-surface) text-(--text-primary) font-semibold hover:bg-(--accent-subtle) disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" />
+          <span>Prev</span>
+        </button>
+
+        <span className="px-2 font-mono text-(--text-primary) font-semibold">
+          Page {safePage} of {totalPages}
+        </span>
+
+        <button
+          type="button"
+          onClick={() => onPageChange(safePage + 1)}
+          disabled={safePage >= totalPages}
+          className="flex items-center gap-0.5 px-2 py-1 rounded border border-(--border-main) bg-(--bg-surface) text-(--text-primary) font-semibold hover:bg-(--accent-subtle) disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+        >
+          <span>Next</span>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* Helper utility for slicing paginated arrays safely */
+function paginateSlice<T>(items: T[], currentPage: number, pageSize: number): T[] {
+  if (items.length === 0) return [];
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const safePage = Math.min(Math.max(1, currentPage), totalPages);
+  const start = (safePage - 1) * pageSize;
+  return items.slice(start, start + pageSize);
+}
 
 /* Helper utility for Date Range checking */
 function isWithinDateRange(dateString?: string | null, dateFrom?: string, dateTo?: string): boolean {
@@ -122,6 +220,8 @@ function isWithinDateRange(dateString?: string | null, dateFrom?: string, dateTo
   let targetDate: Date;
   if (/^\d{4}-\d{2}$/.test(dateString)) {
     targetDate = new Date(`${dateString}-01T00:00:00`);
+  } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    targetDate = new Date(`${dateString}T00:00:00`);
   } else {
     targetDate = new Date(dateString);
   }
@@ -145,6 +245,15 @@ function isWithinDateRange(dateString?: string | null, dateFrom?: string, dateTo
   return true;
 }
 
+/* Helper utility to get normalized operational event date */
+function getRecordEventDate(record: {
+  effective_date?: string | null;
+  incident_date?: string | null;
+  event_date?: string | null;
+}): string {
+  return record.effective_date || record.incident_date || record.event_date || '';
+}
+
 /* Helper utility to map textual incident severity level to numeric scale 1-10 */
 function mapSeverityToNumber(level?: string): number {
   const normalized = level?.toLowerCase().trim();
@@ -156,6 +265,59 @@ function mapSeverityToNumber(level?: string): number {
     case 'low': return 2;
     default: return 5;
   }
+}
+
+/* Helper utility for case-insensitive and normalized severity matching */
+function matchesSeverityFilter(recordLevel?: string | null, selectedFilter?: string): boolean {
+  if (!selectedFilter || selectedFilter === 'ALL') return true;
+  const normalizedRecord = (recordLevel || '').toLowerCase().trim();
+  const normalizedFilter = selectedFilter.toLowerCase().trim();
+
+  if (normalizedFilter === 'low/moderate') {
+    return normalizedRecord === 'low/moderate' || normalizedRecord === 'low' || normalizedRecord === 'moderate';
+  }
+  return normalizedRecord === normalizedFilter;
+}
+
+/* Helper utility to explain the active Severity x Occurrence Quadrant */
+function getQuadrantExplanation(sev: number, occ: number) {
+  const isHighSev = sev >= 6;
+  const isHighOcc = occ >= 6;
+
+  if (isHighSev && isHighOcc) {
+    return {
+      title: 'Quadrant I: Critical Risk Zone (High Severity 6–10 & High Occurrence 6–10)',
+      description:
+        'Catastrophic and recurring operational hazards. Immediate Corrective and Preventive Action (CAPA), engineering intervention, and high-frequency PM checks are required to prevent severe safety or fleet downtime events.',
+      containerClass: 'bg-rose-500/10 border-rose-500/30 text-rose-800 dark:text-rose-200',
+      badgeClass: 'bg-rose-600 text-white'
+    };
+  }
+  if (isHighSev && !isHighOcc) {
+    return {
+      title: 'Quadrant II: High Impact Zone (High Severity 6–10 & Low Occurrence 1–5)',
+      description:
+        'Infrequent events carrying severe safety, operational, or financial consequences. Mitigate by enforcing strict pre-trip detection controls, safety interlocks, and emergency response protocols.',
+      containerClass: 'bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-200',
+      badgeClass: 'bg-amber-600 text-white'
+    };
+  }
+  if (!isHighSev && isHighOcc) {
+    return {
+      title: 'Quadrant III: High Nuisance Zone (Low Severity 1–5 & High Occurrence 6–10)',
+      description:
+        'Frequent, lower-severity defects that drive recurring workshop backlogs and minor unplanned stops. Address by standardizing routine wear-and-tear component replacement intervals.',
+      containerClass: 'bg-purple-500/10 border-purple-500/30 text-purple-800 dark:text-purple-200',
+      badgeClass: 'bg-purple-600 text-white'
+    };
+  }
+  return {
+    title: 'Quadrant IV: Low Risk Zone (Low Severity 1–5 & Low Occurrence 1–5)',
+    description:
+      'Low-impact, rare operational anomalies within acceptable tolerance. Continue monitoring through routine shift inspections and standard preventive maintenance schedules.',
+    containerClass: 'bg-blue-500/10 border-blue-500/30 text-blue-800 dark:text-blue-200',
+    badgeClass: 'bg-blue-600 text-white'
+  };
 }
 
 export function FMEADashboard() {
@@ -171,6 +333,26 @@ export function FMEADashboard() {
   // Selected Month Filters (YYYY-MM format)
   const [selectedMonthKey, setSelectedMonthKey] = useState<string | null>(null);
   const [selectedBadActorMonthKey, setSelectedBadActorMonthKey] = useState<string | null>(null);
+
+  // Component Reliability 2nd Level KPI Collapsible & Active Filter State
+  const [showReliabilityKpis, setShowReliabilityKpis] = useState<boolean>(true);
+  const [reliabilityKpiFilter, setReliabilityKpiFilter] = useState<ReliabilityKpiFilter>('ALL');
+
+  // Pagination States per Table
+  const [fmeaInspectorPage, setFmeaInspectorPage] = useState<number>(1);
+  const [fmeaInspectorPageSize, setFmeaInspectorPageSize] = useState<number>(10);
+
+  const [incidentInspectorPage, setIncidentInspectorPage] = useState<number>(1);
+  const [incidentInspectorPageSize, setIncidentInspectorPageSize] = useState<number>(10);
+
+  const [rcaTablePage, setRcaTablePage] = useState<number>(1);
+  const [rcaTablePageSize, setRcaTablePageSize] = useState<number>(10);
+
+  const [badActorsPage, setBadActorsPage] = useState<number>(1);
+  const [badActorsPageSize, setBadActorsPageSize] = useState<number>(10);
+
+  const [reliabilityPage, setReliabilityPage] = useState<number>(1);
+  const [reliabilityPageSize, setReliabilityPageSize] = useState<number>(10);
 
   // Date Filters (Default aligned to start of month for 90-day window)
   const defaultEndDate = useMemo(() => {
@@ -192,6 +374,10 @@ export function FMEADashboard() {
     setDateTo(newDateTo);
     setSelectedMonthKey(null);
     setSelectedBadActorMonthKey(null);
+    setSelectedIncidentMatrixCell(null);
+    setIncidentInspectorPage(1);
+    setRcaTablePage(1);
+    setBadActorsPage(1);
     if (dateFrom && newDateTo) {
       const fromObj = new Date(dateFrom);
       const toObj = new Date(newDateTo);
@@ -206,6 +392,10 @@ export function FMEADashboard() {
     setDateFrom(newDateFrom);
     setSelectedMonthKey(null);
     setSelectedBadActorMonthKey(null);
+    setSelectedIncidentMatrixCell(null);
+    setIncidentInspectorPage(1);
+    setRcaTablePage(1);
+    setBadActorsPage(1);
     if (dateTo && newDateFrom) {
       const fromObj = new Date(newDateFrom);
       const toObj = new Date(dateTo);
@@ -221,10 +411,10 @@ export function FMEADashboard() {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Toggle Guides
-  const [showMatrixGuide, setShowMatrixGuide] = useState<boolean>(true);
-  const [showQuadrantGuide, setShowQuadrantGuide] = useState<boolean>(true);
-  const [showBadActorGuide, setShowBadActorGuide] = useState<boolean>(true);
+  // Toggle Guides (Collapsed by default on load)
+  const [showMatrixGuide, setShowMatrixGuide] = useState<boolean>(false);
+  const [showQuadrantGuide, setShowQuadrantGuide] = useState<boolean>(false);
+  const [showBadActorGuide, setShowBadActorGuide] = useState<boolean>(false);
 
   // Data States
   const [fmeaAnalytics, setFmeaAnalytics] = useState<FmeaAnalyticsRecord[]>([]);
@@ -313,19 +503,57 @@ export function FMEADashboard() {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mappedFmea: FmeaAnalyticsRecord[] = (resFmea.data || []).map((f: any) => {
-      const hasEffect = Boolean(f.potential_effect && String(f.potential_effect).trim() !== '' && String(f.potential_effect).toLowerCase() !== 'null');
+      const rawEffect = f.potential_effect ?? f.effect_desc ?? f.effect_description ?? '';
+      const trimmedEffect = String(rawEffect).trim();
+      const hasEffect =
+        trimmedEffect !== '' &&
+        trimmedEffect.toLowerCase() !== 'null' &&
+        trimmedEffect.toLowerCase() !== 'none';
+
+      const normalizedEffectStatus: 'Missing Potential Effect' | 'Potential Effect Documented' =
+        f.potential_effect_status === 'Missing Potential Effect' ||
+        f.potential_effect_status === 'Potential Effect Documented'
+          ? f.potential_effect_status
+          : hasEffect
+            ? 'Potential Effect Documented'
+            : 'Missing Potential Effect';
+
+      const rawControl = f.current_control ?? f.control_desc ?? f.control_description ?? '';
+      const trimmedControl = String(rawControl).trim();
+      const hasControl =
+        trimmedControl !== '' &&
+        trimmedControl.toLowerCase() !== 'null' &&
+        trimmedControl.toLowerCase() !== 'none';
+
+      const normalizedControlStatus: 'Missing Control' | 'Control Documented' =
+        f.control_status === 'Missing Control' ||
+        f.control_status === 'Control Documented'
+          ? f.control_status
+          : hasControl
+            ? 'Control Documented'
+            : 'Missing Control';
+
       return {
         ...f,
-        potential_effect_status: f.potential_effect_status || (hasEffect ? 'Potential Effect Documented' : 'Missing Potential Effect')
+        potential_effect: hasEffect ? trimmedEffect : null,
+        current_control: hasControl ? trimmedControl : null,
+        control_status: normalizedControlStatus,
+        potential_effect_status: normalizedEffectStatus
       };
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mappedIncidents: OperationalIncidentRiskRecord[] = (resIncidents.data || []).map((inc: any) => ({
-      ...inc,
-      source: inc.source === 'INS' ? 'INS' : 'IRS',
-      incident_loss: 0 
-    }));
+    const mappedIncidents: OperationalIncidentRiskRecord[] = (resIncidents.data || []).map((inc: any) => {
+      const normalizedDate = inc.effective_date || inc.incident_date || inc.event_date || '';
+      return {
+        ...inc,
+        effective_date: normalizedDate,
+        incident_date: inc.incident_date || normalizedDate,
+        event_date: normalizedDate,
+        source: inc.source === 'INS' ? 'INS' : 'IRS',
+        incident_loss: Number(inc.incident_loss || 0)
+      };
+    });
 
     return {
       fmeaAnalytics: mappedFmea,
@@ -416,15 +644,12 @@ export function FMEADashboard() {
   }, [filteredFmea]);
 
   const periodIncidents = useMemo(() => {
-    return opIncidents.filter(i => isWithinDateRange(i.event_date, dateFrom, dateTo));
+    return opIncidents.filter(i => isWithinDateRange(getRecordEventDate(i), dateFrom, dateTo));
   }, [opIncidents, dateFrom, dateTo]);
 
   const filteredIncidents = useMemo(() => {
     return periodIncidents
-      .filter(i => {
-        if (filterSeverityLevel !== 'ALL' && i.severity_level !== filterSeverityLevel) return false;
-        return true;
-      })
+      .filter(i => matchesSeverityFilter(i.severity_level, filterSeverityLevel))
       .map(i => {
         const sevNum = i.severity_num ?? mapSeverityToNumber(i.severity_level);
         const occNum = i.occurrence_num ?? 5;
@@ -440,8 +665,8 @@ export function FMEADashboard() {
   const monthOnMonthIncidentVolume = useMemo(() => {
     const monthMap = new Map<string, { monthKey: string; monthLabel: string; ins: number; irs: number; total: number }>();
 
-    const start = new Date(dateFrom);
-    const end = new Date(dateTo);
+    const start = new Date(`${dateFrom}T00:00:00`);
+    const end = new Date(`${dateTo}T00:00:00`);
     const curr = new Date(start.getFullYear(), start.getMonth(), 1);
     
     while (curr <= end) {
@@ -455,8 +680,9 @@ export function FMEADashboard() {
     }
 
     filteredIncidents.forEach(inc => {
-      if (!inc.event_date) return;
-      const mKey = inc.event_date.substring(0, 7);
+      const recordDate = getRecordEventDate(inc);
+      if (!recordDate) return;
+      const mKey = recordDate.substring(0, 7);
       if (!mKey || mKey.length < 7) return;
 
       if (!monthMap.has(mKey)) {
@@ -481,8 +707,8 @@ export function FMEADashboard() {
   const monthOnMonthBadActorMetrics = useMemo(() => {
     const monthMap = new Map<string, { monthKey: string; monthLabel: string; repairCost: number; financialLoss: number }>();
 
-    const start = new Date(dateFrom);
-    const end = new Date(dateTo);
+    const start = new Date(`${dateFrom}T00:00:00`);
+    const end = new Date(`${dateTo}T00:00:00`);
     const curr = new Date(start.getFullYear(), start.getMonth(), 1);
 
     while (curr <= end) {
@@ -495,7 +721,6 @@ export function FMEADashboard() {
       curr.setMonth(curr.getMonth() + 1);
     }
 
-    // Accumulate repair costs strictly within the date range
     jobOrdersFlat.forEach(j => {
       const dateVal = j.created_at || j.date_completed;
       if (!isWithinDateRange(dateVal, dateFrom, dateTo)) return;
@@ -508,7 +733,6 @@ export function FMEADashboard() {
       bucket.repairCost += cost;
     });
 
-    // Accumulate financial losses strictly within the date range
     incidentReportsFlat.forEach(inc => {
       if (!inc.incident_date || !isWithinDateRange(inc.incident_date, dateFrom, dateTo)) return;
       
@@ -526,7 +750,10 @@ export function FMEADashboard() {
   // Incidents dynamically filtered by selected month for the KPI cards & table
   const selectedMonthIncidents = useMemo(() => {
     if (!selectedMonthKey) return filteredIncidents;
-    return filteredIncidents.filter(i => i.event_date && i.event_date.substring(0, 7) === selectedMonthKey);
+    return filteredIncidents.filter(i => {
+      const recordDate = getRecordEventDate(i);
+      return recordDate && recordDate.substring(0, 7) === selectedMonthKey;
+    });
   }, [filteredIncidents, selectedMonthKey]);
 
   // Aggregated Counts for 3rd Sub-Tab based on Selected Month and Clickable Source Filtering
@@ -622,6 +849,36 @@ export function FMEADashboard() {
     return { totalCount, irsTotal, insTotal, filteredTotalCount, pillars };
   }, [selectedMonthIncidents, rcaSourceFilter]);
 
+  const rcaFlattenedRows = useMemo(() => {
+    const pillarsToDisplay = selectedPillarDrilldown
+      ? hierarchicalRcaBreakdown.pillars.filter(p => p.pillarName === selectedPillarDrilldown)
+      : hierarchicalRcaBreakdown.pillars;
+
+    const allRows: {
+      pillarName: string;
+      code: string;
+      desc: string;
+      insCount: number;
+      irsCount: number;
+      totalCount: number;
+    }[] = [];
+
+    pillarsToDisplay.forEach(p => {
+      p.categoriesList.forEach(c => {
+        allRows.push({
+          pillarName: p.pillarName,
+          code: c.code,
+          desc: c.desc,
+          insCount: c.insCount,
+          irsCount: c.irsCount,
+          totalCount: c.totalCount
+        });
+      });
+    });
+
+    return allRows;
+  }, [hierarchicalRcaBreakdown, selectedPillarDrilldown]);
+
   const activeIncidentMatrixInspector = useMemo(() => {
     if (!selectedIncidentMatrixCell) return null;
     const matches = filteredIncidents.filter(
@@ -631,6 +888,7 @@ export function FMEADashboard() {
     return {
       sev: selectedIncidentMatrixCell.sev,
       occ: selectedIncidentMatrixCell.occ,
+      quadrantInfo: getQuadrantExplanation(selectedIncidentMatrixCell.sev, selectedIncidentMatrixCell.occ),
       items: matches
     };
   }, [selectedIncidentMatrixCell, filteredIncidents]);
@@ -754,11 +1012,54 @@ export function FMEADashboard() {
   }, [componentReliability, filterSystemGroup]);
 
   const decoupledComponentReliability = useMemo(() => {
-    return componentReliability.filter(cr => {
+    const baseList = componentReliability.filter(cr => {
       if (filterSystemGroup !== 'ALL' && cr.system_code !== filterSystemGroup) return false;
+      if (reliabilityKpiFilter === 'UNINSTALLED' && cr.installed_status !== false) return false;
+      if (reliabilityKpiFilter === 'INSTALLED' && cr.installed_status !== true) return false;
+      if (reliabilityKpiFilter === 'COST' && Number(cr.cumulative_component_cost || 0) <= 0) return false;
       return true;
     });
-  }, [componentReliability, filterSystemGroup]);
+
+    if (reliabilityKpiFilter === 'COST') {
+      return [...baseList].sort(
+        (a, b) => Number(b.cumulative_component_cost || 0) - Number(a.cumulative_component_cost || 0)
+      );
+    }
+
+    return baseList;
+  }, [componentReliability, filterSystemGroup, reliabilityKpiFilter]);
+
+  /* --- Paginated Slices --- */
+  const paginatedFmeaInspectorItems = useMemo(
+    () =>
+      activeFmeaMatrixInspector
+        ? paginateSlice(activeFmeaMatrixInspector.items, fmeaInspectorPage, fmeaInspectorPageSize)
+        : [],
+    [activeFmeaMatrixInspector, fmeaInspectorPage, fmeaInspectorPageSize]
+  );
+
+  const paginatedIncidentInspectorItems = useMemo(
+    () =>
+      activeIncidentMatrixInspector
+        ? paginateSlice(activeIncidentMatrixInspector.items, incidentInspectorPage, incidentInspectorPageSize)
+        : [],
+    [activeIncidentMatrixInspector, incidentInspectorPage, incidentInspectorPageSize]
+  );
+
+  const paginatedRcaRows = useMemo(
+    () => paginateSlice(rcaFlattenedRows, rcaTablePage, rcaTablePageSize),
+    [rcaFlattenedRows, rcaTablePage, rcaTablePageSize]
+  );
+
+  const paginatedBadActors = useMemo(
+    () => paginateSlice(filteredBadActors, badActorsPage, badActorsPageSize),
+    [filteredBadActors, badActorsPage, badActorsPageSize]
+  );
+
+  const paginatedReliabilityRows = useMemo(
+    () => paginateSlice(decoupledComponentReliability, reliabilityPage, reliabilityPageSize),
+    [decoupledComponentReliability, reliabilityPage, reliabilityPageSize]
+  );
 
   return (
     <div className="h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 flex flex-col overflow-hidden">
@@ -929,7 +1230,10 @@ export function FMEADashboard() {
                               id="filterRiskSource"
                               name="filterRiskSource"
                               value={filterRiskSource}
-                              onChange={(e) => setFilterRiskSource(e.target.value)}
+                              onChange={(e) => {
+                                setFilterRiskSource(e.target.value);
+                                setFmeaInspectorPage(1);
+                              }}
                               className="w-full mt-1 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2.5 py-1.5 focus:outline-none font-medium"
                             >
                               <option value="ALL">All Categories</option>
@@ -946,7 +1250,10 @@ export function FMEADashboard() {
                               id="filterControlStatus"
                               name="filterControlStatus"
                               value={filterControlStatus}
-                              onChange={(e) => setFilterControlStatus(e.target.value)}
+                              onChange={(e) => {
+                                setFilterControlStatus(e.target.value);
+                                setFmeaInspectorPage(1);
+                              }}
                               className="w-full mt-1 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2.5 py-1.5 focus:outline-none font-medium"
                             >
                               <option value="ALL">All Controls</option>
@@ -961,7 +1268,10 @@ export function FMEADashboard() {
                               id="filterPotentialEffectStatus"
                               name="filterPotentialEffectStatus"
                               value={filterPotentialEffectStatus}
-                              onChange={(e) => setFilterPotentialEffectStatus(e.target.value)}
+                              onChange={(e) => {
+                                setFilterPotentialEffectStatus(e.target.value);
+                                setFmeaInspectorPage(1);
+                              }}
                               className="w-full mt-1 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2.5 py-1.5 focus:outline-none font-medium"
                             >
                               <option value="ALL">All Potential Effects</option>
@@ -1171,7 +1481,10 @@ export function FMEADashboard() {
                                     return (
                                       <button
                                         key={occ}
-                                        onClick={() => setSelectedMatrixCell({ sev, occ })}
+                                        onClick={() => {
+                                          setSelectedMatrixCell({ sev, occ });
+                                          setFmeaInspectorPage(1);
+                                        }}
                                         disabled={count === 0}
                                         title={`S${sev} & O${occ} | Matched Risks: ${count} | Max RPN: ${maxRpn}`}
                                         className={`h-9 rounded-lg flex flex-col items-center justify-center text-[10px] transition-all cursor-pointer ${quadrantStyle} ${
@@ -1204,62 +1517,75 @@ export function FMEADashboard() {
                               </div>
                               <button
                                 onClick={() => setSelectedMatrixCell(null)}
-                                className="text-xs font-semibold text-(--text-muted) hover:text-(--text-primary)"
+                                className="text-xs font-semibold text-(--text-muted) hover:text-(--text-primary) cursor-pointer"
                               >
                                 Close Inspector
                               </button>
                             </div>
 
-                            <div className="overflow-x-auto max-h-48">
-                              <table className="w-full text-left text-xs">
-                                <thead className="bg-(--bg-surface) text-[10px] text-(--text-muted) uppercase sticky top-0">
-                                  <tr>
-                                    <th className="p-2">Code</th>
-                                    <th className="p-2">Risk Source</th>
-                                    <th className="p-2">Description</th>
-                                    <th className="p-2">Potential Effect</th>
-                                    <th className="p-2 text-center">RPN</th>
-                                    <th className="p-2 text-center">Risk Tier</th>
-                                    <th className="p-2">Control Status</th>
-                                    <th className="p-2">Effect Status</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-(--border-main)">
-                                  {activeFmeaMatrixInspector.items.map((item, idx) => (
-                                    <tr key={idx} className="hover:bg-(--accent-subtle)">
-                                      <td className="p-2 font-mono font-bold text-rose-600">{item.detail_code}</td>
-                                      <td className="p-2 font-semibold">{item.risk_source}</td>
-                                      <td className="p-2 text-(--text-secondary)">{item.detail_description}</td>
-                                      <td className="p-2 text-(--text-primary) italic">{item.potential_effect || 'None'}</td>
-                                      <td className="p-2 text-center font-mono font-bold">{item.computed_rpn}</td>
-                                      <td className="p-2 text-center">
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                          item.risk_tier === 'Critical' ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300' :
-                                          item.risk_tier === 'High' ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300' :
-                                          item.risk_tier === 'Medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300' :
-                                          'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
-                                        }`}>
-                                          {item.risk_tier}
-                                        </span>
-                                      </td>
-                                      <td className="p-2">
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                          item.control_status === 'Missing Control' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
-                                        }`}>
-                                          {item.control_status}
-                                        </span>
-                                      </td>
-                                      <td className="p-2">
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                          item.potential_effect_status === 'Missing Potential Effect' ? 'bg-amber-100 text-amber-700' : 'bg-purple-100 text-purple-700'
-                                        }`}>
-                                          {item.potential_effect_status}
-                                        </span>
-                                      </td>
+                            <div className="border border-(--border-main) rounded-lg overflow-hidden bg-(--bg-surface)">
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs">
+                                  <thead className="bg-(--bg-elevated) text-[10px] text-(--text-muted) uppercase border-b border-(--border-main)">
+                                    <tr>
+                                      <th className="p-2">Code</th>
+                                      <th className="p-2">Risk Source</th>
+                                      <th className="p-2">Description</th>
+                                      <th className="p-2">Potential Effect</th>
+                                      <th className="p-2 text-center">RPN</th>
+                                      <th className="p-2 text-center">Risk Tier</th>
+                                      <th className="p-2">Control Status</th>
+                                      <th className="p-2">Effect Status</th>
                                     </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                                  </thead>
+                                  <tbody className="divide-y divide-(--border-main)">
+                                    {paginatedFmeaInspectorItems.map((item, idx) => (
+                                      <tr key={idx} className="hover:bg-(--accent-subtle)">
+                                        <td className="p-2 font-mono font-bold text-rose-600">{item.detail_code}</td>
+                                        <td className="p-2 font-semibold">{item.risk_source}</td>
+                                        <td className="p-2 text-(--text-secondary)">{item.detail_description}</td>
+                                        <td className="p-2 text-(--text-primary) italic">{item.potential_effect || 'None'}</td>
+                                        <td className="p-2 text-center font-mono font-bold">{item.computed_rpn}</td>
+                                        <td className="p-2 text-center">
+                                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                            item.risk_tier === 'Critical' ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300' :
+                                            item.risk_tier === 'High' ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300' :
+                                            item.risk_tier === 'Medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300' :
+                                            'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
+                                          }`}>
+                                            {item.risk_tier}
+                                          </span>
+                                        </td>
+                                        <td className="p-2">
+                                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                            item.control_status === 'Missing Control'
+                                              ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300'
+                                              : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                          }`}>
+                                            {item.control_status}
+                                          </span>
+                                        </td>
+                                        <td className="p-2">
+                                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                            item.potential_effect_status === 'Missing Potential Effect'
+                                              ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300'
+                                              : 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300'
+                                          }`}>
+                                            {item.potential_effect_status}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                              <TablePagination
+                                totalItems={activeFmeaMatrixInspector.items.length}
+                                currentPage={fmeaInspectorPage}
+                                pageSize={fmeaInspectorPageSize}
+                                onPageChange={setFmeaInspectorPage}
+                                onPageSizeChange={setFmeaInspectorPageSize}
+                              />
                             </div>
                           </div>
                         )}
@@ -1278,23 +1604,27 @@ export function FMEADashboard() {
                         </div>
                         <select
                           value={filterSeverityLevel}
-                          onChange={(e) => setFilterSeverityLevel(e.target.value)}
+                          onChange={(e) => {
+                            setFilterSeverityLevel(e.target.value);
+                            setSelectedIncidentMatrixCell(null);
+                            setIncidentInspectorPage(1);
+                          }}
                           className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2.5 py-1 focus:outline-none font-semibold cursor-pointer"
                         >
                           <option value="ALL">
                             All Severities ({periodIncidents.length})
                           </option>
                           <option value="Critical">
-                            Critical ({periodIncidents.filter(i => i.severity_level?.toLowerCase() === 'critical').length})
+                            Critical ({periodIncidents.filter(i => matchesSeverityFilter(i.severity_level, 'Critical')).length})
                           </option>
                           <option value="High">
-                            High ({periodIncidents.filter(i => i.severity_level?.toLowerCase() === 'high').length})
+                            High ({periodIncidents.filter(i => matchesSeverityFilter(i.severity_level, 'High')).length})
                           </option>
                           <option value="Medium">
-                            Medium ({periodIncidents.filter(i => i.severity_level?.toLowerCase() === 'medium').length})
+                            Medium ({periodIncidents.filter(i => matchesSeverityFilter(i.severity_level, 'Medium')).length})
                           </option>
                           <option value="Low/Moderate">
-                            Low/Moderate ({periodIncidents.filter(i => i.severity_level?.toLowerCase() === 'low/moderate' || i.severity_level?.toLowerCase() === 'low').length})
+                            Low/Moderate ({periodIncidents.filter(i => matchesSeverityFilter(i.severity_level, 'Low/Moderate')).length})
                           </option>
                         </select>
                       </div>
@@ -1308,11 +1638,11 @@ export function FMEADashboard() {
                             <p className="text-[11px] text-(--text-muted)">
                               {filterSeverityLevel === 'ALL'
                                 ? 'Plots vehicle hazard logs across Severity vs Occurrence (Filtered by selected Period Dates).'
-                                : 'Heatmap matrix is hidden when a specific Severity Filter is active. Select "All Severities" to inspect overall distribution.'}
+                                : `Showing vehicle hazard logs filtered by "${filterSeverityLevel}" severity within the selected Period Dates.`}
                             </p>
                           </div>
                           <span className="text-[10px] font-mono text-(--text-muted)">
-                            Period Incidents: <strong>{filteredIncidents.length}</strong>
+                            Matching Incidents: <strong>{filteredIncidents.length}</strong>
                           </span>
                         </div>
 
@@ -1340,9 +1670,9 @@ export function FMEADashboard() {
                                     const occ = oIdx + 1;
                                     const isHighOcc = occ >= 6;
                                     
-                                    const matches = filterSeverityLevel === 'ALL'
-                                      ? filteredIncidents.filter(i => i.severity_num === sev && i.occurrence_num === occ)
-                                      : [];
+                                    const matches = filteredIncidents.filter(
+                                      i => i.severity_num === sev && i.occurrence_num === occ
+                                    );
                                     const count = matches.length;
 
                                     const quadrantStyle = 
@@ -1370,7 +1700,10 @@ export function FMEADashboard() {
                                     return (
                                       <button
                                         key={occ}
-                                        onClick={() => setSelectedIncidentMatrixCell({ sev, occ })}
+                                        onClick={() => {
+                                          setSelectedIncidentMatrixCell({ sev, occ });
+                                          setIncidentInspectorPage(1);
+                                        }}
                                         disabled={count === 0}
                                         title={`S${sev} & O${occ} | Matched Incidents: ${count}`}
                                         className={`h-9 rounded-lg flex flex-col items-center justify-center text-[10px] transition-all cursor-pointer ${quadrantStyle} ${
@@ -1394,7 +1727,7 @@ export function FMEADashboard() {
                           </div>
                         </div>
 
-                        {activeIncidentMatrixInspector && filterSeverityLevel === 'ALL' && (
+                        {activeIncidentMatrixInspector && (
                           <div className="mt-4 p-3.5 bg-(--bg-elevated) border-2 border-amber-500/40 rounded-xl space-y-3 animate-fadeIn">
                             <div className="flex items-center justify-between border-b border-(--border-main) pb-2">
                               <div className="flex items-center gap-2 text-xs font-bold uppercase text-amber-600">
@@ -1403,43 +1736,63 @@ export function FMEADashboard() {
                               </div>
                               <button
                                 onClick={() => setSelectedIncidentMatrixCell(null)}
-                                className="text-xs font-semibold text-(--text-muted) hover:text-(--text-primary)"
+                                className="text-xs font-semibold text-(--text-muted) hover:text-(--text-primary) cursor-pointer"
                               >
                                 Close Inspector
                               </button>
                             </div>
 
-                            <div className="overflow-x-auto max-h-48">
-                              <table className="w-full text-left text-xs">
-                                <thead className="bg-(--bg-surface) text-[10px] text-(--text-muted) uppercase sticky top-0">
-                                  <tr>
-                                    <th className="p-2">Ref No</th>
-                                    <th className="p-2">Plate No</th>
-                                    <th className="p-2">Source</th>
-                                    <th className="p-2">Date</th>
-                                    <th className="p-2">Description</th>
-                                    <th className="p-2">Root Cause</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-(--border-main)">
-                                  {activeIncidentMatrixInspector.items.map((inc, idx) => (
-                                    <tr key={idx} className="hover:bg-(--accent-subtle)">
-                                      <td className="p-2 font-mono font-bold text-rose-600">{inc.ref_no}</td>
-                                      <td className="p-2 font-bold">{inc.plate_no}</td>
-                                      <td className="p-2">
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                          inc.source === 'IRS' ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-                                        }`}>
-                                          {inc.source}
-                                        </span>
-                                      </td>
-                                      <td className="p-2 font-mono">{inc.event_date}</td>
-                                      <td className="p-2 text-(--text-secondary)">{inc.description}</td>
-                                      <td className="p-2 font-semibold">[{inc.root_cause_code}] {inc.root_cause_desc}</td>
+                            {/* Quadrant Explanation Banner */}
+                            <div className={`p-3 rounded-lg border text-xs space-y-1 ${activeIncidentMatrixInspector.quadrantInfo.containerClass}`}>
+                              <div className="flex items-center gap-2 font-extrabold uppercase text-[11px]">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-black ${activeIncidentMatrixInspector.quadrantInfo.badgeClass}`}>
+                                  S{activeIncidentMatrixInspector.sev} &times; O{activeIncidentMatrixInspector.occ}
+                                </span>
+                                <span>{activeIncidentMatrixInspector.quadrantInfo.title}</span>
+                              </div>
+                              <p className="text-[11px] leading-relaxed opacity-90">
+                                {activeIncidentMatrixInspector.quadrantInfo.description}
+                              </p>
+                            </div>
+
+                            <div className="border border-(--border-main) rounded-lg overflow-hidden bg-(--bg-surface)">
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs">
+                                  <thead className="bg-(--bg-elevated) text-[10px] text-(--text-muted) uppercase border-b border-(--border-main)">
+                                    <tr>
+                                      <th className="p-2">Ref No</th>
+                                      <th className="p-2">Source</th>
+                                      <th className="p-2">Effective Date</th>
+                                      <th className="p-2">Description</th>
+                                      <th className="p-2">Root Cause</th>
                                     </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                                  </thead>
+                                  <tbody className="divide-y divide-(--border-main)">
+                                    {paginatedIncidentInspectorItems.map((inc, idx) => (
+                                      <tr key={idx} className="hover:bg-(--accent-subtle)">
+                                        <td className="p-2 font-mono font-bold text-rose-600">{inc.ref_no}</td>
+                                        <td className="p-2">
+                                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                            inc.source === 'IRS' ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                          }`}>
+                                            {inc.source}
+                                          </span>
+                                        </td>
+                                        <td className="p-2 font-mono">{getRecordEventDate(inc)}</td>
+                                        <td className="p-2 text-(--text-secondary)">{inc.description}</td>
+                                        <td className="p-2 font-semibold">[{inc.root_cause_code}] {inc.root_cause_desc}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                              <TablePagination
+                                totalItems={activeIncidentMatrixInspector.items.length}
+                                currentPage={incidentInspectorPage}
+                                pageSize={incidentInspectorPageSize}
+                                onPageChange={setIncidentInspectorPage}
+                                onPageSizeChange={setIncidentInspectorPageSize}
+                              />
                             </div>
                           </div>
                         )}
@@ -1465,7 +1818,10 @@ export function FMEADashboard() {
                             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-purple-500 rounded-xs inline-block"></span>IRS (Incidents)</span>
                             {selectedMonthKey && (
                               <button
-                                onClick={() => setSelectedMonthKey(null)}
+                                onClick={() => {
+                                  setSelectedMonthKey(null);
+                                  setRcaTablePage(1);
+                                }}
                                 className="ml-2 px-2 py-0.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded font-bold text-[10px] hover:bg-rose-500/20 cursor-pointer"
                               >
                                 Clear Month Filter
@@ -1499,7 +1855,10 @@ export function FMEADashboard() {
                                   return (
                                     <button
                                       key={idx}
-                                      onClick={() => setSelectedMonthKey(isSelected ? null : m.monthKey)}
+                                      onClick={() => {
+                                        setSelectedMonthKey(isSelected ? null : m.monthKey);
+                                        setRcaTablePage(1);
+                                      }}
                                       className={`flex flex-col items-center flex-1 h-full justify-end group relative transition-all rounded-lg p-1 cursor-pointer ${
                                         isSelected ? 'bg-purple-500/15 ring-2 ring-purple-500' : 'hover:bg-(--accent-subtle)'
                                       }`}
@@ -1542,7 +1901,11 @@ export function FMEADashboard() {
                       {/* 2. Clickable KPI Cards - Dynamically Filtered */}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <button
-                          onClick={() => { setRcaSourceFilter('ALL'); setSelectedPillarDrilldown(null); }}
+                          onClick={() => {
+                            setRcaSourceFilter('ALL');
+                            setSelectedPillarDrilldown(null);
+                            setRcaTablePage(1);
+                          }}
                           className={`p-3.5 rounded-xl text-left transition-all cursor-pointer shadow-xs border ${
                             rcaSourceFilter === 'ALL'
                               ? 'bg-purple-500/20 border-purple-500 ring-2 ring-purple-500/30'
@@ -1559,7 +1922,11 @@ export function FMEADashboard() {
                         </button>
 
                         <button
-                          onClick={() => { setRcaSourceFilter('IRS'); setSelectedPillarDrilldown(null); }}
+                          onClick={() => {
+                            setRcaSourceFilter('IRS');
+                            setSelectedPillarDrilldown(null);
+                            setRcaTablePage(1);
+                          }}
                           className={`p-3.5 rounded-xl text-left transition-all cursor-pointer shadow-xs border ${
                             rcaSourceFilter === 'IRS'
                               ? 'bg-purple-500/20 border-purple-500 ring-2 ring-purple-500/30'
@@ -1576,7 +1943,11 @@ export function FMEADashboard() {
                         </button>
 
                         <button
-                          onClick={() => { setRcaSourceFilter('INS'); setSelectedPillarDrilldown(null); }}
+                          onClick={() => {
+                            setRcaSourceFilter('INS');
+                            setSelectedPillarDrilldown(null);
+                            setRcaTablePage(1);
+                          }}
                           className={`p-3.5 rounded-xl text-left transition-all cursor-pointer shadow-xs border ${
                             rcaSourceFilter === 'INS'
                               ? 'bg-emerald-500/20 border-emerald-500 ring-2 ring-emerald-500/30'
@@ -1605,7 +1976,10 @@ export function FMEADashboard() {
 
                           {selectedPillarDrilldown && (
                             <button
-                              onClick={() => setSelectedPillarDrilldown(null)}
+                              onClick={() => {
+                                setSelectedPillarDrilldown(null);
+                                setRcaTablePage(1);
+                              }}
                               className="flex items-center gap-1 px-2.5 py-1 bg-(--bg-elevated) border border-(--border-main) text-xs font-bold rounded-lg text-purple-600 hover:opacity-85 cursor-pointer shadow-xs"
                             >
                               <ArrowLeft className="w-3.5 h-3.5" />
@@ -1663,7 +2037,10 @@ export function FMEADashboard() {
                                   return (
                                     <button
                                       key={idx}
-                                      onClick={() => setSelectedPillarDrilldown(pillar.pillarName)}
+                                      onClick={() => {
+                                        setSelectedPillarDrilldown(pillar.pillarName);
+                                        setRcaTablePage(1);
+                                      }}
                                       className={`w-full flex items-center justify-between p-2 rounded-lg text-xs transition-all cursor-pointer border ${
                                         isSelected 
                                           ? 'bg-purple-500/20 border-purple-500 font-bold' 
@@ -1699,9 +2076,9 @@ export function FMEADashboard() {
                               </div>
 
                               <div className="border border-(--border-main) rounded-xl bg-(--bg-elevated) overflow-hidden shadow-xs">
-                                <div className="max-h-96 overflow-y-auto">
+                                <div className="overflow-x-auto">
                                   <table className="w-full text-left text-xs border-collapse">
-                                    <thead className="bg-(--bg-surface) text-[10px] uppercase text-(--text-muted) sticky top-0 border-b border-(--border-main)">
+                                    <thead className="bg-(--bg-surface) text-[10px] uppercase text-(--text-muted) border-b border-(--border-main)">
                                       <tr>
                                         <th className="p-2.5">Pillar / Category</th>
                                         <th className="p-2.5">Description</th>
@@ -1711,37 +2088,14 @@ export function FMEADashboard() {
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-(--border-main)">
-                                      {(() => {
-                                        const pillarsToDisplay = selectedPillarDrilldown
-                                          ? hierarchicalRcaBreakdown.pillars.filter(p => p.pillarName === selectedPillarDrilldown)
-                                          : hierarchicalRcaBreakdown.pillars;
-
-                                        const allRows: { pillarName: string; code: string; desc: string; insCount: number; irsCount: number; totalCount: number }[] = [];
-                                        
-                                        pillarsToDisplay.forEach(p => {
-                                          p.categoriesList.forEach(c => {
-                                            allRows.push({
-                                              pillarName: p.pillarName,
-                                              code: c.code,
-                                              desc: c.desc,
-                                              insCount: c.insCount,
-                                              irsCount: c.irsCount,
-                                              totalCount: c.totalCount
-                                            });
-                                          });
-                                        });
-
-                                        if (allRows.length === 0) {
-                                          return (
-                                            <tr>
-                                              <td colSpan={5} className="p-6 text-center text-(--text-muted)">
-                                                No category breakdown data available for this selection.
-                                              </td>
-                                            </tr>
-                                          );
-                                        }
-
-                                        return allRows.map((row, idx) => (
+                                      {paginatedRcaRows.length === 0 ? (
+                                        <tr>
+                                          <td colSpan={5} className="p-6 text-center text-(--text-muted)">
+                                            No category breakdown data available for this selection.
+                                          </td>
+                                        </tr>
+                                      ) : (
+                                        paginatedRcaRows.map((row, idx) => (
                                           <tr key={idx} className="hover:bg-(--accent-subtle)">
                                             <td className="p-2.5">
                                               <div className="font-bold text-(--text-primary)">{row.pillarName}</div>
@@ -1754,11 +2108,18 @@ export function FMEADashboard() {
                                             <td className="p-2.5 text-center font-mono text-purple-600 font-semibold">{row.irsCount}</td>
                                             <td className="p-2.5 text-right font-mono font-black text-rose-600">{row.totalCount}</td>
                                           </tr>
-                                        ));
-                                      })()}
+                                        ))
+                                      )}
                                     </tbody>
                                   </table>
                                 </div>
+                                <TablePagination
+                                  totalItems={rcaFlattenedRows.length}
+                                  currentPage={rcaTablePage}
+                                  pageSize={rcaTablePageSize}
+                                  onPageChange={setRcaTablePage}
+                                  onPageSizeChange={setRcaTablePageSize}
+                                />
                               </div>
                             </div>
                           </div>
@@ -1856,7 +2217,10 @@ export function FMEADashboard() {
                             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-amber-500 rounded-xs inline-block"></span>Incident Financial Loss</span>
                             {selectedBadActorMonthKey && (
                               <button
-                                onClick={() => setSelectedBadActorMonthKey(null)}
+                                onClick={() => {
+                                  setSelectedBadActorMonthKey(null);
+                                  setBadActorsPage(1);
+                                }}
                                 className="ml-2 px-2 py-0.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded font-bold text-[10px] hover:bg-rose-500/20 cursor-pointer"
                               >
                                 Clear Month Filter
@@ -1890,7 +2254,10 @@ export function FMEADashboard() {
                                   return (
                                     <button
                                       key={idx}
-                                      onClick={() => setSelectedBadActorMonthKey(isSelected ? null : m.monthKey)}
+                                      onClick={() => {
+                                        setSelectedBadActorMonthKey(isSelected ? null : m.monthKey);
+                                        setBadActorsPage(1);
+                                      }}
                                       className={`flex flex-col items-center flex-1 h-full justify-end group relative transition-all rounded-lg p-1 cursor-pointer ${
                                         isSelected ? 'bg-purple-500/15 ring-2 ring-purple-500' : 'hover:bg-(--accent-subtle)'
                                       }`}
@@ -1952,55 +2319,64 @@ export function FMEADashboard() {
                         </div>
                       </div>
 
-                      <div className="overflow-x-auto border border-(--border-main) rounded-xl bg-(--bg-surface) shadow-xs">
-                        <table className="w-full text-left text-xs border-collapse">
-                          <thead className="bg-(--bg-elevated) text-[10px] uppercase text-(--text-muted) border-b border-(--border-main)">
-                            <tr>
-                              <th className="p-2.5">Plate No</th>
-                              <th className="p-2.5">Make / Model</th>
-                              <th className="p-2.5 text-center">Bad Actor Score Gauge</th>
-                              <th className="p-2.5 text-center">Risk Tier</th>
-                              <th className="p-2.5 text-right">Maintenance Cost</th>
-                              <th className="p-2.5 text-right">Incident Loss</th>
-                              <th className="p-2.5 text-right">Total Financial Impact</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-(--border-main)">
-                            {filteredBadActors.length === 0 ? (
+                      <div className="border border-(--border-main) rounded-xl bg-(--bg-surface) shadow-xs overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead className="bg-(--bg-elevated) text-[10px] uppercase text-(--text-muted) border-b border-(--border-main)">
                               <tr>
-                                <td colSpan={7} className="p-4 text-center text-(--text-muted)">
-                                  No bad actor vehicle maintenance records found within the selected period.
-                                </td>
+                                <th className="p-2.5">Plate No</th>
+                                <th className="p-2.5">Make / Model</th>
+                                <th className="p-2.5 text-center">Bad Actor Score Gauge</th>
+                                <th className="p-2.5 text-center">Risk Tier</th>
+                                <th className="p-2.5 text-right">Maintenance Cost</th>
+                                <th className="p-2.5 text-right">Incident Loss</th>
+                                <th className="p-2.5 text-right">Total Financial Impact</th>
                               </tr>
-                            ) : (
-                              filteredBadActors.map((ba, idx) => (
-                                <tr key={idx} className="hover:bg-(--accent-subtle)">
-                                  <td className="p-2.5 font-bold font-mono text-(--text-primary)">{ba.plate_no}</td>
-                                  <td className="p-2.5">{ba.make_name} - {ba.model_name}</td>
-                                  <td className="p-2.5 text-center">
-                                    <div className="flex items-center gap-2 max-w-35 mx-auto">
-                                      <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                        <div
-                                          className={`h-full ${ba.bad_actor_score >= 70 ? 'bg-rose-600' : 'bg-amber-500'}`}
-                                          style={{ width: `${Math.min(ba.bad_actor_score, 100)}%` }}
-                                        ></div>
-                                      </div>
-                                      <span className="font-mono text-[10px] font-bold text-rose-600">{ba.bad_actor_score}</span>
-                                    </div>
+                            </thead>
+                            <tbody className="divide-y divide-(--border-main)">
+                              {paginatedBadActors.length === 0 ? (
+                                <tr>
+                                  <td colSpan={7} className="p-4 text-center text-(--text-muted)">
+                                    No bad actor vehicle maintenance records found within the selected period.
                                   </td>
-                                  <td className="p-2.5 text-center">
-                                    <span className="px-2 py-0.5 bg-rose-100 text-rose-700 rounded text-[10px] font-bold">
-                                      {ba.risk_tier}
-                                    </span>
-                                  </td>
-                                  <td className="p-2.5 text-right font-mono font-bold text-(--text-primary)">&#8369;{(ba.total_maintenance_cost || 0).toLocaleString()}</td>
-                                  <td className="p-2.5 text-right font-mono text-amber-600">&#8369;{(ba.incident_loss || 0).toLocaleString()}</td>
-                                  <td className="p-2.5 text-right font-mono font-black text-rose-600">&#8369;{(ba.total_financial_impact || 0).toLocaleString()}</td>
                                 </tr>
-                              ))
-                            )}
-                          </tbody>
-                        </table>
+                              ) : (
+                                paginatedBadActors.map((ba, idx) => (
+                                  <tr key={idx} className="hover:bg-(--accent-subtle)">
+                                    <td className="p-2.5 font-bold font-mono text-(--text-primary)">{ba.plate_no}</td>
+                                    <td className="p-2.5">{ba.make_name} - {ba.model_name}</td>
+                                    <td className="p-2.5 text-center">
+                                      <div className="flex items-center gap-2 max-w-35 mx-auto">
+                                        <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                          <div
+                                            className={`h-full ${ba.bad_actor_score >= 70 ? 'bg-rose-600' : 'bg-amber-500'}`}
+                                            style={{ width: `${Math.min(ba.bad_actor_score, 100)}%` }}
+                                          ></div>
+                                        </div>
+                                        <span className="font-mono text-[10px] font-bold text-rose-600">{ba.bad_actor_score}</span>
+                                      </div>
+                                    </td>
+                                    <td className="p-2.5 text-center">
+                                      <span className="px-2 py-0.5 bg-rose-100 text-rose-700 rounded text-[10px] font-bold">
+                                        {ba.risk_tier}
+                                      </span>
+                                    </td>
+                                    <td className="p-2.5 text-right font-mono font-bold text-(--text-primary)">&#8369;{(ba.total_maintenance_cost || 0).toLocaleString()}</td>
+                                    <td className="p-2.5 text-right font-mono text-amber-600">&#8369;{(ba.incident_loss || 0).toLocaleString()}</td>
+                                    <td className="p-2.5 text-right font-mono font-black text-rose-600">&#8369;{(ba.total_financial_impact || 0).toLocaleString()}</td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                        <TablePagination
+                          totalItems={filteredBadActors.length}
+                          currentPage={badActorsPage}
+                          pageSize={badActorsPageSize}
+                          onPageChange={setBadActorsPage}
+                          onPageSizeChange={setBadActorsPageSize}
+                        />
                       </div>
                     </div>
                   )}
@@ -2021,7 +2397,10 @@ export function FMEADashboard() {
                         <div className="w-full sm:w-auto min-w-72">
                           <select
                             value={filterSystemGroup}
-                            onChange={(e) => setFilterSystemGroup(e.target.value)}
+                            onChange={(e) => {
+                              setFilterSystemGroup(e.target.value);
+                              setReliabilityPage(1);
+                            }}
                             className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-3 py-2 focus:outline-none font-semibold cursor-pointer shadow-xs"
                           >
                             <option value="ALL">All Systems ({systemAggregates.reduce((acc, s) => acc + s.count, 0)} components)</option>
@@ -2034,111 +2413,241 @@ export function FMEADashboard() {
                         </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between px-1">
-                          <h4 className="text-xs font-bold uppercase tracking-wide text-(--text-primary)">
-                            2nd Level KPI Metrics {filterSystemGroup !== 'ALL' ? `for System [${filterSystemGroup}]` : '(All Systems Combined)'}
-                          </h4>
-                          <span className="text-[10px] text-(--text-muted) font-mono">
-                            Unbounded by Date Period
-                          </span>
+                      {/* Collapsible & Clickable 2nd Level KPI Metrics */}
+                      <div className="bg-(--bg-surface) border border-(--border-main) rounded-xl p-3.5 space-y-3 shadow-xs">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Activity className="w-4 h-4 text-blue-500 shrink-0" />
+                            <h4 className="text-xs font-bold uppercase tracking-wide text-(--text-primary)">
+                              2nd Level KPI Metrics {filterSystemGroup !== 'ALL' ? `for System [${filterSystemGroup}]` : '(All Systems Combined)'}
+                            </h4>
+                            <span className="text-[10px] text-(--text-muted) font-mono hidden sm:inline">
+                              &bull; Unbounded by Date Period
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            {reliabilityKpiFilter !== 'ALL' && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setReliabilityKpiFilter('ALL');
+                                  setReliabilityPage(1);
+                                }}
+                                className="px-2 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 rounded font-bold text-[10px] hover:bg-blue-500/20 cursor-pointer"
+                              >
+                                Clear KPI Filter
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setShowReliabilityKpis(!showReliabilityKpis)}
+                              className="flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 font-semibold hover:underline cursor-pointer"
+                            >
+                              {showReliabilityKpis ? (
+                                <>
+                                  <ChevronUp className="w-3.5 h-3.5" />
+                                  <span>Collapse Metrics</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="w-3.5 h-3.5" />
+                                  <span>Expand Metrics</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                          <div className="p-3 bg-(--bg-surface) border border-(--border-main) rounded-xl shadow-xs space-y-0.5">
-                            <div className="text-[9px] font-bold uppercase text-(--text-muted)">Active Sub-Components</div>
-                            <div className="text-xl font-black text-(--text-primary) font-mono">
-                              {selectedSystemMetrics.totalSubComponents}
-                            </div>
-                          </div>
+                        {showReliabilityKpis && (
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-(--border-main)">
+                            {/* Card 1: Active Sub-Components (ALL) */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReliabilityKpiFilter('ALL');
+                                setReliabilityPage(1);
+                              }}
+                              className={`p-3 rounded-xl text-left transition-all cursor-pointer shadow-xs space-y-0.5 border ${
+                                reliabilityKpiFilter === 'ALL'
+                                  ? 'bg-blue-500/15 border-blue-500 ring-2 ring-blue-500/30'
+                                  : 'bg-(--bg-elevated) border-(--border-main) hover:border-blue-500/50'
+                              }`}
+                            >
+                              <div className="text-[9px] font-bold uppercase text-(--text-muted)">Active Sub-Components</div>
+                              <div className="text-xl font-black text-(--text-primary) font-mono">
+                                {selectedSystemMetrics.totalSubComponents}
+                              </div>
+                              <div className="text-[9px] text-(--text-muted) italic pt-0.5">
+                                {reliabilityKpiFilter === 'ALL' ? 'Active filter' : 'Click to show all'}
+                              </div>
+                            </button>
 
-                          <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl shadow-xs space-y-0.5">
-                            <div className="text-[9px] font-bold uppercase text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                              <Clock className="w-3 h-3" /> Total Uninstalled
-                            </div>
-                            <div className="text-xl font-black text-amber-600 dark:text-amber-400 font-mono">
-                              {selectedSystemMetrics.totalUninstalled}
-                            </div>
-                          </div>
+                            {/* Card 2: Total Uninstalled */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReliabilityKpiFilter(reliabilityKpiFilter === 'UNINSTALLED' ? 'ALL' : 'UNINSTALLED');
+                                setReliabilityPage(1);
+                              }}
+                              className={`p-3 rounded-xl text-left transition-all cursor-pointer shadow-xs space-y-0.5 border ${
+                                reliabilityKpiFilter === 'UNINSTALLED'
+                                  ? 'bg-amber-500/20 border-amber-500 ring-2 ring-amber-500/30'
+                                  : 'bg-amber-500/10 border-amber-500/20 hover:border-amber-500/60'
+                              }`}
+                            >
+                              <div className="text-[9px] font-bold uppercase text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                                <Clock className="w-3 h-3" /> Total Uninstalled
+                              </div>
+                              <div className="text-xl font-black text-amber-600 dark:text-amber-400 font-mono">
+                                {selectedSystemMetrics.totalUninstalled}
+                              </div>
+                              <div className="text-[9px] text-amber-600/80 dark:text-amber-400/80 italic pt-0.5">
+                                {reliabilityKpiFilter === 'UNINSTALLED' ? 'Active filter' : 'Click to filter uninstalled'}
+                              </div>
+                            </button>
 
-                          <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl shadow-xs space-y-0.5">
-                            <div className="text-[9px] font-bold uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3" /> Total Installed
-                            </div>
-                            <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-                              {selectedSystemMetrics.totalInstalled}
-                            </div>
-                          </div>
+                            {/* Card 3: Total Installed */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReliabilityKpiFilter(reliabilityKpiFilter === 'INSTALLED' ? 'ALL' : 'INSTALLED');
+                                setReliabilityPage(1);
+                              }}
+                              className={`p-3 rounded-xl text-left transition-all cursor-pointer shadow-xs space-y-0.5 border ${
+                                reliabilityKpiFilter === 'INSTALLED'
+                                  ? 'bg-emerald-500/20 border-emerald-500 ring-2 ring-emerald-500/30'
+                                  : 'bg-emerald-500/10 border-emerald-500/20 hover:border-emerald-500/60'
+                              }`}
+                            >
+                              <div className="text-[9px] font-bold uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3" /> Total Installed
+                              </div>
+                              <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                                {selectedSystemMetrics.totalInstalled}
+                              </div>
+                              <div className="text-[9px] text-emerald-600/80 dark:text-emerald-400/80 italic pt-0.5">
+                                {reliabilityKpiFilter === 'INSTALLED' ? 'Active filter' : 'Click to filter installed'}
+                              </div>
+                            </button>
 
-                          <div className="p-3 bg-(--bg-surface) border border-(--border-main) rounded-xl shadow-xs space-y-0.5">
-                            <div className="text-[9px] font-bold uppercase text-(--text-muted)">Total Acquisition Cost</div>
-                            <div className="text-xl font-black text-rose-600 font-mono">
-                              &#8369;{selectedSystemMetrics.totalAcquisitionCost.toLocaleString()}
-                            </div>
+                            {/* Card 4: Total Acquisition Cost */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReliabilityKpiFilter(reliabilityKpiFilter === 'COST' ? 'ALL' : 'COST');
+                                setReliabilityPage(1);
+                              }}
+                              className={`p-3 rounded-xl text-left transition-all cursor-pointer shadow-xs space-y-0.5 border ${
+                                reliabilityKpiFilter === 'COST'
+                                  ? 'bg-rose-500/15 border-rose-500 ring-2 ring-rose-500/30'
+                                  : 'bg-(--bg-elevated) border-(--border-main) hover:border-rose-500/50'
+                              }`}
+                            >
+                              <div className="text-[9px] font-bold uppercase text-(--text-muted)">Total Acquisition Cost</div>
+                              <div className="text-xl font-black text-rose-600 font-mono">
+                                &#8369;{selectedSystemMetrics.totalAcquisitionCost.toLocaleString()}
+                              </div>
+                              <div className="text-[9px] text-rose-600/80 dark:text-rose-400/80 italic pt-0.5">
+                                {reliabilityKpiFilter === 'COST' ? 'Sorted by highest cost' : 'Click to rank by cost'}
+                              </div>
+                            </button>
                           </div>
-                        </div>
+                        )}
                       </div>
 
-                      <div className="space-y-2 pt-2">
-                        <div className="flex items-center justify-between px-1">
-                          <h4 className="text-xs font-bold uppercase tracking-wide text-(--text-primary)">
-                            Detailed Component Reliability Table (Decoupled from Period Dates)
-                          </h4>
-                          <span className="text-[10px] text-(--text-muted)">Showing all component inventory items</span>
+                      <div className="space-y-2 pt-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-xs font-bold uppercase tracking-wide text-(--text-primary)">
+                              Detailed Component Reliability Table (Decoupled from Period Dates)
+                            </h4>
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                reliabilityKpiFilter === 'UNINSTALLED'
+                                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                                  : reliabilityKpiFilter === 'INSTALLED'
+                                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                  : reliabilityKpiFilter === 'COST'
+                                  ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                                  : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                              }`}
+                            >
+                              {reliabilityKpiFilter === 'UNINSTALLED'
+                                ? 'Filter: Uninstalled Only'
+                                : reliabilityKpiFilter === 'INSTALLED'
+                                ? 'Filter: Installed Only'
+                                : reliabilityKpiFilter === 'COST'
+                                ? 'Filter: With Cost (Highest First)'
+                                : 'Filter: All Sub-Components'}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-(--text-muted) font-mono">
+                            Matching Items: <strong>{decoupledComponentReliability.length}</strong>
+                          </span>
                         </div>
-                        <div className="overflow-x-auto border border-(--border-main) rounded-xl bg-(--bg-surface) shadow-xs">
-                          <table className="w-full text-left text-xs border-collapse">
-                            <thead className="bg-(--bg-elevated) text-[10px] uppercase text-(--text-muted) border-b border-(--border-main)">
-                              <tr>
-                                <th className="p-2.5">Component Code</th>
-                                <th className="p-2.5">System</th>
-                                <th className="p-2.5">Description</th>
-                                <th className="p-2.5 text-center">Status</th>
-                                <th className="p-2.5 text-center">Reinstallations</th>
-                                <th className="p-2.5 text-center">Avg Run Interval</th>
-                                <th className="p-2.5 text-right">Acquisition Cost</th>
-                                <th className="p-2.5 text-right">Cost / Avg Run Interval</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-(--border-main)">
-                              {decoupledComponentReliability.length === 0 ? (
+                        <div className="border border-(--border-main) rounded-xl bg-(--bg-surface) shadow-xs overflow-hidden">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs border-collapse">
+                              <thead className="bg-(--bg-elevated) text-[10px] uppercase text-(--text-muted) border-b border-(--border-main)">
                                 <tr>
-                                  <td colSpan={8} className="p-4 text-center text-(--text-muted)">
-                                    No component reliability records found.
-                                  </td>
+                                  <th className="p-2.5">Component Code</th>
+                                  <th className="p-2.5">System</th>
+                                  <th className="p-2.5">Description</th>
+                                  <th className="p-2.5 text-center">Status</th>
+                                  <th className="p-2.5 text-center">Reinstallations</th>
+                                  <th className="p-2.5 text-center">Avg Run Interval</th>
+                                  <th className="p-2.5 text-right">Acquisition Cost</th>
+                                  <th className="p-2.5 text-right">Cost / Avg Run Interval</th>
                                 </tr>
-                              ) : (
-                                decoupledComponentReliability.map((cr, idx) => {
-                                  const avgRun = Number(cr.avg_service_run || 0);
-                                  const acqCost = Number(cr.cumulative_component_cost || 0);
-                                  const costPerRun = avgRun > 0 ? acqCost / avgRun : 0;
+                              </thead>
+                              <tbody className="divide-y divide-(--border-main)">
+                                {paginatedReliabilityRows.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={8} className="p-4 text-center text-(--text-muted)">
+                                      No component reliability records found for this filter.
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  paginatedReliabilityRows.map((cr, idx) => {
+                                    const avgRun = Number(cr.avg_service_run || 0);
+                                    const acqCost = Number(cr.cumulative_component_cost || 0);
+                                    const costPerRun = avgRun > 0 ? acqCost / avgRun : 0;
 
-                                  return (
-                                    <tr key={idx} className="hover:bg-(--accent-subtle)">
-                                      <td className="p-2.5 font-bold font-mono text-rose-600">{cr.equipment_component_code}</td>
-                                      <td className="p-2.5 font-semibold text-blue-600 dark:text-blue-400">{cr.system_code}</td>
-                                      <td className="p-2.5 text-(--text-primary)">{cr.equipment_component_desc}</td>
-                                      <td className="p-2.5 text-center">
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                          cr.installed_status ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                                        }`}>
-                                          {cr.installed_status ? 'Installed' : 'Uninstalled'}
-                                        </span>
-                                      </td>
-                                      <td className="p-2.5 text-center font-mono font-bold">{cr.total_replacements}</td>
-                                      <td className="p-2.5 text-center font-mono">{cr.avg_service_run ?? 0} hrs/km</td>
-                                      <td className="p-2.5 text-right font-mono font-bold text-rose-600">
-                                        &#8369;{acqCost.toLocaleString()}
-                                      </td>
-                                      <td className="p-2.5 text-right font-mono font-semibold text-blue-600 dark:text-blue-400">
-                                        &#8369;{costPerRun.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                      </td>
-                                    </tr>
-                                  );
-                                })
-                              )}
-                            </tbody>
-                          </table>
+                                    return (
+                                      <tr key={idx} className="hover:bg-(--accent-subtle)">
+                                        <td className="p-2.5 font-bold font-mono text-rose-600">{cr.equipment_component_code}</td>
+                                        <td className="p-2.5 font-semibold text-blue-600 dark:text-blue-400">{cr.system_code}</td>
+                                        <td className="p-2.5 text-(--text-primary)">{cr.equipment_component_desc}</td>
+                                        <td className="p-2.5 text-center">
+                                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                            cr.installed_status ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                                          }`}>
+                                            {cr.installed_status ? 'Installed' : 'Uninstalled'}
+                                          </span>
+                                        </td>
+                                        <td className="p-2.5 text-center font-mono font-bold">{cr.total_replacements}</td>
+                                        <td className="p-2.5 text-center font-mono">{cr.avg_service_run ?? 0} hrs/km</td>
+                                        <td className="p-2.5 text-right font-mono font-bold text-rose-600">
+                                          &#8369;{acqCost.toLocaleString()}
+                                        </td>
+                                        <td className="p-2.5 text-right font-mono font-semibold text-blue-600 dark:text-blue-400">
+                                          &#8369;{costPerRun.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                          <TablePagination
+                            totalItems={decoupledComponentReliability.length}
+                            currentPage={reliabilityPage}
+                            pageSize={reliabilityPageSize}
+                            onPageChange={setReliabilityPage}
+                            onPageSizeChange={setReliabilityPageSize}
+                          />
                         </div>
                       </div>
                     </div>
