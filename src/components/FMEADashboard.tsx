@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import {  
   SlidersHorizontal,
@@ -27,8 +27,108 @@ import {
   PieChart as PieIcon,
   ArrowLeft,
   Table as TableIcon,
-  Calendar
+  Calendar,
+  Check
 } from 'lucide-react';
+
+/* --- Reusable CustomDropdown Component --- */
+
+export interface DropdownOption<T extends string | number> {
+  value: T;
+  label: string;
+}
+
+interface CustomDropdownProps<T extends string | number> {
+  id?: string;
+  value: T;
+  options: DropdownOption<T>[];
+  onChange: (value: T) => void;
+  className?: string;
+  buttonClassName?: string;
+  menuClassName?: string;
+  openUpwards?: boolean;
+}
+
+function CustomDropdown<T extends string | number>({
+  id,
+  value,
+  options,
+  onChange,
+  className = '',
+  buttonClassName = '',
+  menuClassName = '',
+  openUpwards = false,
+}: CustomDropdownProps<T>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedOption = useMemo(
+    () => options.find((opt) => opt.value === value) || options[0],
+    [options, value]
+  );
+
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isOpen]);
+
+  return (
+    <div ref={containerRef} className={`relative ${className}`}>
+      <button
+        id={id}
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className={`flex items-center justify-between gap-2 text-left transition-colors focus:outline-none cursor-pointer ${buttonClassName}`}
+      >
+        <span className="truncate">{selectedOption?.label ?? ''}</span>
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-(--text-muted) shrink-0 transition-transform duration-150 ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {isOpen && (
+        <div
+          className={`absolute z-50 min-w-full w-max max-w-xs max-h-60 overflow-y-auto rounded-lg border border-(--border-main) bg-(--bg-elevated) shadow-xl py-1 ${
+            openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
+          } ${menuClassName}`}
+        >
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={String(opt.value)}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-left text-xs transition-colors cursor-pointer ${
+                  isSelected
+                    ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold'
+                    : 'text-(--text-primary) hover:bg-(--accent-subtle)'
+                }`}
+              >
+                <span className="truncate">{opt.label}</span>
+                {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* --- Interfaces --- */
 
@@ -140,6 +240,11 @@ function TablePagination({
   onPageSizeChange,
   pageSizeOptions = [10, 25, 50, 100]
 }: TablePaginationProps) {
+  const dropdownOptions = useMemo(
+    () => pageSizeOptions.map((size) => ({ value: size, label: String(size) })),
+    [pageSizeOptions]
+  );
+
   if (totalItems === 0) return null;
 
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -156,23 +261,19 @@ function TablePagination({
           <strong className="text-(--text-primary) font-mono">{totalItems.toLocaleString()}</strong>
         </span>
         <span className="text-(--border-main)">|</span>
-        <label className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5">
           <span>Rows:</span>
-          <select
+          <CustomDropdown
             value={pageSize}
-            onChange={(e) => {
-              onPageSizeChange(Number(e.target.value));
+            options={dropdownOptions}
+            openUpwards
+            onChange={(val) => {
+              onPageSizeChange(Number(val));
               onPageChange(1);
             }}
-            className="bg-(--bg-surface) border border-(--border-main) text-(--text-primary) rounded px-1.5 py-0.5 text-[11px] font-mono focus:outline-none cursor-pointer"
-          >
-            {pageSizeOptions.map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
-        </label>
+            buttonClassName="bg-(--bg-surface) border border-(--border-main) text-(--text-primary) rounded px-1.5 py-0.5 text-[11px] font-mono"
+          />
+        </div>
       </div>
 
       <div className="flex items-center gap-1.5">
@@ -1029,6 +1130,58 @@ export function FMEADashboard() {
     return baseList;
   }, [componentReliability, filterSystemGroup, reliabilityKpiFilter]);
 
+  /* --- Dropdown Options --- */
+  const riskSourceOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: 'ALL', label: 'All Categories' },
+      { value: 'Unsafe Act', label: 'Unsafe Acts' },
+      { value: 'Unsafe Condition', label: 'Unsafe Conditions' },
+      { value: 'Work Cause', label: 'Work Causes' },
+      { value: 'Personal Factor', label: 'Personal Factors' }
+    ],
+    []
+  );
+
+  const controlStatusOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: 'ALL', label: 'All Controls' },
+      { value: 'Control Documented', label: 'Control Documented' },
+      { value: 'Missing Control', label: 'Missing Control' }
+    ],
+    []
+  );
+
+  const potentialEffectStatusOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: 'ALL', label: 'All Potential Effects' },
+      { value: 'Potential Effect Documented', label: 'Potential Effect Documented' },
+      { value: 'Missing Potential Effect', label: 'Missing Potential Effect' }
+    ],
+    []
+  );
+
+  const severityLevelOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: 'ALL', label: `All Severities (${periodIncidents.length})` },
+      { value: 'Critical', label: `Critical (${periodIncidents.filter(i => matchesSeverityFilter(i.severity_level, 'Critical')).length})` },
+      { value: 'High', label: `High (${periodIncidents.filter(i => matchesSeverityFilter(i.severity_level, 'High')).length})` },
+      { value: 'Medium', label: `Medium (${periodIncidents.filter(i => matchesSeverityFilter(i.severity_level, 'Medium')).length})` },
+      { value: 'Low/Moderate', label: `Low/Moderate (${periodIncidents.filter(i => matchesSeverityFilter(i.severity_level, 'Low/Moderate')).length})` }
+    ],
+    [periodIncidents]
+  );
+
+  const systemGroupOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: 'ALL', label: `All Systems (${systemAggregates.reduce((acc, s) => acc + s.count, 0)} components)` },
+      ...systemAggregates.map((sys) => ({
+        value: sys.systemCode,
+        label: `[${sys.systemCode}] ${sys.systemDesc} (${sys.count} components)`
+      }))
+    ],
+    [systemAggregates]
+  );
+
   /* --- Paginated Slices --- */
   const paginatedFmeaInspectorItems = useMemo(
     () =>
@@ -1226,58 +1379,47 @@ export function FMEADashboard() {
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div>
                             <label htmlFor="filterRiskSource" className="text-[10px] font-bold uppercase text-(--text-muted)">Risk Category Source</label>
-                            <select
+                            <CustomDropdown
                               id="filterRiskSource"
-                              name="filterRiskSource"
                               value={filterRiskSource}
-                              onChange={(e) => {
-                                setFilterRiskSource(e.target.value);
+                              options={riskSourceOptions}
+                              onChange={(val) => {
+                                setFilterRiskSource(val);
                                 setFmeaInspectorPage(1);
                               }}
-                              className="w-full mt-1 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2.5 py-1.5 focus:outline-none font-medium"
-                            >
-                              <option value="ALL">All Categories</option>
-                              <option value="Unsafe Act">Unsafe Acts</option>
-                              <option value="Unsafe Condition">Unsafe Conditions</option>
-                              <option value="Work Cause">Work Causes</option>
-                              <option value="Personal Factor">Personal Factors</option>
-                            </select>
+                              className="mt-1"
+                              buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2.5 py-1.5 font-medium"
+                            />
                           </div>
 
                           <div>
                             <label htmlFor="filterControlStatus" className="text-[10px] font-bold uppercase text-(--text-muted)">Control Status</label>
-                            <select
+                            <CustomDropdown
                               id="filterControlStatus"
-                              name="filterControlStatus"
                               value={filterControlStatus}
-                              onChange={(e) => {
-                                setFilterControlStatus(e.target.value);
+                              options={controlStatusOptions}
+                              onChange={(val) => {
+                                setFilterControlStatus(val);
                                 setFmeaInspectorPage(1);
                               }}
-                              className="w-full mt-1 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2.5 py-1.5 focus:outline-none font-medium"
-                            >
-                              <option value="ALL">All Controls</option>
-                              <option value="Control Documented">Control Documented</option>
-                              <option value="Missing Control">Missing Control</option>
-                            </select>
+                              className="mt-1"
+                              buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2.5 py-1.5 font-medium"
+                            />
                           </div>
 
                           <div>
                             <label htmlFor="filterPotentialEffectStatus" className="text-[10px] font-bold uppercase text-(--text-muted)">Potential Effects Status</label>
-                            <select
+                            <CustomDropdown
                               id="filterPotentialEffectStatus"
-                              name="filterPotentialEffectStatus"
                               value={filterPotentialEffectStatus}
-                              onChange={(e) => {
-                                setFilterPotentialEffectStatus(e.target.value);
+                              options={potentialEffectStatusOptions}
+                              onChange={(val) => {
+                                setFilterPotentialEffectStatus(val);
                                 setFmeaInspectorPage(1);
                               }}
-                              className="w-full mt-1 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2.5 py-1.5 focus:outline-none font-medium"
-                            >
-                              <option value="ALL">All Potential Effects</option>
-                              <option value="Potential Effect Documented">Potential Effect Documented</option>
-                              <option value="Missing Potential Effect">Missing Potential Effect</option>
-                            </select>
+                              className="mt-1"
+                              buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2.5 py-1.5 font-medium"
+                            />
                           </div>
                         </div>
 
@@ -1602,31 +1744,16 @@ export function FMEADashboard() {
                             Live Incident & Vehicle Hazard Log
                           </h3>
                         </div>
-                        <select
+                        <CustomDropdown
                           value={filterSeverityLevel}
-                          onChange={(e) => {
-                            setFilterSeverityLevel(e.target.value);
+                          options={severityLevelOptions}
+                          onChange={(val) => {
+                            setFilterSeverityLevel(val);
                             setSelectedIncidentMatrixCell(null);
                             setIncidentInspectorPage(1);
                           }}
-                          className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2.5 py-1 focus:outline-none font-semibold cursor-pointer"
-                        >
-                          <option value="ALL">
-                            All Severities ({periodIncidents.length})
-                          </option>
-                          <option value="Critical">
-                            Critical ({periodIncidents.filter(i => matchesSeverityFilter(i.severity_level, 'Critical')).length})
-                          </option>
-                          <option value="High">
-                            High ({periodIncidents.filter(i => matchesSeverityFilter(i.severity_level, 'High')).length})
-                          </option>
-                          <option value="Medium">
-                            Medium ({periodIncidents.filter(i => matchesSeverityFilter(i.severity_level, 'Medium')).length})
-                          </option>
-                          <option value="Low/Moderate">
-                            Low/Moderate ({periodIncidents.filter(i => matchesSeverityFilter(i.severity_level, 'Low/Moderate')).length})
-                          </option>
-                        </select>
+                          buttonClassName="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2.5 py-1 font-semibold"
+                        />
                       </div>
 
                       <div className="p-4 bg-(--bg-surface) border border-(--border-main) rounded-xl space-y-3 shadow-xs">
@@ -2395,21 +2522,15 @@ export function FMEADashboard() {
                         </div>
 
                         <div className="w-full sm:w-auto min-w-72">
-                          <select
+                          <CustomDropdown
                             value={filterSystemGroup}
-                            onChange={(e) => {
-                              setFilterSystemGroup(e.target.value);
+                            options={systemGroupOptions}
+                            onChange={(val) => {
+                              setFilterSystemGroup(val);
                               setReliabilityPage(1);
                             }}
-                            className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-3 py-2 focus:outline-none font-semibold cursor-pointer shadow-xs"
-                          >
-                            <option value="ALL">All Systems ({systemAggregates.reduce((acc, s) => acc + s.count, 0)} components)</option>
-                            {systemAggregates.map((sys, idx) => (
-                              <option key={idx} value={sys.systemCode}>
-                                [{sys.systemCode}] {sys.systemDesc} ({sys.count} components)
-                              </option>
-                            ))}
-                          </select>
+                            buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-3 py-2 font-semibold shadow-xs"
+                          />
                         </div>
                       </div>
 

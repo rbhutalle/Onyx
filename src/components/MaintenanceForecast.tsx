@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Calendar, Loader2, AlertCircle, RefreshCw, Sliders, Filter, Car, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { CustomDropdown } from './ui/CustomDropdown';
 
 interface PredictiveRow {
   pm_level: string;
@@ -138,7 +139,7 @@ export function MaintenanceForecast() {
       )}
 
       {/* Main Content Body Container */}
-      <div className="bg-(--bg-elevated) border border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3 flex flex-col flex-1 min-h-0">
+      <div className="bg-(--bg-elevated) border border-(--border-main) rounded-xl p-4 shadow-xl overflow-visible space-y-3 flex flex-col flex-1 min-h-0">
         
         {/* Table Header & Collapsible Controls Toolbar */}
         <div className="border-b border-(--border-main) pb-3 space-y-3 shrink-0">
@@ -172,16 +173,20 @@ export function MaintenanceForecast() {
               {/* PM Level Filter Dropdown */}
               <div className="flex items-center gap-1.5 shrink-0">
                 <Filter className="w-3.5 h-3.5 text-(--text-muted)" />
-                <select
-                  value={pmLevelFilter}
-                  onChange={(e) => setPmLevelFilter(e.target.value)}
-                  className="bg-(--bg-elevated) border border-(--border-main) rounded-lg px-2.5 py-1.5 text-xs text-(--text-primary) focus:outline-none focus:border-(--text-primary) cursor-pointer"
-                >
-                  <option value="all">All PM Levels</option>
-                  {uniquePmLevels.map((level) => (
-                    <option key={level} value={level}>{level}</option>
-                  ))}
-                </select>
+                <div className="min-w-36">
+                  <CustomDropdown
+                    value={pmLevelFilter}
+                    onChange={(val: string) => setPmLevelFilter(val)}
+                    placeholder="All PM Levels"
+                    options={[
+                      { value: 'all', label: 'All PM Levels' },
+                      ...uniquePmLevels.map((level) => ({
+                        value: level,
+                        label: level
+                      }))
+                    ]}
+                  />
+                </div>
               </div>
 
               {/* Collapse / Expand Controls Toggle Button */}

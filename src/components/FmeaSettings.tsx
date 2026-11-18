@@ -221,6 +221,89 @@ interface CauseFmeaDetRecord {
   created_at: string;
 }
 
+interface DropdownOption {
+  value: string;
+  label: string;
+}
+
+interface CustomDropdownProps {
+  value: string;
+  onChange: (value: string) => void;
+  options: DropdownOption[];
+  placeholder?: string;
+  disabled?: boolean;
+  className?: string;
+}
+
+// Reusable Custom Dropdown Component
+function CustomDropdown({
+  value,
+  onChange,
+  options,
+  placeholder = '-- Select --',
+  disabled = false,
+  className = '',
+}: CustomDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedOption = options.find(opt => String(opt.value) === String(value));
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className={`relative ${className}`} ref={containerRef}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen(prev => !prev)}
+        className={`w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) px-3 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+          isOpen ? 'border-(--text-primary)' : ''
+        }`}
+      >
+        <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
+        <ChevronDown className={`w-3.5 h-3.5 text-(--text-muted) transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-(--bg-elevated) border border-(--border-main) rounded-lg shadow-xl max-h-60 overflow-y-auto py-1 text-xs">
+          {options.length === 0 ? (
+            <div className="px-3 py-2 text-(--text-muted) italic text-center">No options available</div>
+          ) : (
+            options.map(opt => {
+              const isSelected = String(opt.value) === String(value);
+              return (
+                <div
+                  key={opt.value}
+                  onClick={() => {
+                    onChange(opt.value);
+                    setIsOpen(false);
+                  }}
+                  className={`px-3 py-2 cursor-pointer transition-colors truncate ${
+                    isSelected 
+                      ? 'bg-(--accent-subtle) font-semibold text-(--text-primary)' 
+                      : 'text-(--text-secondary) hover:bg-(--accent-subtle) hover:text-(--text-primary)'
+                  }`}
+                >
+                  {opt.label}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function FmeaSettings() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -1550,7 +1633,7 @@ export function FmeaSettings() {
                       {filteredConditions.length === 0 ? (
                         <tr><td colSpan={9} className="p-4 text-center text-(--text-muted)">No condition FMEA records found.</td></tr>
                       ) : (
-                        paginateData(filteredConditions).map((item, idx) => {
+                        paginateData(filteredConditions).map((item, _idx) => {
                           const matchedDetail = conditionDetailsList.find(d => d.detail_id === item.detail_id);
                           const matchedEffect = effectsList.find(e => e.potentialeffects_id === item.potentialeffects_id);
                           const matchedControl = controlsList.find(c => c.currentcontrols_id === item.currentcontrols_id);
@@ -1560,7 +1643,7 @@ export function FmeaSettings() {
                           const linkedDetRecords = conditionsFmeaDetList.filter(det => det.conditionsfmea_id === item.conditionsfmea_id);
 
                           return (
-                            <React.Fragment key={`cond-fragment-${item.conditionsfmea_id || idx}`}>
+                            <React.Fragment key={`cond-fragment-${item.conditionsfmea_id || _idx}`}>
                               <tr className="hover:bg-(--accent-subtle) transition-colors">
                                 <td className="py-2 px-2 text-center">
                                   <button
@@ -1638,10 +1721,10 @@ export function FmeaSettings() {
                                             </tr>
                                           </thead>
                                           <tbody className="divide-y divide-(--border-main)/60 text-(--text-secondary)">
-                                            {linkedDetRecords.map((det, sIdx) => {
+                                            {linkedDetRecords.map((det, _sIdx) => {
                                               const std = taskStandardsList.find(ts => ts.task_standard_id === det.task_standard_id);
                                               return (
-                                                <tr key={`cond-std-${det.conditions_fmea_det_id || sIdx}`}>
+                                                <tr key={`cond-std-${det.conditions_fmea_det_id || _sIdx}`}>
                                                   <td className="py-1.5 px-2 text-(--text-primary)">{std?.task_standard_desc || '—'}</td>
                                                   <td className="py-1.5 px-2 text-(--text-primary)">{std?.item || '—'}</td>
                                                   <td className="py-1.5 px-2 font-mono text-center text-(--text-primary)">{std?.standard_time ?? '0'}</td>
@@ -1712,7 +1795,7 @@ export function FmeaSettings() {
                       {filteredActs.length === 0 ? (
                         <tr><td colSpan={9} className="p-4 text-center text-(--text-muted)">No act FMEA records found.</td></tr>
                       ) : (
-                        paginateData(filteredActs).map((item, idx) => {
+                        paginateData(filteredActs).map((item, _idx) => {
                           const matchedDetail = actDetailsList.find(d => d.detail_id === item.detail_id);
                           const matchedEffect = effectsList.find(e => e.potentialeffects_id === item.potentialeffects_id);
                           const matchedControl = controlsList.find(c => c.currentcontrols_id === item.currentcontrols_id);
@@ -1722,7 +1805,7 @@ export function FmeaSettings() {
                           const linkedDetRecords = actFmeaDetList.filter(det => det.actfmea_id === item.actfmea_id);
 
                           return (
-                            <React.Fragment key={`act-fragment-${item.actfmea_id || idx}`}>
+                            <React.Fragment key={`act-fragment-${item.actfmea_id || _idx}`}>
                               <tr className="hover:bg-(--accent-subtle) transition-colors">
                                 <td className="py-2 px-2 text-center">
                                   <button
@@ -1802,10 +1885,10 @@ export function FmeaSettings() {
                                             </tr>
                                           </thead>
                                           <tbody className="divide-y divide-(--border-main)/60 text-(--text-secondary)">
-                                            {linkedDetRecords.map((det, sIdx) => {
+                                            {linkedDetRecords.map((det, _sIdx) => {
                                               const std = taskStandardsList.find(ts => ts.task_standard_id === det.task_standard_id);
                                               return (
-                                                <tr key={`act-std-${det.act_fmea_det_id || sIdx}`}>
+                                                <tr key={`act-std-${det.act_fmea_det_id || _sIdx}`}>
                                                   <td className="py-1.5 px-2 text-(--text-primary)">{std?.task_standard_desc || '—'}</td>
                                                   <td className="py-1.5 px-2 text-(--text-primary)">{std?.item || '—'}</td>
                                                   <td className="py-1.5 px-2 font-mono text-center text-(--text-primary)">{std?.standard_time ?? '0'}</td>
@@ -1876,20 +1959,20 @@ export function FmeaSettings() {
                       {filteredFactors.length === 0 ? (
                         <tr><td colSpan={9} className="p-4 text-center text-(--text-muted)">No factor FMEA records found.</td></tr>
                       ) : (
-                        paginateData(filteredFactors).map((item, idx) => {
+                        paginateData(filteredFactors).map((item, _idx) => {
                           const matchedDetail = factorDetailsList.find(d => d.detail_id === item.detail_id);
                           const matchedEffect = effectsList.find(e => e.potentialeffects_id === item.potentialeffects_id);
                           const matchedControl = controlsList.find(c => c.currentcontrols_id === item.currentcontrols_id);
                           const computedRpn = item.computed_rpn ?? ((item.sev_id || 0) * (item.occ_id || 0) * (item.det_id || 0));
 
-                          const recId = item.factors_fmea_id || item.factor_fmea_id || item.conditions_fmea_id || item.id || `factor-${idx}`;
+                          const recId = item.factors_fmea_id || item.factor_fmea_id || item.conditions_fmea_id || item.id || `factor-${_idx}`;
                           const pkCol = item.factors_fmea_id ? 'factors_fmea_id' : item.factor_fmea_id ? 'factor_fmea_id' : 'id';
                           const isExpanded = expandedFactorRowId === recId;
 
                           const linkedDetRecords = factorsFmeaDetList.filter(det => det.factors_fmea_id === recId);
 
                           return (
-                            <React.Fragment key={`factor-fragment-${recId}-${idx}`}>
+                            <React.Fragment key={`factor-fragment-${recId}-${_idx}`}>
                               <tr className="hover:bg-(--accent-subtle) transition-colors">
                                 <td className="py-2 px-2 text-center">
                                   <button
@@ -1970,10 +2053,10 @@ export function FmeaSettings() {
                                             </tr>
                                           </thead>
                                           <tbody className="divide-y divide-(--border-main)/60 text-(--text-secondary)">
-                                            {linkedDetRecords.map((det, sIdx) => {
+                                            {linkedDetRecords.map((det, _sIdx) => {
                                               const std = taskStandardsList.find(ts => ts.task_standard_id === det.task_standard_id);
                                               return (
-                                                <tr key={`factor-std-${det.factors_fmea_det_id || sIdx}`}>
+                                                <tr key={`factor-std-${det.factors_fmea_det_id || _sIdx}`}>
                                                   <td className="py-1.5 px-2 text-(--text-primary)">{std?.task_standard_desc || '—'}</td>
                                                   <td className="py-1.5 px-2 text-(--text-primary)">{std?.item || '—'}</td>
                                                   <td className="py-1.5 px-2 font-mono text-center text-(--text-primary)">{std?.standard_time ?? '0'}</td>
@@ -2044,7 +2127,7 @@ export function FmeaSettings() {
                       {filteredCauses.length === 0 ? (
                         <tr><td colSpan={9} className="p-4 text-center text-(--text-muted)">No cause FMEA records found.</td></tr>
                       ) : (
-                        paginateData(filteredCauses).map((item, idx) => {
+                        paginateData(filteredCauses).map((item, _idx) => {
                           const matchedDetail = causeDetailsList.find(d => d.detail_id === item.detail_id);
                           const matchedEffect = effectsList.find(e => e.potentialeffects_id === item.potentialeffects_id);
                           const matchedControl = controlsList.find(c => c.currentcontrols_id === item.currentcontrols_id);
@@ -2054,7 +2137,7 @@ export function FmeaSettings() {
                           const linkedDetRecords = causeFmeaDetList.filter(det => det.cause_fmea_id === item.cause_fmea_id);
 
                           return (
-                            <React.Fragment key={`cause-fragment-${item.cause_fmea_id || idx}`}>
+                            <React.Fragment key={`cause-fragment-${item.cause_fmea_id || _idx}`}>
                               <tr className="hover:bg-(--accent-subtle) transition-colors">
                                 <td className="py-2 px-2 text-center">
                                   <button
@@ -2134,10 +2217,10 @@ export function FmeaSettings() {
                                             </tr>
                                           </thead>
                                           <tbody className="divide-y divide-(--border-main)/60 text-(--text-secondary)">
-                                            {linkedDetRecords.map((det, sIdx) => {
+                                            {linkedDetRecords.map((det, _sIdx) => {
                                               const std = taskStandardsList.find(ts => ts.task_standard_id === det.task_standard_id);
                                               return (
-                                                <tr key={`cause-std-${det.cause_fmea_det_id || sIdx}`}>
+                                                <tr key={`cause-std-${det.cause_fmea_det_id || _sIdx}`}>
                                                   <td className="py-1.5 px-2 text-(--text-primary)">{std?.task_standard_desc || '—'}</td>
                                                   <td className="py-1.5 px-2 text-(--text-primary)">{std?.item || '—'}</td>
                                                   <td className="py-1.5 px-2 font-mono text-center text-(--text-primary)">{std?.standard_time ?? '0'}</td>
@@ -2222,8 +2305,8 @@ export function FmeaSettings() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                      {filteredControls.map((c, idx) => (
-                        <tr key={`ctrl-${c.currentcontrols_id || idx}`} className="hover:bg-(--accent-subtle)">
+                      {filteredControls.map((c, _idx) => (
+                        <tr key={`ctrl-${c.currentcontrols_id || _idx}`} className="hover:bg-(--accent-subtle)">
                           <td className="py-2 px-3 text-(--text-primary)">{c.currentcontrols_desc}</td>
                           <td className="py-2 px-3 text-right">
                             <div className="flex items-center justify-end gap-2">
@@ -2263,8 +2346,8 @@ export function FmeaSettings() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                      {filteredEffects.map((e, idx) => (
-                        <tr key={`eff-${e.potentialeffects_id || idx}`} className="hover:bg-(--accent-subtle)">
+                      {filteredEffects.map((e, _idx) => (
+                        <tr key={`eff-${e.potentialeffects_id || _idx}`} className="hover:bg-(--accent-subtle)">
                           <td className="py-2 px-3 text-(--text-primary)">{e.potentialeffects_desc}</td>
                           <td className="py-2 px-3 text-right">
                             <div className="flex items-center justify-end gap-2">
@@ -2297,19 +2380,19 @@ export function FmeaSettings() {
               {rpnSubTab === 'severity' && (
                 <table className="w-full text-left border-collapse text-xs">
                   <thead><tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle)"><th className="py-2 px-3 w-16">ID</th><th className="py-2 px-3">Severity Description</th></tr></thead>
-                  <tbody className="divide-y divide-(--border-main)">{severityList.map((s, idx) => (<tr key={`sev-tab-${s.sev_id || idx}`} className="hover:bg-(--accent-subtle)"><td className="py-2 px-3 font-bold font-mono">{s.sev_id}</td><td className="py-2 px-3">{s.sev_description || '—'}</td></tr>))}</tbody>
+                  <tbody className="divide-y divide-(--border-main)">{severityList.map((s, _idx) => (<tr key={`sev-tab-${s.sev_id || _idx}`} className="hover:bg-(--accent-subtle)"><td className="py-2 px-3 font-bold font-mono">{s.sev_id}</td><td className="py-2 px-3">{s.sev_description || '—'}</td></tr>))}</tbody>
                 </table>
               )}
               {rpnSubTab === 'occurrence' && (
                 <table className="w-full text-left border-collapse text-xs">
                   <thead><tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle)"><th className="py-2 px-3 w-16">ID</th><th className="py-2 px-3">Occurrence Description</th></tr></thead>
-                  <tbody className="divide-y divide-(--border-main)">{occurrenceList.map((o, idx) => (<tr key={`occ-tab-${o.occ_id || idx}`} className="hover:bg-(--accent-subtle)"><td className="py-2 px-3 font-bold font-mono">{o.occ_id}</td><td className="py-2 px-3">{o.occ_description || '—'}</td></tr>))}</tbody>
+                  <tbody className="divide-y divide-(--border-main)">{occurrenceList.map((o, _idx) => (<tr key={`occ-tab-${o.occ_id || _idx}`} className="hover:bg-(--accent-subtle)"><td className="py-2 px-3 font-bold font-mono">{o.occ_id}</td><td className="py-2 px-3">{o.occ_description || '—'}</td></tr>))}</tbody>
                 </table>
               )}
               {rpnSubTab === 'detection' && (
                 <table className="w-full text-left border-collapse text-xs">
                   <thead><tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle)"><th className="py-2 px-3 w-16">ID</th><th className="py-2 px-3">Detection Description</th></tr></thead>
-                  <tbody className="divide-y divide-(--border-main)">{detectionList.map((d, idx) => (<tr key={`det-tab-${d.det_id || idx}`} className="hover:bg-(--accent-subtle)"><td className="py-2 px-3 font-bold font-mono">{d.det_id}</td><td className="py-2 px-3">{d.det_description || '—'}</td></tr>))}</tbody>
+                  <tbody className="divide-y divide-(--border-main)">{detectionList.map((d, _idx) => (<tr key={`det-tab-${d.det_id || _idx}`} className="hover:bg-(--accent-subtle)"><td className="py-2 px-3 font-bold font-mono">{d.det_id}</td><td className="py-2 px-3">{d.det_description || '—'}</td></tr>))}</tbody>
                 </table>
               )}
             </div>
@@ -2343,18 +2426,18 @@ export function FmeaSettings() {
                 <label className="text-xs font-semibold text-(--text-primary) mb-1 flex items-center gap-1">
                   <Filter className="w-3.5 h-3.5" /> Filter by Equipment Task
                 </label>
-                <select
+                <CustomDropdown
                   value={taskFilterId}
-                  onChange={(e) => setTaskFilterId(e.target.value)}
-                  className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-1.5 text-xs"
-                >
-                  <option value="">All Equipment Tasks</option>
-                  {equipmentTasksList.map((t) => (
-                    <option key={t.task_id} value={t.task_id}>
-                      {t.task_name} {t.task_description ? `(${t.task_description})` : ''}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setTaskFilterId(val)}
+                  placeholder="All Equipment Tasks"
+                  options={[
+                    { value: '', label: 'All Equipment Tasks' },
+                    ...equipmentTasksList.map((t) => ({
+                      value: t.task_id,
+                      label: `${t.task_name} ${t.task_description ? `(${t.task_description})` : ''}`,
+                    }))
+                  ]}
+                />
               </div>
 
               <div>
@@ -2455,17 +2538,37 @@ export function FmeaSettings() {
               <div className="overflow-y-auto space-y-4 p-1 flex-1">
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Unsafe Condition</label>
-                  <select value={modalConditionId} onChange={(e) => { setModalConditionId(e.target.value); setModalDetailId(''); }} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Condition...</option>
-                    {conditionsList.map((cond, idx) => <option key={`cond-opt-${cond.condition_id || idx}`} value={cond.condition_id}>{cond.code || ''} - {cond.description || cond.condition_desc || cond.name || 'Condition'}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={modalConditionId}
+                    onChange={(val) => {
+                      setModalConditionId(val);
+                      setModalDetailId('');
+                    }}
+                    placeholder="Select Condition..."
+                    options={[
+                      { value: '', label: 'Select Condition...' },
+                      ...conditionsList.map((cond) => ({
+                        value: cond.condition_id,
+                        label: `${cond.code || ''} - ${cond.description || cond.condition_desc || cond.name || 'Condition'}`,
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Condition Detail</label>
-                  <select value={modalDetailId} onChange={(e) => setModalDetailId(e.target.value)} disabled={!modalConditionId} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs disabled:opacity-50">
-                    <option value="">{modalConditionId ? 'Select Condition Detail...' : '— Select Unsafe Condition First —'}</option>
-                    {modalFilteredDetails.map((det, idx) => <option key={`cond-det-opt-${det.detail_id || idx}`} value={det.detail_id}>{det.code || ''} - {det.description || ''}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={modalDetailId}
+                    onChange={(val) => setModalDetailId(val)}
+                    disabled={!modalConditionId}
+                    placeholder={modalConditionId ? 'Select Condition Detail...' : '— Select Unsafe Condition First —'}
+                    options={[
+                      { value: '', label: modalConditionId ? 'Select Condition Detail...' : '— Select Unsafe Condition First —' },
+                      ...modalFilteredDetails.map((det) => ({
+                        value: det.detail_id,
+                        label: `${det.code || ''} - ${det.description || ''}`,
+                      }))
+                    ]}
+                  />
                 </div>
 
                 {/* Potential Effect with Search/Filter */}
@@ -2482,10 +2585,18 @@ export function FmeaSettings() {
                         className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg pl-8 pr-3 py-1 text-xs"
                       />
                     </div>
-                    <select value={modalPotentialEffectId} onChange={(e) => setModalPotentialEffectId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Select Potential Effect...</option>
-                      {filteredModalEffects.map((eff, idx) => <option key={`cond-eff-opt-${eff.potentialeffects_id || idx}`} value={eff.potentialeffects_id}>{eff.potentialeffects_desc}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={modalPotentialEffectId}
+                      onChange={(val) => setModalPotentialEffectId(val)}
+                      placeholder="Select Potential Effect..."
+                      options={[
+                        { value: '', label: 'Select Potential Effect...' },
+                        ...filteredModalEffects.map((eff) => ({
+                          value: eff.potentialeffects_id,
+                          label: eff.potentialeffects_desc || '',
+                        }))
+                      ]}
+                    />
                   </div>
                 </div>
 
@@ -2503,34 +2614,66 @@ export function FmeaSettings() {
                         className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg pl-8 pr-3 py-1 text-xs"
                       />
                     </div>
-                    <select value={modalCurrentControlId} onChange={(e) => setModalCurrentControlId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Select Current Control...</option>
-                      {filteredModalControls.map((ctrl, idx) => <option key={`cond-ctrl-opt-${ctrl.currentcontrols_id || idx}`} value={ctrl.currentcontrols_id}>{ctrl.currentcontrols_desc}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={modalCurrentControlId}
+                      onChange={(val) => setModalCurrentControlId(val)}
+                      placeholder="Select Current Control..."
+                      options={[
+                        { value: '', label: 'Select Current Control...' },
+                        ...filteredModalControls.map((ctrl) => ({
+                          value: ctrl.currentcontrols_id,
+                          label: ctrl.currentcontrols_desc || '',
+                        }))
+                      ]}
+                    />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-4 gap-2 items-end">
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Severity</label>
-                    <select value={modalSevId} onChange={(e) => setModalSevId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Sev</option>
-                      {severityList.map((s, idx) => <option key={`sev-opt-${s.sev_id ?? idx}`} value={s.sev_id}>{s.sev_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={modalSevId}
+                      onChange={(val) => setModalSevId(val)}
+                      placeholder="Sev"
+                      options={[
+                        { value: '', label: 'Sev' },
+                        ...severityList.map((s) => ({
+                          value: String(s.sev_id),
+                          label: String(s.sev_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Occurrence</label>
-                    <select value={modalOccId} onChange={(e) => setModalOccId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Occ</option>
-                      {occurrenceList.map((o, idx) => <option key={`occ-opt-${o.occ_id ?? idx}`} value={o.occ_id}>{o.occ_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={modalOccId}
+                      onChange={(val) => setModalOccId(val)}
+                      placeholder="Occ"
+                      options={[
+                        { value: '', label: 'Occ' },
+                        ...occurrenceList.map((o) => ({
+                          value: String(o.occ_id),
+                          label: String(o.occ_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Detection</label>
-                    <select value={modalDetId} onChange={(e) => setModalDetId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Det</option>
-                      {detectionList.map((d, idx) => <option key={`det-opt-${d.det_id ?? idx}`} value={d.det_id}>{d.det_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={modalDetId}
+                      onChange={(val) => setModalDetId(val)}
+                      placeholder="Det"
+                      options={[
+                        { value: '', label: 'Det' },
+                        ...detectionList.map((d) => ({
+                          value: String(d.det_id),
+                          label: String(d.det_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">RPN</label>
@@ -2562,17 +2705,37 @@ export function FmeaSettings() {
               <div className="overflow-y-auto space-y-4 p-1 flex-1">
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Unsafe Condition</label>
-                  <select value={editConditionId} onChange={(e) => { setEditConditionId(e.target.value); setEditDetailId(''); }} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Condition...</option>
-                    {conditionsList.map((cond, idx) => <option key={`cond-edit-opt-${cond.condition_id || idx}`} value={cond.condition_id}>{cond.code || ''} - {cond.description || cond.condition_desc || cond.name || 'Condition'}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={editConditionId}
+                    onChange={(val) => {
+                      setEditConditionId(val);
+                      setEditDetailId('');
+                    }}
+                    placeholder="Select Condition..."
+                    options={[
+                      { value: '', label: 'Select Condition...' },
+                      ...conditionsList.map((cond) => ({
+                        value: cond.condition_id,
+                        label: `${cond.code || ''} - ${cond.description || cond.condition_desc || cond.name || 'Condition'}`,
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Condition Detail</label>
-                  <select value={editDetailId} onChange={(e) => setEditDetailId(e.target.value)} disabled={!editConditionId} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs disabled:opacity-50">
-                    <option value="">{editConditionId ? 'Select Condition Detail...' : '— Select Unsafe Condition First —'}</option>
-                    {editFilteredDetails.map((det, idx) => <option key={`cond-edit-det-opt-${det.detail_id || idx}`} value={det.detail_id}>{det.code || ''} - {det.description || ''}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={editDetailId}
+                    onChange={(val) => setEditDetailId(val)}
+                    disabled={!editConditionId}
+                    placeholder={editConditionId ? 'Select Condition Detail...' : '— Select Unsafe Condition First —'}
+                    options={[
+                      { value: '', label: editConditionId ? 'Select Condition Detail...' : '— Select Unsafe Condition First —' },
+                      ...editFilteredDetails.map((det) => ({
+                        value: det.detail_id,
+                        label: `${det.code || ''} - ${det.description || ''}`,
+                      }))
+                    ]}
+                  />
                 </div>
 
                 {/* Edit Potential Effect with Search/Filter */}
@@ -2589,10 +2752,18 @@ export function FmeaSettings() {
                         className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg pl-8 pr-3 py-1 text-xs"
                       />
                     </div>
-                    <select value={editPotentialEffectId} onChange={(e) => setEditPotentialEffectId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Select Potential Effect...</option>
-                      {filteredEditModalEffects.map((eff, idx) => <option key={`cond-edit-eff-opt-${eff.potentialeffects_id || idx}`} value={eff.potentialeffects_id}>{eff.potentialeffects_desc}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={editPotentialEffectId}
+                      onChange={(val) => setEditPotentialEffectId(val)}
+                      placeholder="Select Potential Effect..."
+                      options={[
+                        { value: '', label: 'Select Potential Effect...' },
+                        ...filteredEditModalEffects.map((eff) => ({
+                          value: eff.potentialeffects_id,
+                          label: eff.potentialeffects_desc || '',
+                        }))
+                      ]}
+                    />
                   </div>
                 </div>
 
@@ -2610,34 +2781,66 @@ export function FmeaSettings() {
                         className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg pl-8 pr-3 py-1 text-xs"
                       />
                     </div>
-                    <select value={editCurrentControlId} onChange={(e) => setEditCurrentControlId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Select Current Control...</option>
-                      {filteredEditModalControls.map((ctrl, idx) => <option key={`cond-edit-ctrl-opt-${ctrl.currentcontrols_id || idx}`} value={ctrl.currentcontrols_id}>{ctrl.currentcontrols_desc}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={editCurrentControlId}
+                      onChange={(val) => setEditCurrentControlId(val)}
+                      placeholder="Select Current Control..."
+                      options={[
+                        { value: '', label: 'Select Current Control...' },
+                        ...filteredEditModalControls.map((ctrl) => ({
+                          value: ctrl.currentcontrols_id,
+                          label: ctrl.currentcontrols_desc || '',
+                        }))
+                      ]}
+                    />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-4 gap-2 items-end">
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Severity</label>
-                    <select value={editSevId} onChange={(e) => setEditSevId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Sev</option>
-                      {severityList.map((s, idx) => <option key={`sev-edit-opt-${s.sev_id ?? idx}`} value={s.sev_id}>{s.sev_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={editSevId}
+                      onChange={(val) => setEditSevId(val)}
+                      placeholder="Sev"
+                      options={[
+                        { value: '', label: 'Sev' },
+                        ...severityList.map((s) => ({
+                          value: String(s.sev_id),
+                          label: String(s.sev_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Occurrence</label>
-                    <select value={editOccId} onChange={(e) => setEditOccId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Occ</option>
-                      {occurrenceList.map((o, idx) => <option key={`occ-edit-opt-${o.occ_id ?? idx}`} value={o.occ_id}>{o.occ_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={editOccId}
+                      onChange={(val) => setEditOccId(val)}
+                      placeholder="Occ"
+                      options={[
+                        { value: '', label: 'Occ' },
+                        ...occurrenceList.map((o) => ({
+                          value: String(o.occ_id),
+                          label: String(o.occ_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Detection</label>
-                    <select value={editDetId} onChange={(e) => setEditDetId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Det</option>
-                      {detectionList.map((d, idx) => <option key={`det-edit-opt-${d.det_id ?? idx}`} value={d.det_id}>{d.det_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={editDetId}
+                      onChange={(val) => setEditDetId(val)}
+                      placeholder="Det"
+                      options={[
+                        { value: '', label: 'Det' },
+                        ...detectionList.map((d) => ({
+                          value: String(d.det_id),
+                          label: String(d.det_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">RPN</label>
@@ -2669,17 +2872,37 @@ export function FmeaSettings() {
               <div className="overflow-y-auto space-y-4 p-1 flex-1">
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Unsafe Act</label>
-                  <select value={actModalActId} onChange={(e) => { setActModalActId(e.target.value); setActModalDetailId(''); }} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Act...</option>
-                    {actsList.map((act, idx) => <option key={`act-opt-${act.act_id || idx}`} value={act.act_id}>{act.code || ''} - {act.description || act.act_desc || act.name || 'Act'}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={actModalActId}
+                    onChange={(val) => {
+                      setActModalActId(val);
+                      setActModalDetailId('');
+                    }}
+                    placeholder="Select Act..."
+                    options={[
+                      { value: '', label: 'Select Act...' },
+                      ...actsList.map((act) => ({
+                        value: act.act_id,
+                        label: `${act.code || ''} - ${act.description || act.act_desc || act.name || 'Act'}`,
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Act Detail</label>
-                  <select value={actModalDetailId} onChange={(e) => setActModalDetailId(e.target.value)} disabled={!actModalActId} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs disabled:opacity-50">
-                    <option value="">{actModalActId ? 'Select Act Detail...' : '— Select Unsafe Act First —'}</option>
-                    {actModalFilteredDetails.map((det, idx) => <option key={`act-det-opt-${det.detail_id || idx}`} value={det.detail_id}>{det.code || ''} - {det.description || ''}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={actModalDetailId}
+                    onChange={(val) => setActModalDetailId(val)}
+                    disabled={!actModalActId}
+                    placeholder={actModalActId ? 'Select Act Detail...' : '— Select Unsafe Act First —'}
+                    options={[
+                      { value: '', label: actModalActId ? 'Select Act Detail...' : '— Select Unsafe Act First —' },
+                      ...actModalFilteredDetails.map((det) => ({
+                        value: det.detail_id,
+                        label: `${det.code || ''} - ${det.description || ''}`,
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Equipment Task Standard</label>
@@ -2715,39 +2938,79 @@ export function FmeaSettings() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Potential Effect</label>
-                  <select value={actModalPotentialEffectId} onChange={(e) => setActModalPotentialEffectId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Potential Effect...</option>
-                    {effectsList.map((eff, idx) => <option key={`act-eff-opt-${eff.potentialeffects_id || idx}`} value={eff.potentialeffects_id}>{eff.potentialeffects_desc}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={actModalPotentialEffectId}
+                    onChange={(val) => setActModalPotentialEffectId(val)}
+                    placeholder="Select Potential Effect..."
+                    options={[
+                      { value: '', label: 'Select Potential Effect...' },
+                      ...effectsList.map((eff) => ({
+                        value: eff.potentialeffects_id,
+                        label: eff.potentialeffects_desc || '',
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Current Control</label>
-                  <select value={actModalCurrentControlId} onChange={(e) => setActModalCurrentControlId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Current Control...</option>
-                    {controlsList.map((ctrl, idx) => <option key={`act-ctrl-opt-${ctrl.currentcontrols_id || idx}`} value={ctrl.currentcontrols_id}>{ctrl.currentcontrols_desc}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={actModalCurrentControlId}
+                    onChange={(val) => setActModalCurrentControlId(val)}
+                    placeholder="Select Current Control..."
+                    options={[
+                      { value: '', label: 'Select Current Control...' },
+                      ...controlsList.map((ctrl) => ({
+                        value: ctrl.currentcontrols_id,
+                        label: ctrl.currentcontrols_desc || '',
+                      }))
+                    ]}
+                  />
                 </div>
                 <div className="grid grid-cols-4 gap-2 items-end">
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Severity</label>
-                    <select value={actModalSevId} onChange={(e) => setActModalSevId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Sev</option>
-                      {severityList.map((s, idx) => <option key={`sev-act-opt-${s.sev_id ?? idx}`} value={s.sev_id}>{s.sev_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={actModalSevId}
+                      onChange={(val) => setActModalSevId(val)}
+                      placeholder="Sev"
+                      options={[
+                        { value: '', label: 'Sev' },
+                        ...severityList.map((s) => ({
+                          value: String(s.sev_id),
+                          label: String(s.sev_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Occurrence</label>
-                    <select value={actModalOccId} onChange={(e) => setActModalOccId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Occ</option>
-                      {occurrenceList.map((o, idx) => <option key={`occ-act-opt-${o.occ_id ?? idx}`} value={o.occ_id}>{o.occ_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={actModalOccId}
+                      onChange={(val) => setActModalOccId(val)}
+                      placeholder="Occ"
+                      options={[
+                        { value: '', label: 'Occ' },
+                        ...occurrenceList.map((o) => ({
+                          value: String(o.occ_id),
+                          label: String(o.occ_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Detection</label>
-                    <select value={actModalDetId} onChange={(e) => setActModalDetId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Det</option>
-                      {detectionList.map((d, idx) => <option key={`det-act-opt-${d.det_id ?? idx}`} value={d.det_id}>{d.det_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={actModalDetId}
+                      onChange={(val) => setActModalDetId(val)}
+                      placeholder="Det"
+                      options={[
+                        { value: '', label: 'Det' },
+                        ...detectionList.map((d) => ({
+                          value: String(d.det_id),
+                          label: String(d.det_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">RPN</label>
@@ -2779,17 +3042,37 @@ export function FmeaSettings() {
               <div className="overflow-y-auto space-y-4 p-1 flex-1">
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Unsafe Act</label>
-                  <select value={actEditActId} onChange={(e) => { setActEditActId(e.target.value); setActEditDetailId(''); }} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Act...</option>
-                    {actsList.map((act, idx) => <option key={`act-edit-opt-${act.act_id || idx}`} value={act.act_id}>{act.code || ''} - {act.description || act.act_desc || act.name || 'Act'}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={actEditActId}
+                    onChange={(val) => {
+                      setActEditActId(val);
+                      setActEditDetailId('');
+                    }}
+                    placeholder="Select Act..."
+                    options={[
+                      { value: '', label: 'Select Act...' },
+                      ...actsList.map((act) => ({
+                        value: act.act_id,
+                        label: `${act.code || ''} - ${act.description || act.act_desc || act.name || 'Act'}`,
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Act Detail</label>
-                  <select value={actEditDetailId} onChange={(e) => setActEditDetailId(e.target.value)} disabled={!actEditActId} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs disabled:opacity-50">
-                    <option value="">{actEditActId ? 'Select Act Detail...' : '— Select Unsafe Act First —'}</option>
-                    {actEditFilteredDetails.map((det, idx) => <option key={`act-edit-det-opt-${det.detail_id || idx}`} value={det.detail_id}>{det.code || ''} - {det.description || ''}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={actEditDetailId}
+                    onChange={(val) => setActEditDetailId(val)}
+                    disabled={!actEditActId}
+                    placeholder={actEditActId ? 'Select Act Detail...' : '— Select Unsafe Act First —'}
+                    options={[
+                      { value: '', label: actEditActId ? 'Select Act Detail...' : '— Select Unsafe Act First —' },
+                      ...actEditFilteredDetails.map((det) => ({
+                        value: det.detail_id,
+                        label: `${det.code || ''} - ${det.description || ''}`,
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Equipment Task Standard</label>
@@ -2825,39 +3108,79 @@ export function FmeaSettings() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Potential Effect</label>
-                  <select value={actEditPotentialEffectId} onChange={(e) => setActEditPotentialEffectId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Potential Effect...</option>
-                    {effectsList.map((eff, idx) => <option key={`act-edit-eff-opt-${eff.potentialeffects_id || idx}`} value={eff.potentialeffects_id}>{eff.potentialeffects_desc}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={actEditPotentialEffectId}
+                    onChange={(val) => setActEditPotentialEffectId(val)}
+                    placeholder="Select Potential Effect..."
+                    options={[
+                      { value: '', label: 'Select Potential Effect...' },
+                      ...effectsList.map((eff) => ({
+                        value: eff.potentialeffects_id,
+                        label: eff.potentialeffects_desc || '',
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Current Control</label>
-                  <select value={actEditCurrentControlId} onChange={(e) => setActEditCurrentControlId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Current Control...</option>
-                    {controlsList.map((ctrl, idx) => <option key={`act-edit-ctrl-opt-${ctrl.currentcontrols_id || idx}`} value={ctrl.currentcontrols_id}>{ctrl.currentcontrols_desc}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={actEditCurrentControlId}
+                    onChange={(val) => setActEditCurrentControlId(val)}
+                    placeholder="Select Current Control..."
+                    options={[
+                      { value: '', label: 'Select Current Control...' },
+                      ...controlsList.map((ctrl) => ({
+                        value: ctrl.currentcontrols_id,
+                        label: ctrl.currentcontrols_desc || '',
+                      }))
+                    ]}
+                  />
                 </div>
                 <div className="grid grid-cols-4 gap-2 items-end">
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Severity</label>
-                    <select value={actEditSevId} onChange={(e) => setActEditSevId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Sev</option>
-                      {severityList.map((s, idx) => <option key={`sev-act-edit-opt-${s.sev_id ?? idx}`} value={s.sev_id}>{s.sev_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={actEditSevId}
+                      onChange={(val) => setActEditSevId(val)}
+                      placeholder="Sev"
+                      options={[
+                        { value: '', label: 'Sev' },
+                        ...severityList.map((s) => ({
+                          value: String(s.sev_id),
+                          label: String(s.sev_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Occurrence</label>
-                    <select value={actEditOccId} onChange={(e) => setActEditOccId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Occ</option>
-                      {occurrenceList.map((o, idx) => <option key={`occ-act-edit-opt-${o.occ_id ?? idx}`} value={o.occ_id}>{o.occ_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={actEditOccId}
+                      onChange={(val) => setActEditOccId(val)}
+                      placeholder="Occ"
+                      options={[
+                        { value: '', label: 'Occ' },
+                        ...occurrenceList.map((o) => ({
+                          value: String(o.occ_id),
+                          label: String(o.occ_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Detection</label>
-                    <select value={actEditDetId} onChange={(e) => setActEditDetId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Det</option>
-                      {detectionList.map((d, idx) => <option key={`det-act-edit-opt-${d.det_id ?? idx}`} value={d.det_id}>{d.det_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={actEditDetId}
+                      onChange={(val) => setActEditDetId(val)}
+                      placeholder="Det"
+                      options={[
+                        { value: '', label: 'Det' },
+                        ...detectionList.map((d) => ({
+                          value: String(d.det_id),
+                          label: String(d.det_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">RPN</label>
@@ -2889,17 +3212,37 @@ export function FmeaSettings() {
               <div className="overflow-y-auto space-y-4 p-1 flex-1">
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Personal Factor</label>
-                  <select value={factorModalFactorId} onChange={(e) => { setFactorModalFactorId(e.target.value); setFactorModalDetailId(''); }} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Factor...</option>
-                    {factorsList.map((f, idx) => <option key={`factor-opt-${f.factor_id || idx}`} value={f.factor_id}>{f.code || ''} - {f.description || f.factor_desc || f.name || 'Factor'}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={factorModalFactorId}
+                    onChange={(val) => {
+                      setFactorModalFactorId(val);
+                      setFactorModalDetailId('');
+                    }}
+                    placeholder="Select Factor..."
+                    options={[
+                      { value: '', label: 'Select Factor...' },
+                      ...factorsList.map((f) => ({
+                        value: f.factor_id,
+                        label: `${f.code || ''} - ${f.description || f.factor_desc || f.name || 'Factor'}`,
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Factor Detail</label>
-                  <select value={factorModalDetailId} onChange={(e) => setFactorModalDetailId(e.target.value)} disabled={!factorModalFactorId} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs disabled:opacity-50">
-                    <option value="">{factorModalFactorId ? 'Select Factor Detail...' : '— Select Personal Factor First —'}</option>
-                    {factorModalFilteredDetails.map((det, idx) => <option key={`factor-det-opt-${det.detail_id || idx}`} value={det.detail_id}>{det.code || ''} - {det.description || ''}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={factorModalDetailId}
+                    onChange={(val) => setFactorModalDetailId(val)}
+                    disabled={!factorModalFactorId}
+                    placeholder={factorModalFactorId ? 'Select Factor Detail...' : '— Select Personal Factor First —'}
+                    options={[
+                      { value: '', label: factorModalFactorId ? 'Select Factor Detail...' : '— Select Personal Factor First —' },
+                      ...factorModalFilteredDetails.map((det) => ({
+                        value: det.detail_id,
+                        label: `${det.code || ''} - ${det.description || ''}`,
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Equipment Task Standard</label>
@@ -2935,39 +3278,79 @@ export function FmeaSettings() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Potential Effect</label>
-                  <select value={factorModalPotentialEffectId} onChange={(e) => setFactorModalPotentialEffectId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Potential Effect...</option>
-                    {effectsList.map((eff, idx) => <option key={`factor-eff-opt-${eff.potentialeffects_id || idx}`} value={eff.potentialeffects_id}>{eff.potentialeffects_desc}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={factorModalPotentialEffectId}
+                    onChange={(val) => setFactorModalPotentialEffectId(val)}
+                    placeholder="Select Potential Effect..."
+                    options={[
+                      { value: '', label: 'Select Potential Effect...' },
+                      ...effectsList.map((eff) => ({
+                        value: eff.potentialeffects_id,
+                        label: eff.potentialeffects_desc || '',
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Current Control</label>
-                  <select value={factorModalCurrentControlId} onChange={(e) => setFactorModalCurrentControlId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Current Control...</option>
-                    {controlsList.map((ctrl, idx) => <option key={`factor-ctrl-opt-${ctrl.currentcontrols_id || idx}`} value={ctrl.currentcontrols_id}>{ctrl.currentcontrols_desc}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={factorModalCurrentControlId}
+                    onChange={(val) => setFactorModalCurrentControlId(val)}
+                    placeholder="Select Current Control..."
+                    options={[
+                      { value: '', label: 'Select Current Control...' },
+                      ...controlsList.map((ctrl) => ({
+                        value: ctrl.currentcontrols_id,
+                        label: ctrl.currentcontrols_desc || '',
+                      }))
+                    ]}
+                  />
                 </div>
                 <div className="grid grid-cols-4 gap-2 items-end">
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Severity</label>
-                    <select value={factorModalSevId} onChange={(e) => setFactorModalSevId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Sev</option>
-                      {severityList.map((s, idx) => <option key={`sev-factor-opt-${s.sev_id ?? idx}`} value={s.sev_id}>{s.sev_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={factorModalSevId}
+                      onChange={(val) => setFactorModalSevId(val)}
+                      placeholder="Sev"
+                      options={[
+                        { value: '', label: 'Sev' },
+                        ...severityList.map((s) => ({
+                          value: String(s.sev_id),
+                          label: String(s.sev_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Occurrence</label>
-                    <select value={factorModalOccId} onChange={(e) => setFactorModalOccId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Occ</option>
-                      {occurrenceList.map((o, idx) => <option key={`occ-factor-opt-${o.occ_id ?? idx}`} value={o.occ_id}>{o.occ_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={factorModalOccId}
+                      onChange={(val) => setFactorModalOccId(val)}
+                      placeholder="Occ"
+                      options={[
+                        { value: '', label: 'Occ' },
+                        ...occurrenceList.map((o) => ({
+                          value: String(o.occ_id),
+                          label: String(o.occ_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Detection</label>
-                    <select value={factorModalDetId} onChange={(e) => setFactorModalDetId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Det</option>
-                      {detectionList.map((d, idx) => <option key={`det-factor-opt-${d.det_id ?? idx}`} value={d.det_id}>{d.det_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={factorModalDetId}
+                      onChange={(val) => setFactorModalDetId(val)}
+                      placeholder="Det"
+                      options={[
+                        { value: '', label: 'Det' },
+                        ...detectionList.map((d) => ({
+                          value: String(d.det_id),
+                          label: String(d.det_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">RPN</label>
@@ -2999,17 +3382,37 @@ export function FmeaSettings() {
               <div className="overflow-y-auto space-y-4 p-1 flex-1">
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Personal Factor</label>
-                  <select value={factorEditFactorId} onChange={(e) => { setFactorEditFactorId(e.target.value); setFactorEditDetailId(''); }} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Factor...</option>
-                    {factorsList.map((f, idx) => <option key={`factor-edit-opt-${f.factor_id || idx}`} value={f.factor_id}>{f.code || ''} - {f.description || f.factor_desc || f.name || 'Factor'}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={factorEditFactorId}
+                    onChange={(val) => {
+                      setFactorEditFactorId(val);
+                      setFactorEditDetailId('');
+                    }}
+                    placeholder="Select Factor..."
+                    options={[
+                      { value: '', label: 'Select Factor...' },
+                      ...factorsList.map((f) => ({
+                        value: f.factor_id,
+                        label: `${f.code || ''} - ${f.description || f.factor_desc || f.name || 'Factor'}`,
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Factor Detail</label>
-                  <select value={factorEditDetailId} onChange={(e) => setFactorEditDetailId(e.target.value)} disabled={!factorEditFactorId} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs disabled:opacity-50">
-                    <option value="">{factorEditFactorId ? 'Select Factor Detail...' : '— Select Personal Factor First —'}</option>
-                    {factorEditFilteredDetails.map((det, idx) => <option key={`factor-edit-det-opt-${det.detail_id || idx}`} value={det.detail_id}>{det.code || ''} - {det.description || ''}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={factorEditDetailId}
+                    onChange={(val) => setFactorEditDetailId(val)}
+                    disabled={!factorEditFactorId}
+                    placeholder={factorEditFactorId ? 'Select Factor Detail...' : '— Select Personal Factor First —'}
+                    options={[
+                      { value: '', label: factorEditFactorId ? 'Select Factor Detail...' : '— Select Personal Factor First —' },
+                      ...factorEditFilteredDetails.map((det) => ({
+                        value: det.detail_id,
+                        label: `${det.code || ''} - ${det.description || ''}`,
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Equipment Task Standard</label>
@@ -3045,39 +3448,79 @@ export function FmeaSettings() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Potential Effect</label>
-                  <select value={factorEditPotentialEffectId} onChange={(e) => setFactorEditPotentialEffectId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Potential Effect...</option>
-                    {effectsList.map((eff, idx) => <option key={`factor-edit-eff-opt-${eff.potentialeffects_id || idx}`} value={eff.potentialeffects_id}>{eff.potentialeffects_desc}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={factorEditPotentialEffectId}
+                    onChange={(val) => setFactorEditPotentialEffectId(val)}
+                    placeholder="Select Potential Effect..."
+                    options={[
+                      { value: '', label: 'Select Potential Effect...' },
+                      ...effectsList.map((eff) => ({
+                        value: eff.potentialeffects_id,
+                        label: eff.potentialeffects_desc || '',
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Current Control</label>
-                  <select value={factorEditCurrentControlId} onChange={(e) => setFactorEditCurrentControlId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Current Control...</option>
-                    {controlsList.map((ctrl, idx) => <option key={`factor-edit-ctrl-opt-${ctrl.currentcontrols_id || idx}`} value={ctrl.currentcontrols_id}>{ctrl.currentcontrols_desc}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={factorEditCurrentControlId}
+                    onChange={(val) => setFactorEditCurrentControlId(val)}
+                    placeholder="Select Current Control..."
+                    options={[
+                      { value: '', label: 'Select Current Control...' },
+                      ...controlsList.map((ctrl) => ({
+                        value: ctrl.currentcontrols_id,
+                        label: ctrl.currentcontrols_desc || '',
+                      }))
+                    ]}
+                  />
                 </div>
                 <div className="grid grid-cols-4 gap-2 items-end">
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Severity</label>
-                    <select value={factorEditSevId} onChange={(e) => setFactorEditSevId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Sev</option>
-                      {severityList.map((s, idx) => <option key={`sev-factor-edit-opt-${s.sev_id ?? idx}`} value={s.sev_id}>{s.sev_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={factorEditSevId}
+                      onChange={(val) => setFactorEditSevId(val)}
+                      placeholder="Sev"
+                      options={[
+                        { value: '', label: 'Sev' },
+                        ...severityList.map((s) => ({
+                          value: String(s.sev_id),
+                          label: String(s.sev_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Occurrence</label>
-                    <select value={factorEditOccId} onChange={(e) => setFactorEditOccId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Occ</option>
-                      {occurrenceList.map((o, idx) => <option key={`occ-factor-edit-opt-${o.occ_id ?? idx}`} value={o.occ_id}>{o.occ_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={factorEditOccId}
+                      onChange={(val) => setFactorEditOccId(val)}
+                      placeholder="Occ"
+                      options={[
+                        { value: '', label: 'Occ' },
+                        ...occurrenceList.map((o) => ({
+                          value: String(o.occ_id),
+                          label: String(o.occ_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Detection</label>
-                    <select value={factorEditDetId} onChange={(e) => setFactorEditDetId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Det</option>
-                      {detectionList.map((d, idx) => <option key={`det-factor-edit-opt-${d.det_id ?? idx}`} value={d.det_id}>{d.det_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={factorEditDetId}
+                      onChange={(val) => setFactorEditDetId(val)}
+                      placeholder="Det"
+                      options={[
+                        { value: '', label: 'Det' },
+                        ...detectionList.map((d) => ({
+                          value: String(d.det_id),
+                          label: String(d.det_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">RPN</label>
@@ -3109,17 +3552,37 @@ export function FmeaSettings() {
               <div className="overflow-y-auto space-y-4 p-1 flex-1">
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Work Cause</label>
-                  <select value={causeModalCauseId} onChange={(e) => { setCauseModalCauseId(e.target.value); setCauseModalDetailId(''); }} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Work Cause...</option>
-                    {causesList.map((c, idx) => <option key={`cause-opt-${c.cause_id || idx}`} value={c.cause_id}>{c.code || ''} - {c.description || c.cause_desc || c.name || 'Cause'}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={causeModalCauseId}
+                    onChange={(val) => {
+                      setCauseModalCauseId(val);
+                      setCauseModalDetailId('');
+                    }}
+                    placeholder="Select Work Cause..."
+                    options={[
+                      { value: '', label: 'Select Work Cause...' },
+                      ...causesList.map((c) => ({
+                        value: c.cause_id,
+                        label: `${c.code || ''} - ${c.description || c.cause_desc || c.name || 'Cause'}`,
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Cause Detail</label>
-                  <select value={causeModalDetailId} onChange={(e) => setCauseModalDetailId(e.target.value)} disabled={!causeModalCauseId} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs disabled:opacity-50">
-                    <option value="">{causeModalCauseId ? 'Select Cause Detail...' : '— Select Work Cause First —'}</option>
-                    {causeModalFilteredDetails.map((det, idx) => <option key={`cause-det-opt-${det.detail_id || idx}`} value={det.detail_id}>{det.code || ''} - {det.description || ''}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={causeModalDetailId}
+                    onChange={(val) => setCauseModalDetailId(val)}
+                    disabled={!causeModalCauseId}
+                    placeholder={causeModalCauseId ? 'Select Cause Detail...' : '— Select Work Cause First —'}
+                    options={[
+                      { value: '', label: causeModalCauseId ? 'Select Cause Detail...' : '— Select Work Cause First —' },
+                      ...causeModalFilteredDetails.map((det) => ({
+                        value: det.detail_id,
+                        label: `${det.code || ''} - ${det.description || ''}`,
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Equipment Task Standard</label>
@@ -3155,39 +3618,79 @@ export function FmeaSettings() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Potential Effect</label>
-                  <select value={causeModalPotentialEffectId} onChange={(e) => setCauseModalPotentialEffectId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Potential Effect...</option>
-                    {effectsList.map((eff, idx) => <option key={`cause-eff-opt-${eff.potentialeffects_id || idx}`} value={eff.potentialeffects_id}>{eff.potentialeffects_desc}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={causeModalPotentialEffectId}
+                    onChange={(val) => setCauseModalPotentialEffectId(val)}
+                    placeholder="Select Potential Effect..."
+                    options={[
+                      { value: '', label: 'Select Potential Effect...' },
+                      ...effectsList.map((eff) => ({
+                        value: eff.potentialeffects_id,
+                        label: eff.potentialeffects_desc || '',
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Current Control</label>
-                  <select value={causeModalCurrentControlId} onChange={(e) => setCauseModalCurrentControlId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Current Control...</option>
-                    {controlsList.map((ctrl, idx) => <option key={`cause-ctrl-opt-${ctrl.currentcontrols_id || idx}`} value={ctrl.currentcontrols_id}>{ctrl.currentcontrols_desc}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={causeModalCurrentControlId}
+                    onChange={(val) => setCauseModalCurrentControlId(val)}
+                    placeholder="Select Current Control..."
+                    options={[
+                      { value: '', label: 'Select Current Control...' },
+                      ...controlsList.map((ctrl) => ({
+                        value: ctrl.currentcontrols_id,
+                        label: ctrl.currentcontrols_desc || '',
+                      }))
+                    ]}
+                  />
                 </div>
                 <div className="grid grid-cols-4 gap-2 items-end">
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Severity</label>
-                    <select value={causeModalSevId} onChange={(e) => setCauseModalSevId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Sev</option>
-                      {severityList.map((s, idx) => <option key={`sev-cause-opt-${s.sev_id ?? idx}`} value={s.sev_id}>{s.sev_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={causeModalSevId}
+                      onChange={(val) => setCauseModalSevId(val)}
+                      placeholder="Sev"
+                      options={[
+                        { value: '', label: 'Sev' },
+                        ...severityList.map((s) => ({
+                          value: String(s.sev_id),
+                          label: String(s.sev_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Occurrence</label>
-                    <select value={causeModalOccId} onChange={(e) => setCauseModalOccId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Occ</option>
-                      {occurrenceList.map((o, idx) => <option key={`occ-cause-opt-${o.occ_id ?? idx}`} value={o.occ_id}>{o.occ_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={causeModalOccId}
+                      onChange={(val) => setCauseModalOccId(val)}
+                      placeholder="Occ"
+                      options={[
+                        { value: '', label: 'Occ' },
+                        ...occurrenceList.map((o) => ({
+                          value: String(o.occ_id),
+                          label: String(o.occ_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Detection</label>
-                    <select value={causeModalDetId} onChange={(e) => setCauseModalDetId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Det</option>
-                      {detectionList.map((d, idx) => <option key={`det-cause-opt-${d.det_id ?? idx}`} value={d.det_id}>{d.det_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={causeModalDetId}
+                      onChange={(val) => setCauseModalDetId(val)}
+                      placeholder="Det"
+                      options={[
+                        { value: '', label: 'Det' },
+                        ...detectionList.map((d) => ({
+                          value: String(d.det_id),
+                          label: String(d.det_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">RPN</label>
@@ -3219,17 +3722,37 @@ export function FmeaSettings() {
               <div className="overflow-y-auto space-y-4 p-1 flex-1">
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Work Cause</label>
-                  <select value={causeEditCauseId} onChange={(e) => { setCauseEditCauseId(e.target.value); setCauseEditDetailId(''); }} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Work Cause...</option>
-                    {causesList.map((c, idx) => <option key={`cause-edit-opt-${c.cause_id || idx}`} value={c.cause_id}>{c.code || ''} - {c.description || c.cause_desc || c.name || 'Cause'}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={causeEditCauseId}
+                    onChange={(val) => {
+                      setCauseEditCauseId(val);
+                      setCauseEditDetailId('');
+                    }}
+                    placeholder="Select Work Cause..."
+                    options={[
+                      { value: '', label: 'Select Work Cause...' },
+                      ...causesList.map((c) => ({
+                        value: c.cause_id,
+                        label: `${c.code || ''} - ${c.description || c.cause_desc || c.name || 'Cause'}`,
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Cause Detail</label>
-                  <select value={causeEditDetailId} onChange={(e) => setCauseEditDetailId(e.target.value)} disabled={!causeEditCauseId} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs disabled:opacity-50">
-                    <option value="">{causeEditCauseId ? 'Select Cause Detail...' : '— Select Work Cause First —'}</option>
-                    {causeEditFilteredDetails.map((det, idx) => <option key={`cause-edit-det-opt-${det.detail_id || idx}`} value={det.detail_id}>{det.code || ''} - {det.description || ''}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={causeEditDetailId}
+                    onChange={(val) => setCauseEditDetailId(val)}
+                    disabled={!causeEditCauseId}
+                    placeholder={causeEditCauseId ? 'Select Cause Detail...' : '— Select Work Cause First —'}
+                    options={[
+                      { value: '', label: causeEditCauseId ? 'Select Cause Detail...' : '— Select Work Cause First —' },
+                      ...causeEditFilteredDetails.map((det) => ({
+                        value: det.detail_id,
+                        label: `${det.code || ''} - ${det.description || ''}`,
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Equipment Task Standard</label>
@@ -3265,39 +3788,79 @@ export function FmeaSettings() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Potential Effect</label>
-                  <select value={causeEditPotentialEffectId} onChange={(e) => setCauseEditPotentialEffectId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Potential Effect...</option>
-                    {effectsList.map((eff, idx) => <option key={`cause-edit-eff-opt-${eff.potentialeffects_id || idx}`} value={eff.potentialeffects_id}>{eff.potentialeffects_desc}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={causeEditPotentialEffectId}
+                    onChange={(val) => setCauseEditPotentialEffectId(val)}
+                    placeholder="Select Potential Effect..."
+                    options={[
+                      { value: '', label: 'Select Potential Effect...' },
+                      ...effectsList.map((eff) => ({
+                        value: eff.potentialeffects_id,
+                        label: eff.potentialeffects_desc || '',
+                      }))
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Current Control</label>
-                  <select value={causeEditCurrentControlId} onChange={(e) => setCauseEditCurrentControlId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                    <option value="">Select Current Control...</option>
-                    {controlsList.map((ctrl, idx) => <option key={`cause-edit-ctrl-opt-${ctrl.currentcontrols_id || idx}`} value={ctrl.currentcontrols_id}>{ctrl.currentcontrols_desc}</option>)}
-                  </select>
+                  <CustomDropdown
+                    value={causeEditCurrentControlId}
+                    onChange={(val) => setCauseEditCurrentControlId(val)}
+                    placeholder="Select Current Control..."
+                    options={[
+                      { value: '', label: 'Select Current Control...' },
+                      ...controlsList.map((ctrl) => ({
+                        value: ctrl.currentcontrols_id,
+                        label: ctrl.currentcontrols_desc || '',
+                      }))
+                    ]}
+                  />
                 </div>
                 <div className="grid grid-cols-4 gap-2 items-end">
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Severity</label>
-                    <select value={causeEditSevId} onChange={(e) => setCauseEditSevId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Sev</option>
-                      {severityList.map((s, idx) => <option key={`sev-cause-edit-opt-${s.sev_id ?? idx}`} value={s.sev_id}>{s.sev_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={causeEditSevId}
+                      onChange={(val) => setCauseEditSevId(val)}
+                      placeholder="Sev"
+                      options={[
+                        { value: '', label: 'Sev' },
+                        ...severityList.map((s) => ({
+                          value: String(s.sev_id),
+                          label: String(s.sev_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Occurrence</label>
-                    <select value={causeEditOccId} onChange={(e) => setCauseEditOccId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Occ</option>
-                      {occurrenceList.map((o, idx) => <option key={`occ-cause-edit-opt-${o.occ_id ?? idx}`} value={o.occ_id}>{o.occ_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={causeEditOccId}
+                      onChange={(val) => setCauseEditOccId(val)}
+                      placeholder="Occ"
+                      options={[
+                        { value: '', label: 'Occ' },
+                        ...occurrenceList.map((o) => ({
+                          value: String(o.occ_id),
+                          label: String(o.occ_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">Detection</label>
-                    <select value={causeEditDetId} onChange={(e) => setCauseEditDetId(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Det</option>
-                      {detectionList.map((d, idx) => <option key={`det-cause-edit-opt-${d.det_id ?? idx}`} value={d.det_id}>{d.det_id}</option>)}
-                    </select>
+                    <CustomDropdown
+                      value={causeEditDetId}
+                      onChange={(val) => setCauseEditDetId(val)}
+                      placeholder="Det"
+                      options={[
+                        { value: '', label: 'Det' },
+                        ...detectionList.map((d) => ({
+                          value: String(d.det_id),
+                          label: String(d.det_id),
+                        }))
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">RPN</label>

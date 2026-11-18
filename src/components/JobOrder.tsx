@@ -20,6 +20,7 @@ import {
   Upload,
   Briefcase
 } from 'lucide-react';
+import { CustomDropdown } from './ui/CustomDropdown';
 
 interface JobOrderMasterRecord {
   job_order_id: string;
@@ -1399,8 +1400,8 @@ export function JobOrder() {
       {/* JOB ORDER SEARCH PICKER MODAL */}
       {showJobOrderPicker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-(--bg-surface) border border-(--border-main) rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-(--border-main) bg-(--bg-elevated) shrink-0">
+          <div className="bg-(--bg-surface) border border-(--border-main) rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-visible">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-(--border-main) bg-(--bg-elevated) rounded-t-2xl shrink-0">
               <h3 className="text-lg font-bold text-(--text-primary)">Search Job Order</h3>
               <button
                 type="button"
@@ -1423,20 +1424,20 @@ export function JobOrder() {
                 />
               </div>
 
-              <select
-                required
-                value={jobOrderSearchStatus}
-                onChange={(e) => {
-                  const newStatus = e.target.value;
-                  setJobOrderSearchStatus(newStatus);
-                  fetchPickerJobOrders(jobOrderSearchQuery, newStatus);
-                }}
-                className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
-              >
-                {statuses.map(s => (
-                  <option key={s.status_id} value={s.status_id}>{s.status_name}</option>
-                ))}
-              </select>
+              <div className="min-w-36">
+                <CustomDropdown
+                  value={jobOrderSearchStatus}
+                  onChange={(newStatus: string) => {
+                    setJobOrderSearchStatus(newStatus);
+                    fetchPickerJobOrders(jobOrderSearchQuery, newStatus);
+                  }}
+                  placeholder="Select Status"
+                  options={statuses.map(s => ({
+                    value: s.status_id,
+                    label: s.status_name
+                  }))}
+                />
+              </div>
 
               <button
                 type="submit"
@@ -1509,8 +1510,8 @@ export function JobOrder() {
       {/* HEADER FORM MODAL */}
       {isHeaderModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-(--bg-surface) border border-(--border-main) rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 shrink-0 bg-(--bg-elevated)">
+          <div className="bg-(--bg-surface) border border-(--border-main) rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-visible">
+            <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 shrink-0 bg-(--bg-elevated) rounded-t-2xl">
               <h3 className="text-lg font-bold text-(--text-primary)">
                 {isHeaderEditing ? `Edit Job Order #${currentJobOrder?.job_order_no}` : 'New Job Order'}
               </h3>
@@ -1519,8 +1520,8 @@ export function JobOrder() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmitHeader} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-              <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
+            <form onSubmit={handleSubmitHeader} className="flex flex-col flex-1 min-h-0 overflow-visible">
+              <div className="p-4 sm:p-6 overflow-visible flex-1 space-y-4">
                 <div className="space-y-2">
                   <label className="block text-xs font-semibold uppercase text-(--text-secondary) mb-1">
                     Selected Equipment <span className="text-red-500">*</span>
@@ -1571,11 +1572,9 @@ export function JobOrder() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-semibold uppercase text-(--text-secondary) mb-1">Status</label>
-                    <select
-                      required
+                    <CustomDropdown
                       value={headerForm.status_id}
-                      onChange={(e) => {
-                        const selectedStatusId = e.target.value;
+                      onChange={(selectedStatusId: string) => {
                         const selectedStatus = statuses.find(s => s.status_id === selectedStatusId);
                         const isCompleted = (selectedStatus?.status_name ?? '').toLowerCase() === 'completed';
                         const todayStr = new Date().toISOString().split('T')[0];
@@ -1586,42 +1585,47 @@ export function JobOrder() {
                           date_completed: isCompleted ? (prev.date_completed || todayStr) : ''
                         }));
                       }}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                    >
-                      <option value="">Select Status</option>
-                      {statuses.map(s => (
-                        <option key={s.status_id} value={s.status_id}>{s.status_name}</option>
-                      ))}
-                    </select>
+                      placeholder="Select Status"
+                      options={[
+                        { value: '', label: 'Select Status' },
+                        ...statuses.map(s => ({
+                          value: s.status_id,
+                          label: s.status_name
+                        }))
+                      ]}
+                    />
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold uppercase text-(--text-secondary) mb-1">Priority</label>
-                    <select
-                      required
+                    <CustomDropdown
                       value={headerForm.priority_id}
-                      onChange={(e) => setHeaderForm({ ...headerForm, priority_id: e.target.value })}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                    >
-                      <option value="">Select Priority</option>
-                      {priorities.map(p => (
-                        <option key={p.priority_id} value={p.priority_id}>{p.priority_desc}</option>
-                      ))}
-                    </select>
+                      onChange={(val: string) => setHeaderForm({ ...headerForm, priority_id: val })}
+                      placeholder="Select Priority"
+                      options={[
+                        { value: '', label: 'Select Priority' },
+                        ...priorities.map(p => ({
+                          value: p.priority_id,
+                          label: p.priority_desc
+                        }))
+                      ]}
+                    />
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold uppercase text-(--text-secondary) mb-1">Job Order Type</label>
-                    <select
+                    <CustomDropdown
                       value={headerForm.type_id}
-                      onChange={(e) => setHeaderForm({ ...headerForm, type_id: e.target.value })}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                    >
-                      <option value="">Select Type (Optional)</option>
-                      {jobOrderTypes.map(t => (
-                        <option key={t.type_id} value={t.type_id}>{t.type_desc || t.description || t.type_code || 'Type'}</option>
-                      ))}
-                    </select>
+                      onChange={(val: string) => setHeaderForm({ ...headerForm, type_id: val })}
+                      placeholder="Select Type (Optional)"
+                      options={[
+                        { value: '', label: 'Select Type (Optional)' },
+                        ...jobOrderTypes.map(t => ({
+                          value: t.type_id,
+                          label: t.type_desc || t.description || t.type_code || 'Type'
+                        }))
+                      ]}
+                    />
                   </div>
                 </div>
 
@@ -1765,7 +1769,7 @@ export function JobOrder() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 px-6 py-4 border-t border-(--border-main) shrink-0 bg-(--bg-elevated)">
+              <div className="flex justify-end gap-3 px-6 py-4 border-t border-(--border-main) shrink-0 bg-(--bg-elevated) rounded-b-2xl">
                 <button
                   type="button"
                   onClick={() => setIsHeaderModalOpen(false)}
@@ -1871,7 +1875,7 @@ export function JobOrder() {
       {/* CHILD FORM MODAL — Larger width (max-w-2xl) & single scrollbar */}
       {isChildModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-(--bg-surface) border border-(--border-main) rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl">
+          <div className="bg-(--bg-surface) border border-(--border-main) rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-visible">
             <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 shrink-0 bg-(--bg-elevated) rounded-t-2xl">
               <h3 className="text-lg font-bold text-(--text-primary)">
                 {childEditingId ? 'Edit Details' : 'Add Details'} ({activeChildTab === 'contracts' ? 'Contracted Job' : activeChildTab})
@@ -1985,40 +1989,38 @@ export function JobOrder() {
                   <>
                     <div>
                       <label className="block text-xs font-semibold uppercase text-(--text-secondary) mb-1">Associated Task</label>
-                      <select
-                        required
+                      <CustomDropdown
                         value={resourceForm.job_order_task_id}
-                        onChange={(e) => setResourceForm({ ...resourceForm, job_order_task_id: e.target.value })}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                      >
-                        <option value="">Select Task Detail</option>
-                        {taskDetails.map(td => {
-                          const tsObj = taskStandards.find(s => s.task_standard_id === td.task_standard_id);
-                          return (
-                            <option key={td.job_order_task_id} value={td.job_order_task_id}>
-                              {tsObj ? tsObj.task_standard_desc : 'Task'}
-                            </option>
-                          );
-                        })}
-                      </select>
+                        onChange={(val: string) => setResourceForm({ ...resourceForm, job_order_task_id: val })}
+                        placeholder="Select Task Detail"
+                        options={[
+                          { value: '', label: 'Select Task Detail' },
+                          ...taskDetails.map(td => {
+                            const tsObj = taskStandards.find(s => s.task_standard_id === td.task_standard_id);
+                            return {
+                              value: td.job_order_task_id,
+                              label: tsObj ? tsObj.task_standard_desc : 'Task'
+                            };
+                          })
+                        ]}
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold uppercase text-(--text-secondary) mb-1">Employee</label>
-                      <select
-                        required
+                      <CustomDropdown
                         value={resourceForm.employee_id}
-                        onChange={(e) => {
-                          setResourceForm({ ...resourceForm, employee_id: e.target.value });
+                        onChange={(val: string) => {
+                          setResourceForm({ ...resourceForm, employee_id: val });
                         }}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                      >
-                        <option value="">Select Employee</option>
-                        {activeEmployees.map(emp => (
-                          <option key={emp.employee_id} value={emp.employee_id}>
-                            {emp.employee_name ?? emp.name ?? `${emp.first_name ?? ''} ${emp.last_name ?? ''}`}
-                          </option>
-                        ))}
-                      </select>
+                        placeholder="Select Employee"
+                        options={[
+                          { value: '', label: 'Select Employee' },
+                          ...activeEmployees.map(emp => ({
+                            value: emp.employee_id,
+                            label: emp.employee_name ?? emp.name ?? `${emp.first_name ?? ''} ${emp.last_name ?? ''}`
+                          }))
+                        ]}
+                      />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import {
   Users,
@@ -12,6 +12,8 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Check,
   Search,
   Wrench,
   ClipboardList,
@@ -21,6 +23,105 @@ import {
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
+
+/* --- Reusable CustomDropdown Component --- */
+
+export interface DropdownOption<T extends string | number> {
+  value: T;
+  label: string;
+}
+
+interface CustomDropdownProps<T extends string | number> {
+  id?: string;
+  value: T;
+  options: DropdownOption<T>[];
+  onChange: (value: T) => void;
+  className?: string;
+  buttonClassName?: string;
+  menuClassName?: string;
+  openUpwards?: boolean;
+}
+
+function CustomDropdown<T extends string | number>({
+  id,
+  value,
+  options,
+  onChange,
+  className = '',
+  buttonClassName = '',
+  menuClassName = '',
+  openUpwards = false,
+}: CustomDropdownProps<T>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedOption = useMemo(
+    () => options.find((opt) => opt.value === value) || options[0],
+    [options, value]
+  );
+
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isOpen]);
+
+  return (
+    <div ref={containerRef} className={`relative ${className}`}>
+      <button
+        id={id}
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className={`flex items-center justify-between gap-2 text-left transition-colors focus:outline-none cursor-pointer ${buttonClassName}`}
+      >
+        <span className="truncate">{selectedOption?.label ?? ''}</span>
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-(--text-muted) shrink-0 transition-transform duration-150 ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {isOpen && (
+        <div
+          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-(--border-main) bg-(--bg-elevated) shadow-xl py-1 ${
+            openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
+          } ${menuClassName}`}
+        >
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={String(opt.value)}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-left text-xs transition-colors cursor-pointer ${
+                  isSelected
+                    ? 'bg-(--accent-subtle) text-(--text-primary) font-bold'
+                    : 'text-(--text-primary) hover:bg-(--accent-subtle)'
+                }`}
+              >
+                <span className="truncate">{opt.label}</span>
+                {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface EmployeeRecord {
   employee_id: string;
@@ -269,6 +370,17 @@ export function EmployeeRegistry() {
         emp.employee_name.toLowerCase().includes(q)
     );
   }, [employees, searchQuery]);
+
+  const employeeDropdownOptions = useMemo<DropdownOption<string>[]>(
+    () =>
+      matchingEmployees.length === 0
+        ? [{ value: '', label: 'No matching employees' }]
+        : matchingEmployees.map((emp) => ({
+            value: emp.employee_id,
+            label: `[${emp.employee_code}] ${emp.employee_name}`
+          })),
+    [matchingEmployees]
+  );
 
   const selectedEmployee = useMemo(
     () => employees.find((e) => e.employee_id === selectedEmployeeId) || null,
@@ -903,24 +1015,15 @@ export function EmployeeRegistry() {
               <label className="block text-[10px] uppercase text-(--text-muted) font-bold mb-1">
                 Selected Employee ({matchingEmployees.length})
               </label>
-              <select
+              <CustomDropdown
                 value={selectedEmployeeId}
-                onChange={(e) => {
-                  setSelectedEmployeeId(e.target.value);
+                options={employeeDropdownOptions}
+                onChange={(val) => {
+                  setSelectedEmployeeId(val);
                   setRecordsPage(1);
                 }}
-                className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-(--text-primary) cursor-pointer"
-              >
-                {matchingEmployees.length === 0 ? (
-                  <option value="">No matching employees</option>
-                ) : (
-                  matchingEmployees.map((emp) => (
-                    <option key={emp.employee_id} value={emp.employee_id}>
-                      [{emp.employee_code}] {emp.employee_name}
-                    </option>
-                  ))
-                )}
-              </select>
+                buttonClassName="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:border-(--text-primary)"
+              />
             </div>
 
             {/* Optional Date Range */}

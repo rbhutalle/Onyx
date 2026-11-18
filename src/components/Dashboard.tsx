@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { 
   LayoutDashboard, 
@@ -20,8 +20,80 @@ import {
   PlayCircle,
   CheckCircle2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  Check
 } from 'lucide-react';
+
+/* --- Custom Dropdown Component --- */
+interface Option {
+  value: string;
+  label: string;
+}
+
+interface CustomDropdownProps {
+  options: Option[];
+  value: string;
+  onChange: (value: string) => void;
+  id?: string;
+}
+
+function CustomDropdown({ options, value, onChange, id }: CustomDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const selectedOption = options.find((opt) => opt.value === value) || options[0];
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative inline-block text-left" ref={dropdownRef}>
+      <button
+        id={id}
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between gap-2 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-3 py-1.5 focus:outline-none cursor-pointer hover:bg-(--accent-subtle) transition-colors min-w-32.5"
+      >
+        <span className="truncate font-medium">{selectedOption.label}</span>
+        <ChevronDown className={`w-3.5 h-3.5 text-(--text-muted) transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 mt-1.5 w-full min-w-37.5 bg-(--bg-elevated) border border-(--border-main) rounded-lg shadow-xl z-50 overflow-hidden py-1">
+          {options.map((option) => {
+            const isSelected = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 text-xs text-left transition-colors cursor-pointer ${
+                  isSelected 
+                    ? 'bg-(--accent-subtle) font-bold text-(--text-primary)' 
+                    : 'text-(--text-secondary) hover:bg-(--accent-subtle) hover:text-(--text-primary)'
+                }`}
+              >
+                <span>{option.label}</span>
+                {isSelected && <Check className="w-3.5 h-3.5 text-blue-500" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* --- Interfaces --- */
 interface OverviewSummary {
@@ -1209,23 +1281,23 @@ export function Dashboard() {
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1.5">
                           <label htmlFor="pm-code-filter-select" className="text-xs text-(--text-secondary) font-medium">Filter PM Code:</label>
-                          <select
+                          <CustomDropdown
                             id="pm-code-filter-select"
                             value={selectedPmFilter}
-                            onChange={(e) => {
-                              setSelectedPmFilter(e.target.value);
+                            onChange={(val) => {
+                              setSelectedPmFilter(val);
                               setItemizedPmPage(1);
                             }}
-                            className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2.5 py-1 focus:outline-none"
-                          >
-                            <option value="ALL">All PM Codes</option>
-                            <option value="PM2">PM2 Only</option>
-                            <option value="PM3">PM3 Only</option>
-                            <option value="PM4">PM4 Only</option>
-                            <option value="PM5">PM5 Only</option>
-                            <option value="PM6">PM6 Only</option>
-                            <option value="PM7">PM7 Only</option>
-                          </select>
+                            options={[
+                              { value: 'ALL', label: 'All PM Codes' },
+                              { value: 'PM2', label: 'PM2 Only' },
+                              { value: 'PM3', label: 'PM3 Only' },
+                              { value: 'PM4', label: 'PM4 Only' },
+                              { value: 'PM5', label: 'PM5 Only' },
+                              { value: 'PM6', label: 'PM6 Only' },
+                              { value: 'PM7', label: 'PM7 Only' }
+                            ]}
+                          />
                         </div>
 
                         <button

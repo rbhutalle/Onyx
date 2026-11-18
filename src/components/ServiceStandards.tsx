@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { 
   ShieldAlert, 
@@ -15,8 +15,114 @@ import {
   Filter,
   Search,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  Check
 } from 'lucide-react';
+
+/* --- Reusable CustomDropdown Component --- */
+
+export interface DropdownOption<T extends string | number> {
+  value: T;
+  label: string;
+}
+
+interface CustomDropdownProps<T extends string | number> {
+  id?: string;
+  value: T;
+  options: DropdownOption<T>[];
+  onChange: (value: T) => void;
+  className?: string;
+  buttonClassName?: string;
+  menuClassName?: string;
+  openUpwards?: boolean;
+  disabled?: boolean;
+}
+
+function CustomDropdown<T extends string | number>({
+  id,
+  value,
+  options,
+  onChange,
+  className = '',
+  buttonClassName = '',
+  menuClassName = '',
+  openUpwards = false,
+  disabled = false,
+}: CustomDropdownProps<T>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedOption = useMemo(
+    () => options.find((opt) => opt.value === value) || options[0],
+    [options, value]
+  );
+
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isOpen]);
+
+  return (
+    <div ref={containerRef} className={`relative ${className}`}>
+      <button
+        id={id}
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen((prev) => !prev)}
+        className={`flex items-center justify-between gap-2 text-left transition-colors focus:outline-none ${
+          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+        } ${buttonClassName}`}
+      >
+        <span className="truncate">{selectedOption?.label ?? ''}</span>
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-(--text-muted) shrink-0 transition-transform duration-150 ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {isOpen && !disabled && (
+        <div
+          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-(--border-main) bg-(--bg-elevated) shadow-xl py-1 ${
+            openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
+          } ${menuClassName}`}
+        >
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={String(opt.value)}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-left text-xs transition-colors cursor-pointer ${
+                  isSelected
+                    ? 'bg-(--accent-subtle) text-(--text-primary) font-bold'
+                    : 'text-(--text-primary) hover:bg-(--accent-subtle)'
+                }`}
+              >
+                <span className="truncate">{opt.label}</span>
+                {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface StandardRecord {
   service_standard_id: string;
@@ -266,6 +372,34 @@ export function ServiceStandards() {
     }
   };
 
+  // Dropdown Options
+  const filterStandardOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: 'all', label: 'All Standards (Filter by Code)' },
+      ...standards.map((std) => ({
+        value: std.service_standard_id,
+        label: `${std.code} ${std.description ? `- ${std.description}` : ''}`.trim()
+      }))
+    ],
+    [standards]
+  );
+
+  const modalStandardOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: 'Select Service Standard...' },
+      ...standards.map((std) => ({
+        value: std.service_standard_id,
+        label: `${std.code} ${std.description ? `- ${std.description.substring(0, 40)}` : ''}`.trim()
+      }))
+    ],
+    [standards]
+  );
+
+  const pmCodeOptions = useMemo<DropdownOption<string>[]>(
+    () => PM_CODES.map((pmCode) => ({ value: pmCode, label: pmCode })),
+    []
+  );
+
   // Filter & Search computation
   const filteredStandards = useMemo(() => {
     const q = searchQuery.toLowerCase();
@@ -377,18 +511,12 @@ export function ServiceStandards() {
           {activeTab === 'intervals' && (
             <div className="flex items-center gap-2">
               <Filter className="w-3.5 h-3.5 text-(--text-muted)" />
-              <select
+              <CustomDropdown
                 value={selectedStandardFilter}
-                onChange={(e) => setSelectedStandardFilter(e.target.value)}
-                className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
-              >
-                <option value="all">All Standards (Filter by Code)</option>
-                {standards.map((std) => (
-                  <option key={std.service_standard_id} value={std.service_standard_id}>
-                    {std.code} {std.description ? `- ${std.description}` : ''}
-                  </option>
-                ))}
-              </select>
+                options={filterStandardOptions}
+                onChange={(val) => setSelectedStandardFilter(val)}
+                buttonClassName="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:border-(--text-primary)"
+              />
             </div>
           )}
 
@@ -650,34 +778,23 @@ export function ServiceStandards() {
                       <label className="block text-xs font-semibold text-(--text-primary) mb-1">
                         Service Standard Reference <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        required
+                      <CustomDropdown
                         value={intervalForm.service_standard_id}
-                        onChange={(e) => setIntervalForm({ ...intervalForm, service_standard_id: e.target.value })}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
-                      >
-                        <option value="">Select Service Standard...</option>
-                        {standards.map((std) => (
-                          <option key={std.service_standard_id} value={std.service_standard_id}>
-                            {std.code} {std.description ? `- ${std.description.substring(0, 40)}` : ''}
-                          </option>
-                        ))}
-                      </select>
+                        options={modalStandardOptions}
+                        onChange={(val) => setIntervalForm({ ...intervalForm, service_standard_id: val })}
+                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:border-(--text-primary)"
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-(--text-primary) mb-1">
                         Code (Fixed PM Value) <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        required
+                      <CustomDropdown
                         value={intervalForm.code}
-                        onChange={(e) => setIntervalForm({ ...intervalForm, code: e.target.value })}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
-                      >
-                        {PM_CODES.map((pmCode) => (
-                          <option key={pmCode} value={pmCode}>{pmCode}</option>
-                        ))}
-                      </select>
+                        options={pmCodeOptions}
+                        onChange={(val) => setIntervalForm({ ...intervalForm, code: val })}
+                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:border-(--text-primary)"
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-(--text-primary) mb-1">Interval</label>

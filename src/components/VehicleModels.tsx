@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { 
   Car, 
@@ -15,8 +15,114 @@ import {
   Loader2,
   Search,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  Check
 } from 'lucide-react';
+
+/* --- Reusable CustomDropdown Component --- */
+
+export interface DropdownOption<T extends string | number> {
+  value: T;
+  label: string;
+}
+
+interface CustomDropdownProps<T extends string | number> {
+  id?: string;
+  value: T;
+  options: DropdownOption<T>[];
+  onChange: (value: T) => void;
+  className?: string;
+  buttonClassName?: string;
+  menuClassName?: string;
+  openUpwards?: boolean;
+  disabled?: boolean;
+}
+
+function CustomDropdown<T extends string | number>({
+  id,
+  value,
+  options,
+  onChange,
+  className = '',
+  buttonClassName = '',
+  menuClassName = '',
+  openUpwards = false,
+  disabled = false,
+}: CustomDropdownProps<T>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedOption = useMemo(
+    () => options.find((opt) => opt.value === value) || options[0],
+    [options, value]
+  );
+
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isOpen]);
+
+  return (
+    <div ref={containerRef} className={`relative ${className}`}>
+      <button
+        id={id}
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen((prev) => !prev)}
+        className={`flex items-center justify-between gap-2 text-left transition-colors focus:outline-none ${
+          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+        } ${buttonClassName}`}
+      >
+        <span className="truncate">{selectedOption?.label ?? ''}</span>
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-(--text-muted) shrink-0 transition-transform duration-150 ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {isOpen && !disabled && (
+        <div
+          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-(--border-main) bg-(--bg-elevated) shadow-xl py-1 ${
+            openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
+          } ${menuClassName}`}
+        >
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={String(opt.value)}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-left text-xs transition-colors cursor-pointer ${
+                  isSelected
+                    ? 'bg-(--accent-subtle) text-(--text-primary) font-bold'
+                    : 'text-(--text-primary) hover:bg-(--accent-subtle)'
+                }`}
+              >
+                <span className="truncate">{opt.label}</span>
+                {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface VehicleMakeRecord {
   make_id: string;
@@ -255,6 +361,40 @@ export function VehicleModels() {
     }
   };
 
+  // Dropdown Options
+  const filterMakeOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: 'all', label: 'All Makes (Filter by Make)' },
+      ...makes.map((make) => ({
+        value: make.make_id,
+        label: make.name
+      }))
+    ],
+    [makes]
+  );
+
+  const modalMakeOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: 'Select Equipment Make...' },
+      ...makes.map((make) => ({
+        value: make.make_id,
+        label: make.name
+      }))
+    ],
+    [makes]
+  );
+
+  const modalTypeOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: 'Select Equipment Type...' },
+      ...types.map((type) => ({
+        value: type.type_id,
+        label: `${type.code}\n${type.description}`
+      }))
+    ],
+    [types]
+  );
+
   // Filter & Search computation
   const filteredMakes = useMemo(() => {
     const q = searchQuery.toLowerCase();
@@ -365,18 +505,12 @@ export function VehicleModels() {
           {activeTab === 'models' && (
             <div className="flex items-center gap-2">
               <Filter className="w-3.5 h-3.5 text-(--text-muted)" />
-              <select
+              <CustomDropdown
                 value={selectedMakeFilter}
-                onChange={(e) => setSelectedMakeFilter(e.target.value)}
-                className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
-              >
-                <option value="all">All Makes (Filter by Make)</option>
-                {makes.map((make) => (
-                  <option key={make.make_id} value={make.make_id}>
-                    {make.name}
-                  </option>
-                ))}
-              </select>
+                options={filterMakeOptions}
+                onChange={(val) => setSelectedMakeFilter(val)}
+                buttonClassName="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:border-(--text-primary)"
+              />
             </div>
           )}
 
@@ -480,7 +614,7 @@ export function VehicleModels() {
                         <td className="py-2 px-3 font-semibold text-(--text-primary)">{model.name}</td>
                         <td className="py-2 px-3 text-(--text-primary) font-medium">{matchedMake ? matchedMake.name : '—'}</td>
                         <td className="py-2 px-3 text-(--text-secondary) font-medium">
-                          {matchedType ? `${matchedType.code} - ${matchedType.description}` : '—'}
+                          {matchedType ? `${matchedType.code}\n${matchedType.description}` : '—'}
                         </td>
                         <td className="py-2 px-3">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${model.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main)'}`}>
@@ -640,34 +774,21 @@ export function VehicleModels() {
                       <label className="block text-xs font-semibold text-(--text-primary) mb-1">
                         Equipment Make <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        required
+                      <CustomDropdown
                         value={modelForm.make_id}
-                        onChange={(e) => setModelForm({ ...modelForm, make_id: e.target.value })}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
-                      >
-                        <option value="">Select Equipment Make...</option>
-                        {makes.map((make) => (
-                          <option key={make.make_id} value={make.make_id}>
-                            {make.name}
-                          </option>
-                        ))}
-                      </select>
+                        options={modalMakeOptions}
+                        onChange={(val) => setModelForm({ ...modelForm, make_id: val })}
+                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:border-(--text-primary)"
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-(--text-primary) mb-1">Equipment Type (Optional)</label>
-                      <select
+                      <CustomDropdown
                         value={modelForm.type_id}
-                        onChange={(e) => setModelForm({ ...modelForm, type_id: e.target.value })}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
-                      >
-                        <option value="">Select Equipment Type...</option>
-                        {types.map((type) => (
-                          <option key={type.type_id} value={type.type_id}>
-                            {type.code} - {type.description}
-                          </option>
-                        ))}
-                      </select>
+                        options={modalTypeOptions}
+                        onChange={(val) => setModelForm({ ...modelForm, type_id: val })}
+                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:border-(--text-primary)"
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-(--text-primary) mb-1">

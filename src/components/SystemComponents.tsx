@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { 
   Cpu, 
@@ -14,8 +14,114 @@ import {
   Loader2,
   Search,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  Check
 } from 'lucide-react';
+
+/* --- Reusable CustomDropdown Component --- */
+
+export interface DropdownOption<T extends string | number> {
+  value: T;
+  label: string;
+}
+
+interface CustomDropdownProps<T extends string | number> {
+  id?: string;
+  value: T;
+  options: DropdownOption<T>[];
+  onChange: (value: T) => void;
+  className?: string;
+  buttonClassName?: string;
+  menuClassName?: string;
+  openUpwards?: boolean;
+  disabled?: boolean;
+}
+
+function CustomDropdown<T extends string | number>({
+  id,
+  value,
+  options,
+  onChange,
+  className = '',
+  buttonClassName = '',
+  menuClassName = '',
+  openUpwards = false,
+  disabled = false,
+}: CustomDropdownProps<T>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedOption = useMemo(
+    () => options.find((opt) => opt.value === value) || options[0],
+    [options, value]
+  );
+
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isOpen]);
+
+  return (
+    <div ref={containerRef} className={`relative ${className}`}>
+      <button
+        id={id}
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen((prev) => !prev)}
+        className={`flex items-center justify-between gap-2 text-left transition-colors focus:outline-none ${
+          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+        } ${buttonClassName}`}
+      >
+        <span className="truncate">{selectedOption?.label ?? ''}</span>
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-(--text-muted) shrink-0 transition-transform duration-150 ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {isOpen && !disabled && (
+        <div
+          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-(--border-main) bg-(--bg-elevated) shadow-xl py-1 ${
+            openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
+          } ${menuClassName}`}
+        >
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={String(opt.value)}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-left text-xs transition-colors cursor-pointer ${
+                  isSelected
+                    ? 'bg-(--accent-subtle) text-(--text-primary) font-bold'
+                    : 'text-(--text-primary) hover:bg-(--accent-subtle)'
+                }`}
+              >
+                <span className="truncate">{opt.label}</span>
+                {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface EquipmentSystemRecord {
   system_id: string;
@@ -205,6 +311,29 @@ export function SystemComponents() {
     }
   };
 
+  // Dropdown Options
+  const filterSystemOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: 'all', label: 'All Systems (Filter by System)' },
+      ...systems.map((sys) => ({
+        value: sys.system_id,
+        label: `${sys.system_code}\n${sys.system_desc}`
+      }))
+    ],
+    [systems]
+  );
+
+  const modalSystemOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: 'Select Equipment System...' },
+      ...systems.map((sys) => ({
+        value: sys.system_id,
+        label: `${sys.system_code}\n${sys.system_desc}`
+      }))
+    ],
+    [systems]
+  );
+
   // Filter & Search computation
   const filteredSystems = useMemo(() => {
     const q = searchQuery.toLowerCase();
@@ -297,18 +426,12 @@ export function SystemComponents() {
           {activeTab === 'components' && (
             <div className="flex items-center gap-2">
               <Filter className="w-3.5 h-3.5 text-(--text-muted)" />
-              <select
+              <CustomDropdown
                 value={selectedSystemFilter}
-                onChange={(e) => setSelectedSystemFilter(e.target.value)}
-                className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
-              >
-                <option value="all">All Systems (Filter by System)</option>
-                {systems.map((sys) => (
-                  <option key={sys.system_id} value={sys.system_id}>
-                    {sys.system_code} - {sys.system_desc}
-                  </option>
-                ))}
-              </select>
+                options={filterSystemOptions}
+                onChange={(val) => setSelectedSystemFilter(val)}
+                buttonClassName="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:border-(--text-primary)"
+              />
             </div>
           )}
 
@@ -406,7 +529,7 @@ export function SystemComponents() {
                         <td className="py-2 px-3 font-semibold text-(--text-primary)">{component.component_code}</td>
                         <td className="py-2 px-3 text-(--text-muted)">{component.component_desc}</td>
                         <td className="py-2 px-3 text-(--text-primary) font-medium">
-                          {matchedSystem ? `${matchedSystem.system_code} - ${matchedSystem.system_desc}` : '—'}
+                          {matchedSystem ? `${matchedSystem.system_code}\n${matchedSystem.system_desc}` : '—'}
                         </td>
                         <td className="py-2 px-3 text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -515,19 +638,12 @@ export function SystemComponents() {
                       <label className="block text-xs font-semibold text-(--text-primary) mb-1">
                         Equipment System <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        required
+                      <CustomDropdown
                         value={componentForm.system_id}
-                        onChange={(e) => setComponentForm({ ...componentForm, system_id: e.target.value })}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
-                      >
-                        <option value="">Select Equipment System...</option>
-                        {systems.map((sys) => (
-                          <option key={sys.system_id} value={sys.system_id}>
-                            {sys.system_code} - {sys.system_desc}
-                          </option>
-                        ))}
-                      </select>
+                        options={modalSystemOptions}
+                        onChange={(val) => setComponentForm({ ...componentForm, system_id: val })}
+                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:border-(--text-primary)"
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-(--text-primary) mb-1">

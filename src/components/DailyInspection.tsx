@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { ClipboardList, Search, Calendar, Gauge, FileText, Loader2, CheckCircle, X, AlertCircle, Car, Flag, Plus, Trash2, Layers, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CustomDropdown } from './ui/CustomDropdown';
 
 interface VehiclePm {
   plate_no: string;
@@ -111,11 +112,8 @@ export function DailyInspection() {
   const todayDateStr = new Date().toISOString().split('T')[0];
 
   // Computed fields for form
-  const previousRdg = selectedVehicle && selectedVehicle.service_rdg !== null && selectedVehicle.service_rdg !== undefined 
-    ? Number(selectedVehicle.service_rdg) 
-    : 0;
-
-  const numericPrevious = previousRdgInput !== '' ? Number(previousRdgInput) : previousRdg;
+  const previousRdg = previousRdgInput !== '' ? Number(previousRdgInput) : 0;
+  const numericPrevious = previousRdg;
   const numericCurrent = Number(currentRdg) || 0;
   const computedIncrement = numericCurrent >= numericPrevious ? numericCurrent - numericPrevious : 0;
 
@@ -421,13 +419,31 @@ export function DailyInspection() {
 
   const handleSelectVehicle = async (v: VehiclePm) => {
     setSelectedVehicle(v);
-    const resolvedRdg = v.service_rdg !== null && v.service_rdg !== undefined ? String(v.service_rdg) : '0';
-    setPreviousRdgInput(resolvedRdg);
     setShowPicker(false);
     setCapturedLogId(null);
+    setPreviousRdgInput('');
 
     const vehicleId = v.id || v.vehicle_id;
-    if (vehicleId) {
+    if (!vehicleId) return;
+
+    try {
+      const { data, error } = await supabase.rpc('get_vehicle_latest_reading', {
+        p_vehicle_id: vehicleId
+      });
+
+      if (!error && data) {
+        const latestRdg = data.latest_rdg !== undefined && data.latest_rdg !== null ? String(data.latest_rdg) : '0';
+        setPreviousRdgInput(latestRdg);
+      } else {
+        const fallbackRdg = v.service_rdg !== null && v.service_rdg !== undefined ? String(v.service_rdg) : '0';
+        setPreviousRdgInput(fallbackRdg);
+      }
+    } catch {
+      const fallbackRdg = v.service_rdg !== null && v.service_rdg !== undefined ? String(v.service_rdg) : '0';
+      setPreviousRdgInput(fallbackRdg);
+    }
+
+    try {
       const { data } = await supabase
         .from('vehicle_daily_logs')
         .select('log_id')
@@ -438,6 +454,8 @@ export function DailyInspection() {
       if (data && data.log_id) {
         setCapturedLogId(data.log_id);
       }
+    } catch {
+      // Error handling
     }
   };
 
@@ -765,19 +783,16 @@ export function DailyInspection() {
                     <Activity className="w-3.5 h-3.5 text-(--text-primary)" />
                     Operating Status <span className="text-red-500">*</span>
                   </span>
-                  <select
-                    required
+                  <CustomDropdown
+                    required={true}
+                    placeholder="— Select Operating Status —"
                     value={selectedOperationsId}
-                    onChange={(e) => setSelectedOperationsId(e.target.value)}
-                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) px-3.5 py-2 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
-                  >
-                    <option value="">— Select Operating Status —</option>
-                    {operationsStatuses.map((op) => (
-                      <option key={op.operations_id} value={op.operations_id}>
-                        {op.status_name} {op.description ? `(${op.description})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val: string) => setSelectedOperationsId(val)}
+                    options={operationsStatuses.map((op) => ({
+                      value: op.operations_id,
+                      label: `${op.status_name} ${op.description ? `(${op.description})` : ''}`
+                    }))}
+                  />
                 </div>
               </div>
 
@@ -1119,32 +1134,22 @@ export function DailyInspection() {
 
                 <div className="space-y-1.5">
                   <span className="block font-semibold uppercase text-(--text-secondary)">Select Equipment (Plate No)</span>
-                  <select
-                    value={searchFlagVehicleId}
-                    onChange={(e) => setSearchFlagVehicleId(e.target.value)}
+                  <CustomDropdown
                     disabled={!searchFlagDate}
-                    className={`w-full bg-(--bg-elevated) border border-(--border-main) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary) disabled:opacity-50 disabled:cursor-not-allowed ${
-                      searchFlagDate && dateFilteredVehicles.length === 0 
-                        ? 'text-red-600 dark:text-red-400 font-semibold' 
-                        : 'text-(--text-primary)'
-                    }`}
-                  >
-                    <option 
-                      value="" 
-                      className={searchFlagDate && dateFilteredVehicles.length === 0 ? 'text-red-600 dark:text-red-400 font-semibold' : ''}
-                    >
-                      {!searchFlagDate 
+                    placeholder={
+                      !searchFlagDate 
                         ? '— Select date first —' 
                         : dateFilteredVehicles.length === 0 
                           ? 'No equipment with records on this date' 
-                          : 'Select Equipment ID'}
-                    </option>
-                    {dateFilteredVehicles.map(v => (
-                      <option key={v.vehicle_id} value={v.vehicle_id} className="text-(--text-primary)">
-                        {v.plate_no}
-                      </option>
-                    ))}
-                  </select>
+                          : 'Select Equipment ID'
+                    }
+                    value={searchFlagVehicleId}
+                    onChange={(val: string) => setSearchFlagVehicleId(val)}
+                    options={dateFilteredVehicles.map(v => ({
+                      value: v.vehicle_id,
+                      label: v.plate_no
+                    }))}
+                  />
                 </div>
               </div>
 
@@ -1236,19 +1241,16 @@ export function DailyInspection() {
 
                 <div>
                   <span className="block font-semibold uppercase text-(--text-secondary) mb-1">Active Log Record (Current Day Only)</span>
-                  <select
-                    required
+                  <CustomDropdown
+                    required={true}
+                    placeholder={dailyLogsList.length === 0 ? '— Select equipment first —' : 'Select Current Day Log'}
                     value={selectedLogId}
-                    onChange={(e) => setSelectedLogId(e.target.value)}
-                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                  >
-                    <option value="">{dailyLogsList.length === 0 ? '— Select equipment first —' : 'Select Current Day Log'}</option>
-                    {dailyLogsList.map((log) => (
-                      <option key={log.log_id} value={log.log_id}>
-                        Log Date: {log.log_date}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val: string) => setSelectedLogId(val)}
+                    options={dailyLogsList.map((log) => ({
+                      value: log.log_id,
+                      label: `Log Date: ${log.log_date}`
+                    }))}
+                  />
                 </div>
 
                 <div className="space-y-1.5">
@@ -1265,25 +1267,22 @@ export function DailyInspection() {
                       className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-8 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:border-(--text-primary) mb-1.5"
                     />
                   </div>
-                  <select
-                    required
+                  <CustomDropdown
+                    required={true}
+                    placeholder="Select FMEA Item..."
                     value={selectedFmeaId}
-                    onChange={(e) => setSelectedFmeaId(e.target.value)}
-                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                  >
-                    <option value="">Select FMEA Item...</option>
-                    {filteredFmeaList.map(f => {
+                    onChange={(val: string) => setSelectedFmeaId(val)}
+                    options={filteredFmeaList.map(f => {
                       const fId = f.fmea_id || f.conditionfmea_id || f.id || '';
                       const dCode = f.detail_code ? `[${f.detail_code}]` : '';
                       const dDesc = f.detail_description || f.description || f.code || 'Item';
                       const cCtrl = f.current_control ? ` | Control: ${f.current_control}` : '';
-                      return (
-                        <option key={fId} value={fId}>
-                          {dCode} {dDesc} {cCtrl}
-                        </option>
-                      );
+                      return {
+                        value: fId,
+                        label: `${dCode} ${dDesc} ${cCtrl}`
+                      };
                     })}
-                  </select>
+                  />
                 </div>
 
                 <div className="space-y-1.5">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { 
   AlertTriangle, 
@@ -19,8 +19,110 @@ import {
   ChevronDown,
   ChevronUp,
   FolderSearch,
-  Lock
+  Lock,
+  Check
 } from 'lucide-react';
+
+/* --- Reusable CustomDropdown Component --- */
+
+export interface DropdownOption<T extends string | number> {
+  value: T;
+  label: string;
+}
+
+interface CustomDropdownProps<T extends string | number> {
+  id?: string;
+  value: T;
+  options: DropdownOption<T>[];
+  onChange: (value: T) => void;
+  className?: string;
+  buttonClassName?: string;
+  menuClassName?: string;
+  openUpwards?: boolean;
+}
+
+function CustomDropdown<T extends string | number>({
+  id,
+  value,
+  options,
+  onChange,
+  className = '',
+  buttonClassName = '',
+  menuClassName = '',
+  openUpwards = false,
+}: CustomDropdownProps<T>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedOption = useMemo(
+    () => options.find((opt) => opt.value === value) || options[0],
+    [options, value]
+  );
+
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isOpen]);
+
+  return (
+    <div ref={containerRef} className={`relative ${className}`}>
+      <button
+        id={id}
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className={`flex items-center justify-between gap-2 text-left transition-colors focus:outline-none cursor-pointer ${buttonClassName}`}
+      >
+        <span className="truncate">{selectedOption?.label ?? ''}</span>
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-(--text-muted) shrink-0 transition-transform duration-150 ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {isOpen && (
+        <div
+          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-(--border-main) bg-(--bg-elevated) shadow-xl py-1 ${
+            openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
+          } ${menuClassName}`}
+        >
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={String(opt.value)}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-left text-xs transition-colors cursor-pointer ${
+                  isSelected
+                    ? 'bg-(--accent-subtle) text-(--text-primary) font-bold'
+                    : 'text-(--text-primary) hover:bg-(--accent-subtle)'
+                }`}
+              >
+                <span className="truncate">{opt.label}</span>
+                {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* --- Interfaces --- */
 
 interface EquipmentPm {
   plate_no: string;
@@ -57,6 +159,9 @@ interface IncidentRecord {
   incident_date: string;
   vehicle_id: string;
   vehicle_plate?: string;
+  vehicle_make?: string;
+  vehicle_model?: string;
+  vehicle_type?: string;
   incident_description: string;
   incident_impact: string;
   incident_loss: number;
@@ -273,6 +378,133 @@ export function IncidentReport() {
   const causeMap = useMemo(() => new Map(causeOptions.map(c => [c.id, c])), [causeOptions]);
   const causeFmeaMap = useMemo(() => new Map(causeFmeaList.map(f => [f.cause_fmea_id, f])) as Map<string, CauseFmeaOption>, [causeFmeaList]);
 
+  /* --- Dropdown Options --- */
+  const pageSizeDropdownOptions = useMemo<DropdownOption<number>[]>(
+    () => [
+      { value: 5, label: '5' },
+      { value: 10, label: '10' },
+      { value: 25, label: '25' }
+    ],
+    []
+  );
+
+  const severityDropdownOptions = useMemo<DropdownOption<IncidentRecord['incident_severity']>[]>(
+    () => [
+      { value: 'Low', label: 'Low' },
+      { value: 'Medium', label: 'Medium' },
+      { value: 'High', label: 'High' },
+      { value: 'Critical', label: 'Critical' }
+    ],
+    []
+  );
+
+  const statusDropdownOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: 'Select Status...' },
+      ...statuses.map((st) => ({
+        value: st.status_id,
+        label: st.status_name || ''
+      }))
+    ],
+    [statuses]
+  );
+
+  const conditionCategoryDropdownOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: 'Select Condition Category...' },
+      ...conditionOptions.map((opt) => ({
+        value: opt.id,
+        label: `[${opt.code}] ${opt.description}`
+      }))
+    ],
+    [conditionOptions]
+  );
+
+  const conditionFmeaDropdownOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: 'Select Condition FMEA Detail...' },
+      ...conditionFmeaList
+        .filter((f) => !childForm.selectedOptionId || f.condition_id === childForm.selectedOptionId)
+        .map((fmea) => ({
+          value: fmea.conditionsfmea_id,
+          label: `[${fmea.detail_code || '—'}] ${fmea.detail_description || '—'}${fmea.computed_rpn ? ` (RPN: ${fmea.computed_rpn})` : ''}`
+        }))
+    ],
+    [conditionFmeaList, childForm.selectedOptionId]
+  );
+
+  const actCategoryDropdownOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: 'Select Unsafe Act Category...' },
+      ...actOptions.map((opt) => ({
+        value: opt.id,
+        label: `[${opt.code}] ${opt.description}`
+      }))
+    ],
+    [actOptions]
+  );
+
+  const actFmeaDropdownOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: 'Select Act FMEA Detail...' },
+      ...actFmeaList
+        .filter((f) => !childForm.selectedOptionId || f.act_id === childForm.selectedOptionId)
+        .map((fmea) => ({
+          value: fmea.actfmea_id,
+          label: `[${fmea.detail_code || '—'}] ${fmea.detail_description || '—'}${fmea.computed_rpn ? ` (RPN: ${fmea.computed_rpn})` : ''}`
+        }))
+    ],
+    [actFmeaList, childForm.selectedOptionId]
+  );
+
+  const factorCategoryDropdownOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: 'Select Personal Factor Category...' },
+      ...factorOptions.map((opt) => ({
+        value: opt.id,
+        label: `[${opt.code}] ${opt.description}`
+      }))
+    ],
+    [factorOptions]
+  );
+
+  const factorFmeaDropdownOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: 'Select Factor FMEA Detail...' },
+      ...factorFmeaList
+        .filter((f) => !childForm.selectedOptionId || f.factor_id === childForm.selectedOptionId)
+        .map((fmea) => ({
+          value: fmea.factors_fmea_id,
+          label: `[${fmea.detail_code || '—'}] ${fmea.detail_description || '—'}${fmea.computed_rpn ? ` (RPN: ${fmea.computed_rpn})` : ''}`
+        }))
+    ],
+    [factorFmeaList, childForm.selectedOptionId]
+  );
+
+  const causeCategoryDropdownOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: 'Select Work Cause Category...' },
+      ...causeOptions.map((opt) => ({
+        value: opt.id,
+        label: `[${opt.code}] ${opt.description}`
+      }))
+    ],
+    [causeOptions]
+  );
+
+  const causeFmeaDropdownOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: 'Select Cause FMEA Detail...' },
+      ...causeFmeaList
+        .filter((f) => !childForm.selectedOptionId || f.cause_id === childForm.selectedOptionId)
+        .map((fmea) => ({
+          value: fmea.cause_fmea_id,
+          label: `[${fmea.detail_code || '—'}] ${fmea.detail_description || '—'}${fmea.computed_rpn ? ` (RPN: ${fmea.computed_rpn})` : ''}`
+        }))
+    ],
+    [causeFmeaList, childForm.selectedOptionId]
+  );
+
   const fetchEquipmentList = useCallback(async (queryToRun?: string) => {
     try {
       setLoadingEquipment(true);
@@ -322,10 +554,11 @@ export function IncidentReport() {
       setLoadingIncidents(true);
       setErrorMsg(null);
 
-      const [incRes, empRes, statusRes] = await Promise.all([
+      const [incRes, empRes, statusRes, vehDetailsRes] = await Promise.all([
         supabase.from('incident_report').select('*, joborder_status(status_id, status_name)').order('created_at', { ascending: false }),
         supabase.from('employees').select('*'),
-        supabase.from('joborder_status').select('*')
+        supabase.from('joborder_status').select('*'),
+        supabase.from('vw_vehicle_pm_details').select('vehicle_id, plate_no, make_name, model_name, type_description')
       ]);
 
       if (incRes.error) throw incRes.error;
@@ -336,6 +569,18 @@ export function IncidentReport() {
           status_name: String(s.status_name || s.name || 'Active')
         })));
       }
+
+      const vehicleMap = new Map<string, { plate_no: string; make_name: string; model_name: string; type_description: string }>();
+      (vehDetailsRes.data || []).forEach((v: Record<string, unknown>) => {
+        if (v.vehicle_id) {
+          vehicleMap.set(String(v.vehicle_id), {
+            plate_no: String(v.plate_no || ''),
+            make_name: String(v.make_name || ''),
+            model_name: String(v.model_name || ''),
+            type_description: String(v.type_description || '')
+          });
+        }
+      });
 
       const empList: EmployeeOption[] = (empRes.data || []).map((e: Record<string, unknown>) => {
         const fname = String(e.first_name || '');
@@ -355,12 +600,17 @@ export function IncidentReport() {
 
       const formatted: IncidentRecord[] = (incRes.data || []).map((row: Record<string, unknown>) => {
         const statusObj = row.joborder_status as Record<string, unknown> | null;
+        const vehId = String(row.vehicle_id || '');
+        const matchedVeh = vehicleMap.get(vehId);
         return {
           incident_id: String(row.incident_id),
           incident_refno: String(row.incident_refno || ''),
           incident_date: String(row.incident_date || ''),
-          vehicle_id: String(row.vehicle_id),
-          vehicle_plate: String(row.vehicle_plate || row.plate_no || 'Assigned Vehicle'),
+          vehicle_id: vehId,
+          vehicle_plate: matchedVeh?.plate_no || String(row.vehicle_plate || row.plate_no || 'Assigned Equipment'),
+          vehicle_make: matchedVeh?.make_name || '',
+          vehicle_model: matchedVeh?.model_name || '',
+          vehicle_type: matchedVeh?.type_description || '',
           incident_description: String(row.incident_description || ''),
           incident_impact: String(row.incident_impact || ''),
           incident_loss: Number(row.incident_loss || 0),
@@ -650,7 +900,10 @@ export function IncidentReport() {
     const matchedEq = equipmentList.find(e => (e.vehicle_id || e.equipment_id || e.id) === inc.vehicle_id);
     setSelectedEquipment(matchedEq || {
       plate_no: inc.vehicle_plate || 'Assigned Equipment',
-      vehicle_id: inc.vehicle_id
+      vehicle_id: inc.vehicle_id,
+      make_name: inc.vehicle_make,
+      model_name: inc.vehicle_model,
+      type_description: inc.vehicle_type
     });
     setFormData({
       incident_refno: inc.incident_refno,
@@ -964,6 +1217,9 @@ export function IncidentReport() {
     return incidents.filter(inc => 
       (inc.incident_refno ?? '').toLowerCase().includes(query) ||
       (inc.vehicle_plate ?? '').toLowerCase().includes(query) ||
+      (inc.vehicle_make ?? '').toLowerCase().includes(query) ||
+      (inc.vehicle_model ?? '').toLowerCase().includes(query) ||
+      (inc.vehicle_type ?? '').toLowerCase().includes(query) ||
       (inc.reported_by ?? '').toLowerCase().includes(query) ||
       (inc.incident_description ?? '').toLowerCase().includes(query)
     );
@@ -989,6 +1245,12 @@ export function IncidentReport() {
 
   const selectedIncidentRecord = incidents.find(inc => inc.incident_id === selectedIncidentId) || null;
   const isLockedRecord = selectedIncidentRecord?.status_name === 'Completed' || selectedIncidentRecord?.status_name === 'Cancelled';
+
+  const formatEquipmentSummary = (inc: IncidentRecord) => {
+    const makeModel = [inc.vehicle_make, inc.vehicle_model].filter(Boolean).join(' / ');
+    const meta = [makeModel, inc.vehicle_type].filter(Boolean).join(' • ');
+    return meta ? `${inc.vehicle_plate} — ${meta}` : (inc.vehicle_plate || '—');
+  };
 
   // Helper renderer for paginated tables
   const renderPaginatedTable = (
@@ -1054,18 +1316,16 @@ export function IncidentReport() {
         <div className="flex items-center justify-between pt-2 px-1 shrink-0 text-xs text-(--text-secondary)">
           <div className="flex items-center gap-2">
             <span>Show:</span>
-            <select
+            <CustomDropdown
               value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
+              options={pageSizeDropdownOptions}
+              openUpwards
+              onChange={(val) => {
+                setPageSize(Number(val));
                 setCurrentPage(1);
               }}
-              className="bg-(--bg-elevated) border border-(--border-main) rounded px-2 py-1 text-xs text-(--text-primary)"
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-            </select>
+              buttonClassName="bg-(--bg-elevated) border border-(--border-main) rounded px-2 py-1 text-xs text-(--text-primary)"
+            />
             <span>
               Showing {totalRecords === 0 ? 0 : (currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalRecords)} of {totalRecords} entries
             </span>
@@ -1127,17 +1387,29 @@ export function IncidentReport() {
 
       <div className="shrink-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-3.5 space-y-2.5">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-(--border-main) pb-2.5">
-          <div className="flex items-center gap-3">
-            <div className="text-xs font-semibold whitespace-nowrap">
+          <div className="flex flex-wrap items-center gap-3 min-w-0">
+            <div className="text-xs font-semibold min-w-0">
               {selectedIncidentRecord ? (
-                <span className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                   <span className="text-(--text-primary) font-mono font-bold">
                     {selectedIncidentRecord.incident_refno}
                   </span>
                   <span className="text-(--text-muted) font-normal">
                     ({selectedIncidentRecord.incident_severity} Severity)
                   </span>
-                </span>
+                  <span className="text-(--border-main)">|</span>
+                  <span className="text-(--text-primary) font-mono font-bold">
+                    {selectedIncidentRecord.vehicle_plate}
+                  </span>
+                  {(selectedIncidentRecord.vehicle_make || selectedIncidentRecord.vehicle_model || selectedIncidentRecord.vehicle_type) && (
+                    <span className="text-(--text-secondary) font-normal truncate">
+                      ({[
+                        [selectedIncidentRecord.vehicle_make, selectedIncidentRecord.vehicle_model].filter(Boolean).join(' / '),
+                        selectedIncidentRecord.vehicle_type
+                      ].filter(Boolean).join(' • ')})
+                    </span>
+                  )}
+                </div>
               ) : (
                 <span className="text-(--text-muted) font-normal">No Incident Selected</span>
               )}
@@ -1148,14 +1420,14 @@ export function IncidentReport() {
                 setIncidentSearchQuery('');
                 setIsIncidentSearchOpen(true);
               }}
-              className="bg-(--bg-elevated) hover:opacity-80 text-(--text-primary) border border-(--border-main) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="bg-(--bg-elevated) hover:opacity-80 text-(--text-primary) border border-(--border-main) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
             >
               <Search className="w-3.5 h-3.5 text-(--text-primary)" />
               <span>Search Incident Reports...</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={handleOpenCreateModal}
               className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
@@ -1253,8 +1525,18 @@ export function IncidentReport() {
                     <span className="font-semibold text-(--text-primary) font-mono">{selectedIncidentRecord.incident_date}</span>
                   </div>
                   <div>
-                    <span className="text-[11px] text-(--text-muted) uppercase block">Equipment Vehicle</span>
-                    <span className="font-bold text-(--text-primary)">{selectedIncidentRecord.vehicle_plate}</span>
+                    <span className="text-[11px] text-(--text-muted) uppercase block">Equipment</span>
+                    <div className="font-bold text-(--text-primary) font-mono">{selectedIncidentRecord.vehicle_plate}</div>
+                    {(selectedIncidentRecord.vehicle_make || selectedIncidentRecord.vehicle_model) && (
+                      <div className="text-[11px] text-(--text-secondary)">
+                        {[selectedIncidentRecord.vehicle_make, selectedIncidentRecord.vehicle_model].filter(Boolean).join(' / ')}
+                      </div>
+                    )}
+                    {selectedIncidentRecord.vehicle_type && (
+                      <div className="text-[10px] text-(--text-muted)">
+                        {selectedIncidentRecord.vehicle_type}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <span className="text-[11px] text-(--text-muted) uppercase block">Estimated Loss</span>
@@ -1412,7 +1694,7 @@ export function IncidentReport() {
             <div className="p-3 border-b border-(--border-main) bg-(--bg-surface) shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
-                <input type="text" autoFocus placeholder="Filter ref #, plate, reporter name..." value={incidentSearchQuery} onChange={(e) => setIncidentSearchQuery(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)" />
+                <input type="text" autoFocus placeholder="Filter ref #, equipment ID, make/model, type, reporter..." value={incidentSearchQuery} onChange={(e) => setIncidentSearchQuery(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)" />
               </div>
             </div>
             <div className="p-4 overflow-y-auto flex-1 space-y-2">
@@ -1427,7 +1709,7 @@ export function IncidentReport() {
                         <span className="text-[11px] text-(--text-muted)">({inc.incident_date})</span>
                         <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-(--accent-subtle) text-(--text-secondary)">{inc.incident_severity}</span>
                       </div>
-                      <div className="text-xs text-(--text-secondary)">Equipment: <strong>{inc.vehicle_plate}</strong> | Reported by: {inc.reported_by || '—'}</div>
+                      <div className="text-xs text-(--text-secondary)">Equipment: <strong>{formatEquipmentSummary(inc)}</strong> | Reported by: {inc.reported_by || '—'}</div>
                     </div>
                     <span className="text-xs text-(--text-primary) group-hover:underline font-semibold shrink-0">Select</span>
                   </div>
@@ -1458,7 +1740,7 @@ export function IncidentReport() {
                   {selectedEquipment ? (
                     <div className="flex items-center justify-between bg-(--bg-surface) border border-(--border-main) p-3.5 rounded-xl">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full text-xs">
-                        <div><span className="text-[11px] text-(--text-muted) uppercase block">Plate No</span><div className="font-bold text-(--text-primary) text-sm font-mono">{selectedEquipment.plate_no}</div></div>
+                        <div><span className="text-[11px] text-(--text-muted) uppercase block">Equipment ID</span><div className="font-bold text-(--text-primary) text-sm font-mono">{selectedEquipment.plate_no}</div></div>
                         <div><span className="text-[11px] text-(--text-muted) uppercase block">Current Reading</span><div className="font-semibold text-(--text-primary)">{selectedEquipment.service_rdg ?? '0'}</div></div>
                         <div><span className="text-[11px] text-(--text-muted) uppercase block">Make / Model</span><div className="font-semibold text-(--text-primary)">{selectedEquipment.make_name || 'N/A'} {selectedEquipment.model_name ? `/ ${selectedEquipment.model_name}` : ''}</div></div>
                         <div><span className="text-[11px] text-(--text-muted) uppercase block">Type</span><div className="font-semibold text-(--text-primary)">{selectedEquipment.type_description || 'N/A'}</div></div>
@@ -1487,9 +1769,12 @@ export function IncidentReport() {
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Severity Level</label>
-                    <select value={formData.incident_severity} onChange={(e) => setFormData({ ...formData, incident_severity: e.target.value as IncidentRecord['incident_severity'] })} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="Low">Low</option><option value="Medium">Medium</option><option value="High">High</option><option value="Critical">Critical</option>
-                    </select>
+                    <CustomDropdown
+                      value={formData.incident_severity}
+                      options={severityDropdownOptions}
+                      onChange={(val) => setFormData({ ...formData, incident_severity: val })}
+                      buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Estimated Loss (₱) <span className="text-red-500">*</span></label>
@@ -1502,10 +1787,12 @@ export function IncidentReport() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Status</label>
-                    <select value={formData.status_id} onChange={(e) => handleStatusChange(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs">
-                      <option value="">Select Status...</option>
-                      {statuses.map(st => (<option key={st.status_id} value={st.status_id}>{st.status_name}</option>))}
-                    </select>
+                    <CustomDropdown
+                      value={formData.status_id}
+                      options={statusDropdownOptions}
+                      onChange={(val) => handleStatusChange(val)}
+                      buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs"
+                    />
                   </div>
                 </div>
 
@@ -1548,7 +1835,7 @@ export function IncidentReport() {
               <button type="button" onClick={() => setShowEquipmentPicker(false)} className="text-(--text-muted) cursor-pointer"><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={(e) => { e.preventDefault(); fetchEquipmentList(equipmentSearchQuery); }} className="p-3 border-b border-(--border-main) bg-(--bg-surface) flex gap-2">
-              <input type="text" placeholder="Filter by Make, Model, or Plate No..." value={equipmentSearchQuery} onChange={(e) => setEquipmentSearchQuery(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs" />
+              <input type="text" placeholder="Filter by Equipment ID..." value={equipmentSearchQuery} onChange={(e) => setEquipmentSearchQuery(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs" />
               <button type="submit" className="bg-(--btn-primary-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer">Search</button>
             </form>
             <div className="p-4 overflow-y-auto flex-1 space-y-2">
@@ -1638,11 +1925,10 @@ export function IncidentReport() {
                       <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
                         Unsafe Condition Category <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        required
+                      <CustomDropdown
                         value={childForm.selectedOptionId}
-                        onChange={(e) => {
-                          const newCondId = e.target.value;
+                        options={conditionCategoryDropdownOptions}
+                        onChange={(newCondId) => {
                           const matchingFmeas = conditionFmeaList.filter(f => f.condition_id === newCondId);
                           setChildForm(prev => ({
                             ...prev,
@@ -1650,24 +1936,18 @@ export function IncidentReport() {
                             selectedFmeaId: matchingFmeas[0]?.conditionsfmea_id || ''
                           }));
                         }}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                      >
-                        <option value="">Select Condition Category...</option>
-                        {conditionOptions.map(opt => (
-                          <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
-                        ))}
-                      </select>
+                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                      />
                     </div>
 
                     <div>
                       <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
                         Condition FMEA Detail <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        required
+                      <CustomDropdown
                         value={childForm.selectedFmeaId}
-                        onChange={(e) => {
-                          const selectedFmeaId = e.target.value;
+                        options={conditionFmeaDropdownOptions}
+                        onChange={(selectedFmeaId) => {
                           const matchedFmea = conditionFmeaList.find(f => f.conditionsfmea_id === selectedFmeaId);
                           setChildForm(prev => ({
                             ...prev,
@@ -1675,17 +1955,8 @@ export function IncidentReport() {
                             selectedOptionId: matchedFmea ? matchedFmea.condition_id : prev.selectedOptionId
                           }));
                         }}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                      >
-                        <option value="">Select Condition FMEA Detail...</option>
-                        {conditionFmeaList
-                          .filter(f => !childForm.selectedOptionId || f.condition_id === childForm.selectedOptionId)
-                          .map(fmea => (
-                            <option key={fmea.conditionsfmea_id} value={fmea.conditionsfmea_id}>
-                              [{fmea.detail_code || '—'}] {fmea.detail_description || '—'} {fmea.computed_rpn ? `(RPN: ${fmea.computed_rpn})` : ''}
-                            </option>
-                          ))}
-                      </select>
+                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                      />
                     </div>
                   </>
                 )}
@@ -1696,11 +1967,10 @@ export function IncidentReport() {
                       <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
                         Unsafe Act Category <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        required
+                      <CustomDropdown
                         value={childForm.selectedOptionId}
-                        onChange={(e) => {
-                          const newActId = e.target.value;
+                        options={actCategoryDropdownOptions}
+                        onChange={(newActId) => {
                           const matchingFmeas = actFmeaList.filter(f => f.act_id === newActId);
                           setChildForm(prev => ({
                             ...prev,
@@ -1708,24 +1978,18 @@ export function IncidentReport() {
                             selectedFmeaId: matchingFmeas[0]?.actfmea_id || ''
                           }));
                         }}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                      >
-                        <option value="">Select Unsafe Act Category...</option>
-                        {actOptions.map(opt => (
-                          <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
-                        ))}
-                      </select>
+                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                      />
                     </div>
 
                     <div>
                       <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
                         Act FMEA Detail <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        required
+                      <CustomDropdown
                         value={childForm.selectedFmeaId}
-                        onChange={(e) => {
-                          const selectedFmeaId = e.target.value;
+                        options={actFmeaDropdownOptions}
+                        onChange={(selectedFmeaId) => {
                           const matchedFmea = actFmeaList.find(f => f.actfmea_id === selectedFmeaId);
                           setChildForm(prev => ({
                             ...prev,
@@ -1733,17 +1997,8 @@ export function IncidentReport() {
                             selectedOptionId: matchedFmea ? matchedFmea.act_id : prev.selectedOptionId
                           }));
                         }}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                      >
-                        <option value="">Select Act FMEA Detail...</option>
-                        {actFmeaList
-                          .filter(f => !childForm.selectedOptionId || f.act_id === childForm.selectedOptionId)
-                          .map(fmea => (
-                            <option key={fmea.actfmea_id} value={fmea.actfmea_id}>
-                              [{fmea.detail_code || '—'}] {fmea.detail_description || '—'} {fmea.computed_rpn ? `(RPN: ${fmea.computed_rpn})` : ''}
-                            </option>
-                          ))}
-                      </select>
+                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                      />
                     </div>
                   </>
                 )}
@@ -1754,11 +2009,10 @@ export function IncidentReport() {
                       <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
                         Personal Factor Category <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        required
+                      <CustomDropdown
                         value={childForm.selectedOptionId}
-                        onChange={(e) => {
-                          const newFactorId = e.target.value;
+                        options={factorCategoryDropdownOptions}
+                        onChange={(newFactorId) => {
                           const matchingFmeas = factorFmeaList.filter(f => f.factor_id === newFactorId);
                           setChildForm(prev => ({
                             ...prev,
@@ -1766,24 +2020,18 @@ export function IncidentReport() {
                             selectedFmeaId: matchingFmeas[0]?.factors_fmea_id || ''
                           }));
                         }}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                      >
-                        <option value="">Select Personal Factor Category...</option>
-                        {factorOptions.map(opt => (
-                          <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
-                        ))}
-                      </select>
+                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                      />
                     </div>
 
                     <div>
                       <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
                         Factor FMEA Detail <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        required
+                      <CustomDropdown
                         value={childForm.selectedFmeaId}
-                        onChange={(e) => {
-                          const selectedFmeaId = e.target.value;
+                        options={factorFmeaDropdownOptions}
+                        onChange={(selectedFmeaId) => {
                           const matchedFmea = factorFmeaList.find(f => f.factors_fmea_id === selectedFmeaId);
                           setChildForm(prev => ({
                             ...prev,
@@ -1791,17 +2039,8 @@ export function IncidentReport() {
                             selectedOptionId: matchedFmea ? matchedFmea.factor_id : prev.selectedOptionId
                           }));
                         }}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                      >
-                        <option value="">Select Factor FMEA Detail...</option>
-                        {factorFmeaList
-                          .filter(f => !childForm.selectedOptionId || f.factor_id === childForm.selectedOptionId)
-                          .map(fmea => (
-                            <option key={fmea.factors_fmea_id} value={fmea.factors_fmea_id}>
-                              [{fmea.detail_code || '—'}] {fmea.detail_description || '—'} {fmea.computed_rpn ? `(RPN: ${fmea.computed_rpn})` : ''}
-                            </option>
-                          ))}
-                      </select>
+                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                      />
                     </div>
                   </>
                 )}
@@ -1812,11 +2051,10 @@ export function IncidentReport() {
                       <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
                         Work Related Cause Category <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        required
+                      <CustomDropdown
                         value={childForm.selectedOptionId}
-                        onChange={(e) => {
-                          const newCauseId = e.target.value;
+                        options={causeCategoryDropdownOptions}
+                        onChange={(newCauseId) => {
                           const matchingFmeas = causeFmeaList.filter(f => f.cause_id === newCauseId);
                           setChildForm(prev => ({
                             ...prev,
@@ -1824,24 +2062,18 @@ export function IncidentReport() {
                             selectedFmeaId: matchingFmeas[0]?.cause_fmea_id || ''
                           }));
                         }}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                      >
-                        <option value="">Select Work Cause Category...</option>
-                        {causeOptions.map(opt => (
-                          <option key={opt.id} value={opt.id}>[{opt.code}] {opt.description}</option>
-                        ))}
-                      </select>
+                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                      />
                     </div>
 
                     <div>
                       <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
                         Cause FMEA Detail <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        required
+                      <CustomDropdown
                         value={childForm.selectedFmeaId}
-                        onChange={(e) => {
-                          const selectedFmeaId = e.target.value;
+                        options={causeFmeaDropdownOptions}
+                        onChange={(selectedFmeaId) => {
                           const matchedFmea = causeFmeaList.find(f => f.cause_fmea_id === selectedFmeaId);
                           setChildForm(prev => ({
                             ...prev,
@@ -1849,17 +2081,8 @@ export function IncidentReport() {
                             selectedOptionId: matchedFmea ? matchedFmea.cause_id : prev.selectedOptionId
                           }));
                         }}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                      >
-                        <option value="">Select Cause FMEA Detail...</option>
-                        {causeFmeaList
-                          .filter(f => !childForm.selectedOptionId || f.cause_id === childForm.selectedOptionId)
-                          .map(fmea => (
-                            <option key={fmea.cause_fmea_id} value={fmea.cause_fmea_id}>
-                              [{fmea.detail_code || '—'}] {fmea.detail_description || '—'} {fmea.computed_rpn ? `(RPN: ${fmea.computed_rpn})` : ''}
-                            </option>
-                          ))}
-                      </select>
+                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                      />
                     </div>
                   </>
                 )}

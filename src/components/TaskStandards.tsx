@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { 
   CheckSquare, 
@@ -14,8 +14,114 @@ import {
   Loader2,
   Search,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  Check
 } from 'lucide-react';
+
+/* --- Reusable CustomDropdown Component --- */
+
+export interface DropdownOption<T extends string | number> {
+  value: T;
+  label: string;
+}
+
+interface CustomDropdownProps<T extends string | number> {
+  id?: string;
+  value: T;
+  options: DropdownOption<T>[];
+  onChange: (value: T) => void;
+  className?: string;
+  buttonClassName?: string;
+  menuClassName?: string;
+  openUpwards?: boolean;
+  disabled?: boolean;
+}
+
+function CustomDropdown<T extends string | number>({
+  id,
+  value,
+  options,
+  onChange,
+  className = '',
+  buttonClassName = '',
+  menuClassName = '',
+  openUpwards = false,
+  disabled = false,
+}: CustomDropdownProps<T>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedOption = useMemo(
+    () => options.find((opt) => opt.value === value) || options[0],
+    [options, value]
+  );
+
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isOpen]);
+
+  return (
+    <div ref={containerRef} className={`relative ${className}`}>
+      <button
+        id={id}
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen((prev) => !prev)}
+        className={`flex items-center justify-between gap-2 text-left transition-colors focus:outline-none ${
+          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+        } ${buttonClassName}`}
+      >
+        <span className="truncate">{selectedOption?.label ?? ''}</span>
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-(--text-muted) shrink-0 transition-transform duration-150 ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {isOpen && !disabled && (
+        <div
+          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-(--border-main) bg-(--bg-elevated) shadow-xl py-1 ${
+            openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
+          } ${menuClassName}`}
+        >
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={String(opt.value)}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-left text-xs transition-colors cursor-pointer ${
+                  isSelected
+                    ? 'bg-(--accent-subtle) text-(--text-primary) font-bold'
+                    : 'text-(--text-primary) hover:bg-(--accent-subtle)'
+                }`}
+              >
+                <span className="truncate">{opt.label}</span>
+                {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface EquipmentTaskRecord {
   task_id: string;
@@ -34,8 +140,6 @@ interface EquipmentTaskStandardRecord {
   task_standard_desc: string;
   standard_time: number;
   item: string | null;
-  est_labor_cost: number | null;
-  est_materials_cost: number | null;
   created_at: string;
   updated_at: string;
   [key: string]: unknown;
@@ -91,9 +195,7 @@ export function TaskStandards() {
     component_id: '', 
     task_standard_desc: '', 
     standard_time: '0', 
-    item: '', 
-    est_labor_cost: '0', 
-    est_materials_cost: '0' 
+    item: ''
   });
 
   const loadData = useCallback(async () => {
@@ -157,9 +259,7 @@ export function TaskStandards() {
       component_id: '', 
       task_standard_desc: '', 
       standard_time: '0', 
-      item: '', 
-      est_labor_cost: '0', 
-      est_materials_cost: '0' 
+      item: ''
     });
     setIsModalOpen(true);
   };
@@ -182,8 +282,6 @@ export function TaskStandards() {
         task_standard_desc: rec.task_standard_desc || '',
         standard_time: String(rec.standard_time ?? 0),
         item: rec.item || '',
-        est_labor_cost: String(rec.est_labor_cost ?? 0),
-        est_materials_cost: String(rec.est_materials_cost ?? 0),
       });
     }
     setIsModalOpen(true);
@@ -239,8 +337,6 @@ export function TaskStandards() {
           task_standard_desc: standardForm.task_standard_desc.trim(),
           standard_time: Number(standardForm.standard_time) || 0,
           item: standardForm.item ? standardForm.item.trim() : null,
-          est_labor_cost: Number(standardForm.est_labor_cost) || 0,
-          est_materials_cost: Number(standardForm.est_materials_cost) || 0,
           updated_at: new Date().toISOString()
         };
         if (editingId) {
@@ -294,6 +390,51 @@ export function TaskStandards() {
   }, [activeTab, filteredTasks.length, filteredStandards.length, pageSize]);
 
   const availableComponents = components.filter(c => c.system_id === standardForm.system_id);
+
+  // Dropdown Options
+  const filterTaskOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: 'all', label: 'All Tasks (Filter by Task)' },
+      ...tasks.map((t) => ({
+        value: t.task_id,
+        label: t.task_name
+      }))
+    ],
+    [tasks]
+  );
+
+  const modalTaskOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: 'Select Task...' },
+      ...tasks.map((t) => ({
+        value: t.task_id,
+        label: t.task_name
+      }))
+    ],
+    [tasks]
+  );
+
+  const modalSystemOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: 'Select System...' },
+      ...systems.map((sys) => ({
+        value: sys.system_id,
+        label: `${sys.system_code}\n${sys.system_desc}`
+      }))
+    ],
+    [systems]
+  );
+
+  const modalComponentOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: 'Select Component...' },
+      ...availableComponents.map((c) => ({
+        value: c.component_id,
+        label: `${c.component_code}\n${c.component_desc}`
+      }))
+    ],
+    [availableComponents]
+  );
 
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
@@ -358,18 +499,12 @@ export function TaskStandards() {
           {activeTab === 'standards' && (
             <div className="flex items-center gap-2">
               <Filter className="w-3.5 h-3.5 text-(--text-muted)" />
-              <select
+              <CustomDropdown
                 value={selectedTaskFilter}
-                onChange={(e) => setSelectedTaskFilter(e.target.value)}
-                className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
-              >
-                <option value="all">All Tasks (Filter by Task)</option>
-                {tasks.map((t) => (
-                  <option key={t.task_id} value={t.task_id}>
-                    {t.task_name}
-                  </option>
-                ))}
-              </select>
+                options={filterTaskOptions}
+                onChange={(val) => setSelectedTaskFilter(val)}
+                buttonClassName="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:border-(--text-primary)"
+              />
             </div>
           )}
 
@@ -456,8 +591,6 @@ export function TaskStandards() {
                     <th className="py-2 px-3">System / Component</th>
                     <th className="py-2 px-3">Description</th>
                     <th className="py-2 px-3">Std. Time</th>
-                    <th className="py-2 px-3">Labor Cost</th>
-                    <th className="py-2 px-3">Materials Cost</th>
                     <th className="py-2 px-3 text-right w-28">Actions</th>
                   </tr>
                 </thead>
@@ -476,8 +609,6 @@ export function TaskStandards() {
                         </td>
                         <td className="py-2 px-3 text-(--text-secondary) max-w-50 truncate">{standard.task_standard_desc}</td>
                         <td className="py-2 px-3 font-mono whitespace-nowrap">{standard.standard_time} HR</td>
-                        <td className="py-2 px-3 font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap">₱{(standard.est_labor_cost ?? 0).toFixed(2)}</td>
-                        <td className="py-2 px-3 font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap">₱{(standard.est_materials_cost ?? 0).toFixed(2)}</td>
                         <td className="py-2 px-3 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button
@@ -582,17 +713,12 @@ export function TaskStandards() {
                       <label className="block text-xs font-semibold text-(--text-primary) mb-1">
                         Equipment Task <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        required
+                      <CustomDropdown
                         value={standardForm.task_id}
-                        onChange={(e) => setStandardForm({ ...standardForm, task_id: e.target.value })}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
-                      >
-                        <option value="">Select Task...</option>
-                        {tasks.map((t) => (
-                          <option key={t.task_id} value={t.task_id}>{t.task_name}</option>
-                        ))}
-                      </select>
+                        options={modalTaskOptions}
+                        onChange={(val) => setStandardForm({ ...standardForm, task_id: val })}
+                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:border-(--text-primary)"
+                      />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -600,34 +726,24 @@ export function TaskStandards() {
                         <label className="block text-xs font-semibold text-(--text-primary) mb-1">
                           Equipment System <span className="text-red-500">*</span>
                         </label>
-                        <select
-                          required
+                        <CustomDropdown
                           value={standardForm.system_id}
-                          onChange={(e) => setStandardForm({ ...standardForm, system_id: e.target.value, component_id: '' })}
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
-                        >
-                          <option value="">Select System...</option>
-                          {systems.map((sys) => (
-                            <option key={sys.system_id} value={sys.system_id}>{sys.system_code} - {sys.system_desc}</option>
-                          ))}
-                        </select>
+                          options={modalSystemOptions}
+                          onChange={(val) => setStandardForm({ ...standardForm, system_id: val, component_id: '' })}
+                          buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:border-(--text-primary)"
+                        />
                       </div>
 
                       <div>
                         <label className="block text-xs font-semibold text-(--text-primary) mb-1">
                           Equipment Component <span className="text-red-500">*</span>
                         </label>
-                        <select
-                          required
+                        <CustomDropdown
                           value={standardForm.component_id}
-                          onChange={(e) => setStandardForm({ ...standardForm, component_id: e.target.value })}
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
-                        >
-                          <option value="">Select Component...</option>
-                          {availableComponents.map((c) => (
-                            <option key={c.component_id} value={c.component_id}>{c.component_code} - {c.component_desc}</option>
-                          ))}
-                        </select>
+                          options={modalComponentOptions}
+                          onChange={(val) => setStandardForm({ ...standardForm, component_id: val })}
+                          buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:border-(--text-primary)"
+                        />
                       </div>
                     </div>
 
@@ -645,41 +761,17 @@ export function TaskStandards() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-xs font-semibold text-(--text-primary) mb-1">Std. Time (HR)</label>
-                        <input
-                          type="number"
-                          step="any"
-                          required
-                          min="0"
-                          value={standardForm.standard_time}
-                          onChange={(e) => setStandardForm({ ...standardForm, standard_time: e.target.value })}
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-(--text-primary) mb-1">Est. Labor Cost (₱)</label>
-                        <input
-                          type="number"
-                          step="any"
-                          min="0"
-                          value={standardForm.est_labor_cost}
-                          onChange={(e) => setStandardForm({ ...standardForm, est_labor_cost: e.target.value })}
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-(--text-primary) mb-1">Est. Materials Cost (₱)</label>
-                        <input
-                          type="number"
-                          step="any"
-                          min="0"
-                          value={standardForm.est_materials_cost}
-                          onChange={(e) => setStandardForm({ ...standardForm, est_materials_cost: e.target.value })}
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                        />
-                      </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">Std. Time (HR)</label>
+                      <input
+                        type="number"
+                        step="any"
+                        required
+                        min="0"
+                        value={standardForm.standard_time}
+                        onChange={(e) => setStandardForm({ ...standardForm, standard_time: e.target.value })}
+                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                      />
                     </div>
 
                     <div>

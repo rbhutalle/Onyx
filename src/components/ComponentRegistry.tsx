@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { 
   Layers, 
@@ -16,8 +16,113 @@ import {
   ChevronLeft,
   ChevronRight,
   Cpu,
-  Filter
+  Filter,
+  Check
 } from 'lucide-react';
+
+/* --- Reusable CustomDropdown Component --- */
+
+export interface DropdownOption<T extends string | number> {
+  value: T;
+  label: string;
+}
+
+interface CustomDropdownProps<T extends string | number> {
+  id?: string;
+  value: T;
+  options: DropdownOption<T>[];
+  onChange: (value: T) => void;
+  className?: string;
+  buttonClassName?: string;
+  menuClassName?: string;
+  openUpwards?: boolean;
+  disabled?: boolean;
+}
+
+function CustomDropdown<T extends string | number>({
+  id,
+  value,
+  options,
+  onChange,
+  className = '',
+  buttonClassName = '',
+  menuClassName = '',
+  openUpwards = false,
+  disabled = false,
+}: CustomDropdownProps<T>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedOption = useMemo(
+    () => options.find((opt) => opt.value === value) || options[0],
+    [options, value]
+  );
+
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isOpen]);
+
+  return (
+    <div ref={containerRef} className={`relative ${className}`}>
+      <button
+        id={id}
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen((prev) => !prev)}
+        className={`flex items-center justify-between gap-2 text-left transition-colors focus:outline-none ${
+          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+        } ${buttonClassName}`}
+      >
+        <span className="truncate">{selectedOption?.label ?? ''}</span>
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-(--text-muted) shrink-0 transition-transform duration-150 ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {isOpen && !disabled && (
+        <div
+          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-(--border-main) bg-(--bg-elevated) shadow-xl py-1 ${
+            openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
+          } ${menuClassName}`}
+        >
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={String(opt.value)}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-left text-xs transition-colors cursor-pointer ${
+                  isSelected
+                    ? 'bg-(--accent-subtle) text-(--text-primary) font-bold'
+                    : 'text-(--text-primary) hover:bg-(--accent-subtle)'
+                }`}
+              >
+                <span className="truncate">{opt.label}</span>
+                {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface ComponentMaintenanceRecord {
   equipment_component_id: string;
@@ -250,15 +355,13 @@ export function ComponentRegistry() {
     }
   };
 
-  const handleSystemChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newSystemId = e.target.value;
+  const handleSystemChange = (newSystemId: string) => {
     setSearchSystemId(newSystemId);
     setSearchComponentId('');
     fetchComponentRegistryData(searchQuery, newSystemId, '');
   };
 
-  const handleComponentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newComponentId = e.target.value;
+  const handleComponentChange = (newComponentId: string) => {
     setSearchComponentId(newComponentId);
     fetchComponentRegistryData(searchQuery, searchSystemId, newComponentId);
   };
@@ -386,9 +489,45 @@ export function ComponentRegistry() {
     }
   };
 
-  const tabFilteredComponents = baseComponents.filter(c => {
-    return searchSystemId ? c.system_id === searchSystemId : true;
-  });
+  const tabFilteredComponents = useMemo(
+    () =>
+      baseComponents.filter(c => {
+        return searchSystemId ? c.system_id === searchSystemId : true;
+      }),
+    [baseComponents, searchSystemId]
+  );
+
+  const systemDropdownOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: '-- All Systems --' },
+      ...systems.map((s) => ({
+        value: s.system_id,
+        label: `${s.system_code} ${s.system_desc ? `- ${s.system_desc}` : ''}`.trim()
+      }))
+    ],
+    [systems]
+  );
+
+  const componentDropdownOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: '-- All Component Types --' },
+      ...tabFilteredComponents.map((c) => ({
+        value: c.component_id,
+        label: `${c.component_code} ${c.component_desc ? `- ${c.component_desc}` : ''}`.trim()
+      }))
+    ],
+    [tabFilteredComponents]
+  );
+
+  const pageSizeDropdownOptions = useMemo<DropdownOption<number>[]>(
+    () => [
+      { value: 5, label: '5' },
+      { value: 10, label: '10' },
+      { value: 20, label: '20' },
+      { value: 50, label: '50' }
+    ],
+    []
+  );
 
   const filteredSystems = systems.filter(s => {
     const q = systemSearchQuery.toLowerCase();
@@ -489,18 +628,12 @@ export function ComponentRegistry() {
                 <label className="text-[11px] font-semibold uppercase text-(--text-muted) mb-1 flex items-center gap-1">
                   <Filter className="w-3 h-3 text-(--text-primary)" /> System
                 </label>
-                <select
+                <CustomDropdown
                   value={searchSystemId}
+                  options={systemDropdownOptions}
                   onChange={handleSystemChange}
-                  className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg px-2.5 py-1.5 text-xs cursor-pointer"
-                >
-                  <option value="">-- All Systems --</option>
-                  {systems.map((s) => (
-                    <option key={s.system_id} value={s.system_id}>
-                      {s.system_code} {s.system_desc ? `- ${s.system_desc}` : ''}
-                    </option>
-                  ))}
-                </select>
+                  buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:border-(--text-primary) rounded-lg px-2.5 py-1.5 text-xs"
+                />
               </div>
 
               {/* Dropdown 2: Component Type */}
@@ -508,19 +641,13 @@ export function ComponentRegistry() {
                 <label className="text-[11px] font-semibold uppercase text-(--text-muted) mb-1 flex items-center gap-1">
                   <Filter className="w-3 h-3 text-(--text-primary)" /> Component Type
                 </label>
-                <select
+                <CustomDropdown
                   value={searchComponentId}
+                  options={componentDropdownOptions}
                   onChange={handleComponentChange}
                   disabled={!searchSystemId && tabFilteredComponents.length === 0}
-                  className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg px-2.5 py-1.5 text-xs cursor-pointer disabled:opacity-50"
-                >
-                  <option value="">-- All Component Types --</option>
-                  {tabFilteredComponents.map((c) => (
-                    <option key={c.component_id} value={c.component_id}>
-                      {c.component_code} {c.component_desc ? `- ${c.component_desc}` : ''}
-                    </option>
-                  ))}
-                </select>
+                  buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:border-(--text-primary) rounded-lg px-2.5 py-1.5 text-xs"
+                />
               </div>
             </div>
 
@@ -666,19 +793,16 @@ export function ComponentRegistry() {
 
                 <div className="flex items-center gap-1.5 ml-2">
                   <span>Per page:</span>
-                  <select
+                  <CustomDropdown
                     value={pageSize}
-                    onChange={(e) => {
-                      setPageSize(Number(e.target.value));
+                    options={pageSizeDropdownOptions}
+                    openUpwards
+                    onChange={(val) => {
+                      setPageSize(Number(val));
                       setCurrentPage(1);
                     }}
-                    className="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded px-2 py-1 focus:outline-none focus:border-(--text-primary) cursor-pointer"
-                  >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                  </select>
+                    buttonClassName="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded px-2 py-1 focus:border-(--text-primary)"
+                  />
                 </div>
               </div>
 

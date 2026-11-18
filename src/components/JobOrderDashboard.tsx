@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import {  
   SlidersHorizontal,
   ChevronRight,
+  ChevronDown,
+  Check,
   Info,
   BarChart3,
   RefreshCw,
@@ -14,6 +16,89 @@ import {
   PieChart,
   DollarSign
 } from 'lucide-react';
+
+/* --- Custom Dropdown Component --- */
+interface DropdownOption {
+  value: string;
+  label: string;
+}
+
+interface CustomDropdownProps {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: DropdownOption[];
+  placeholder?: string;
+}
+
+function CustomDropdown({ id, value, onChange, options, placeholder = 'Select...' }: CustomDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find((opt) => opt.value === value);
+
+  return (
+    <div ref={dropdownRef} className="relative mt-1 w-full">
+      <button
+        id={id}
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 hover:bg-(--accent-subtle) transition-colors cursor-pointer"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        <span className="truncate text-left">
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-(--text-muted) shrink-0 transition-transform duration-150 ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {isOpen && (
+        <ul
+          role="listbox"
+          className="absolute z-40 mt-1 w-full max-h-56 overflow-y-auto bg-(--bg-elevated) border border-(--border-main) rounded-lg shadow-xl py-1 text-xs"
+        >
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <li
+                key={opt.value}
+                role="option"
+                aria-selected={isSelected}
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                className={`px-2.5 py-1.5 flex items-center justify-between gap-2 cursor-pointer transition-colors ${
+                  isSelected
+                    ? 'bg-blue-600/15 text-blue-600 dark:text-blue-400 font-semibold'
+                    : 'text-(--text-primary) hover:bg-(--accent-subtle)'
+                }`}
+              >
+                <span className="truncate">{opt.label}</span>
+                {isSelected && <Check className="w-3.5 h-3.5 shrink-0 text-blue-600 dark:text-blue-400" />}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 /* --- Interfaces --- */
 interface VehicleRecord {
@@ -483,6 +568,37 @@ export function JobOrderDashboard() {
     }
     setRefreshing(false);
   };
+
+  // Dropdown options memos
+  const customerOptions = useMemo<DropdownOption[]>(() => [
+    { value: 'ALL', label: 'All Customers' },
+    ...Array.from(new Set(vehiclesData.map(v => v.customer_name))).map(c => ({ value: c, label: c }))
+  ], [vehiclesData]);
+
+  const makeOptions = useMemo<DropdownOption[]>(() => [
+    { value: 'ALL', label: 'All Makes' },
+    ...Array.from(new Set(vehiclesData.map(v => v.make_name))).map(m => ({ value: m, label: m }))
+  ], [vehiclesData]);
+
+  const modelOptions = useMemo<DropdownOption[]>(() => [
+    { value: 'ALL', label: 'All Models' },
+    ...Array.from(new Set(vehiclesData.map(v => v.model_name))).map(m => ({ value: m, label: m }))
+  ], [vehiclesData]);
+
+  const joTypeOptions = useMemo<DropdownOption[]>(() => [
+    { value: 'ALL', label: 'All JO Types' },
+    ...jobOrderTypes.map(jot => ({ value: jot.type_id, label: jot.type_desc }))
+  ], [jobOrderTypes]);
+
+  const joStatusOptions = useMemo<DropdownOption[]>(() => [
+    { value: 'ALL', label: 'All Statuses' },
+    ...jobOrderStatuses.map(st => ({ value: st.status_id, label: st.status_name }))
+  ], [jobOrderStatuses]);
+
+  const supervisorOptions = useMemo<DropdownOption[]>(() => [
+    { value: 'ALL', label: 'All Supervisors' },
+    ...supervisorsList.map(sup => ({ value: sup.employee_id, label: sup.employee_name }))
+  ], [supervisorsList]);
 
   // Dynamically recalculate vehicle metrics based on date range, supervisor, status & JO Type filters
   const filteredVehicles = useMemo(() => {
@@ -979,98 +1095,62 @@ export function JobOrderDashboard() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
                   <div>
                     <label htmlFor="filterCustomer" className="text-[10px] font-bold uppercase text-(--text-muted)">Customer</label>
-                    <select
+                    <CustomDropdown
                       id="filterCustomer"
-                      name="filterCustomer"
                       value={filterCustomer}
-                      onChange={(e) => setFilterCustomer(e.target.value)}
-                      className="w-full mt-1 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2 py-1 focus:outline-none"
-                    >
-                      <option value="ALL">All Customers</option>
-                      {Array.from(new Set(vehiclesData.map(v => v.customer_name))).map(c => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
+                      onChange={setFilterCustomer}
+                      options={customerOptions}
+                    />
                   </div>
 
                   <div>
                     <label htmlFor="filterMake" className="text-[10px] font-bold uppercase text-(--text-muted)">Vehicle Make</label>
-                    <select
+                    <CustomDropdown
                       id="filterMake"
-                      name="filterMake"
                       value={filterMake}
-                      onChange={(e) => setFilterMake(e.target.value)}
-                      className="w-full mt-1 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2 py-1 focus:outline-none"
-                    >
-                      <option value="ALL">All Makes</option>
-                      {Array.from(new Set(vehiclesData.map(v => v.make_name))).map(m => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
+                      onChange={setFilterMake}
+                      options={makeOptions}
+                    />
                   </div>
 
                   <div>
                     <label htmlFor="filterModel" className="text-[10px] font-bold uppercase text-(--text-muted)">Vehicle Model</label>
-                    <select
+                    <CustomDropdown
                       id="filterModel"
-                      name="filterModel"
                       value={filterModel}
-                      onChange={(e) => setFilterModel(e.target.value)}
-                      className="w-full mt-1 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2 py-1 focus:outline-none"
-                    >
-                      <option value="ALL">All Models</option>
-                      {Array.from(new Set(vehiclesData.map(v => v.model_name))).map(m => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
+                      onChange={setFilterModel}
+                      options={modelOptions}
+                    />
                   </div>
 
                   <div>
                     <label htmlFor="filterJobOrderTypeId" className="text-[10px] font-bold uppercase text-(--text-muted)">JO Type</label>
-                    <select
+                    <CustomDropdown
                       id="filterJobOrderTypeId"
-                      name="filterJobOrderTypeId"
                       value={filterJobOrderTypeId}
-                      onChange={(e) => setFilterJobOrderTypeId(e.target.value)}
-                      className="w-full mt-1 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2 py-1 focus:outline-none"
-                    >
-                      <option value="ALL">All JO Types</option>
-                      {jobOrderTypes.map(jot => (
-                        <option key={jot.type_id} value={jot.type_id}>{jot.type_desc}</option>
-                      ))}
-                    </select>
+                      onChange={setFilterJobOrderTypeId}
+                      options={joTypeOptions}
+                    />
                   </div>
 
                   <div>
                     <label htmlFor="filterStatusId" className="text-[10px] font-bold uppercase text-(--text-muted)">JO Status</label>
-                    <select
+                    <CustomDropdown
                       id="filterStatusId"
-                      name="filterStatusId"
                       value={filterStatusId}
-                      onChange={(e) => setFilterStatusId(e.target.value)}
-                      className="w-full mt-1 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2 py-1 focus:outline-none"
-                    >
-                      <option value="ALL">All Statuses</option>
-                      {jobOrderStatuses.map(st => (
-                        <option key={st.status_id} value={st.status_id}>{st.status_name}</option>
-                      ))}
-                    </select>
+                      onChange={setFilterStatusId}
+                      options={joStatusOptions}
+                    />
                   </div>
 
                   <div>
                     <label htmlFor="filterSupervisorId" className="text-[10px] font-bold uppercase text-(--text-muted)">Supervisor</label>
-                    <select
+                    <CustomDropdown
                       id="filterSupervisorId"
-                      name="filterSupervisorId"
                       value={filterSupervisorId}
-                      onChange={(e) => setFilterSupervisorId(e.target.value)}
-                      className="w-full mt-1 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-2 py-1 focus:outline-none"
-                    >
-                      <option value="ALL">All Supervisors</option>
-                      {supervisorsList.map(sup => (
-                        <option key={sup.employee_id} value={sup.employee_id}>{sup.employee_name}</option>
-                      ))}
-                    </select>
+                      onChange={setFilterSupervisorId}
+                      options={supervisorOptions}
+                    />
                   </div>
                 </div>
 

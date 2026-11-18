@@ -19,6 +19,7 @@ import {
   Search,
   Filter
 } from 'lucide-react';
+import { CustomDropdown } from './ui/CustomDropdown';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -658,37 +659,31 @@ export function DailyTripAssignment() {
                     <label className="text-xs uppercase text-(--text-muted) font-semibold mb-1 flex items-center gap-1">
                       <User className="w-3.5 h-3.5" /> Driver <span className="text-red-500">*</span>
                     </label>
-                    <select
-                      required
+                    <CustomDropdown
+                      required={true}
+                      placeholder="Select Available Driver..."
                       value={driverId}
-                      onChange={(e) => setDriverId(e.target.value)}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
-                    >
-                      <option value="">Select Available Driver...</option>
-                      {drivers.map((d) => (
-                        <option key={d.employee_id} value={d.employee_id}>
-                          {d.employee_name} ({d.employee_code})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val: string) => setDriverId(val)}
+                      options={drivers.map((d) => ({
+                        value: d.employee_id,
+                        label: `${d.employee_name} (${d.employee_code})`
+                      }))}
+                    />
                   </div>
 
                   <div>
                     <label className="text-xs uppercase text-(--text-muted) font-semibold mb-1 flex items-center gap-1">
                       <Car className="w-3.5 h-3.5" /> Vehicle
                     </label>
-                    <select
+                    <CustomDropdown
+                      placeholder="Select Available Vehicle..."
                       value={vehicleId}
-                      onChange={(e) => setVehicleId(e.target.value)}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-(--text-primary) cursor-pointer"
-                    >
-                      <option value="">Select Available Vehicle...</option>
-                      {vehicles.map((v) => (
-                        <option key={v.vehicle_id} value={v.vehicle_id}>
-                          {v.plate_no} {v.conduction_no ? `(${v.conduction_no})` : ''}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val: string) => setVehicleId(val)}
+                      options={vehicles.map((v) => ({
+                        value: v.vehicle_id,
+                        label: `${v.plate_no}${v.conduction_no ? ` (${v.conduction_no})` : ''}`
+                      }))}
+                    />
                   </div>
 
                   <div>
@@ -722,7 +717,7 @@ export function DailyTripAssignment() {
                 </div>
 
                 {/* Route Segment Details Table */}
-                <div className="space-y-2">
+                <div className="space-y-2 pb-16">
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-bold text-(--text-primary) flex items-center gap-1">
                       <Fuel className="w-3.5 h-3.5 text-emerald-500" /> Route Segments & Fuel Allotment
@@ -736,15 +731,15 @@ export function DailyTripAssignment() {
                     </button>
                   </div>
 
-                  <div className="border border-(--border-main) rounded-xl overflow-hidden bg-(--bg-surface)">
+                  <div className="border border-(--border-main) rounded-xl overflow-visible bg-(--bg-surface)">
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
                         <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle)">
-                          <th className="py-2 px-3">Route (Search & Select)</th>
+                          <th className="py-2 px-3 rounded-tl-xl">Route (Search & Select)</th>
                           <th className="py-2 px-3 w-32">Std Fuel (L)</th>
                           <th className="py-2 px-3 w-32">Buffer (L)</th>
                           <th className="py-2 px-3 w-32">Allocated (L)</th>
-                          <th className="py-2 px-2 text-center w-10"></th>
+                          <th className="py-2 px-2 text-center w-10 rounded-tr-xl"></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-(--border-main)">
@@ -769,9 +764,9 @@ export function DailyTripAssignment() {
 
                             return (
                               <tr key={idx} className="hover:bg-(--bg-elevated) transition-colors">
-                                <td className="py-1.5 px-3 space-y-1">
+                                <td className="py-1.5 px-3 space-y-1.5">
                                   <div className="relative">
-                                    <Search className="w-3 h-3 text-(--text-muted) absolute left-2 top-2.5" />
+                                    <Search className="w-3 h-3 text-(--text-muted) absolute left-2.5 top-2.5" />
                                     <input
                                       type="text"
                                       placeholder="Search route code/origin..."
@@ -779,22 +774,19 @@ export function DailyTripAssignment() {
                                       onChange={(e) =>
                                         setRouteSearchQueries({ ...routeSearchQueries, [idx]: e.target.value })
                                       }
-                                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded pl-7 pr-2 py-1 text-xs focus:outline-none"
+                                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg pl-7 pr-2.5 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
                                     />
                                   </div>
-                                  <select
-                                    required
+                                  <CustomDropdown
+                                    required={true}
+                                    placeholder={`-- Choose from ${filteredRoutes.length} matching routes --`}
                                     value={row.route_id}
-                                    onChange={(e) => handleRouteSelect(idx, e.target.value)}
-                                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded px-2 py-1 text-xs focus:outline-none cursor-pointer"
-                                  >
-                                    <option value="">-- Choose from {filteredRoutes.length} matching routes --</option>
-                                    {filteredRoutes.map((r) => (
-                                      <option key={r.route_id} value={r.route_id}>
-                                        {r.route_code ? `${r.route_code}: ` : ''}{r.origin || 'Origin'} → {r.destination || 'Destination'} (Std: {r.standard_fuel_liters || 0}L)
-                                      </option>
-                                    ))}
-                                  </select>
+                                    onChange={(val: string) => handleRouteSelect(idx, val)}
+                                    options={filteredRoutes.map((r) => ({
+                                      value: r.route_id,
+                                      label: `${r.route_code ? `${r.route_code}: ` : ''}${r.origin || 'Origin'} → ${r.destination || 'Destination'} (Std: ${r.standard_fuel_liters || 0}L)`
+                                    }))}
+                                  />
                                 </td>
                                 <td className="py-1.5 px-3 align-top">
                                   <input
@@ -802,7 +794,7 @@ export function DailyTripAssignment() {
                                     step="any"
                                     value={row.standard_fuel_liters}
                                     onChange={(e) => handleDetailChange(idx, 'standard_fuel_liters', Number(e.target.value) || 0)}
-                                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) font-mono px-2 py-1 rounded text-xs"
+                                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) font-mono px-2.5 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
                                   />
                                 </td>
                                 <td className="py-1.5 px-3 align-top">
@@ -811,17 +803,17 @@ export function DailyTripAssignment() {
                                     step="any"
                                     value={row.buffer_allowance_liters}
                                     onChange={(e) => handleDetailChange(idx, 'buffer_allowance_liters', Number(e.target.value) || 0)}
-                                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) font-mono px-2 py-1 rounded text-xs"
+                                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) font-mono px-2.5 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
                                   />
                                 </td>
-                                <td className="py-1.5 px-3 font-mono font-bold text-emerald-600 dark:text-emerald-400 align-top pt-2">
+                                <td className="py-1.5 px-3 font-mono font-bold text-emerald-600 dark:text-emerald-400 align-top pt-2.5">
                                   {allocated.toFixed(2)}
                                 </td>
                                 <td className="py-1.5 px-2 text-center align-top pt-2">
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveRouteRow(idx)}
-                                    className="text-red-600 dark:text-red-400 hover:text-red-800 p-1 rounded transition-colors"
+                                    className="text-red-600 dark:text-red-400 hover:text-red-800 p-1 rounded transition-colors cursor-pointer"
                                     title="Remove segment"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />

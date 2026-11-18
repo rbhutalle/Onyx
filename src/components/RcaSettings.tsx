@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { 
   GitFork, 
@@ -17,8 +17,114 @@ import {
   Database,
   ListTree,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  Check
 } from 'lucide-react';
+
+/* --- Reusable CustomDropdown Component --- */
+
+export interface DropdownOption<T extends string | number> {
+  value: T;
+  label: string;
+}
+
+interface CustomDropdownProps<T extends string | number> {
+  id?: string;
+  value: T;
+  options: DropdownOption<T>[];
+  onChange: (value: T) => void;
+  className?: string;
+  buttonClassName?: string;
+  menuClassName?: string;
+  openUpwards?: boolean;
+  disabled?: boolean;
+}
+
+function CustomDropdown<T extends string | number>({
+  id,
+  value,
+  options,
+  onChange,
+  className = '',
+  buttonClassName = '',
+  menuClassName = '',
+  openUpwards = false,
+  disabled = false,
+}: CustomDropdownProps<T>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedOption = useMemo(
+    () => options.find((opt) => opt.value === value) || options[0],
+    [options, value]
+  );
+
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isOpen]);
+
+  return (
+    <div ref={containerRef} className={`relative ${className}`}>
+      <button
+        id={id}
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen((prev) => !prev)}
+        className={`flex items-center justify-between gap-2 text-left transition-colors focus:outline-none ${
+          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+        } ${buttonClassName}`}
+      >
+        <span className="truncate">{selectedOption?.label ?? ''}</span>
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-(--text-muted) shrink-0 transition-transform duration-150 ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {isOpen && !disabled && (
+        <div
+          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-(--border-main) bg-(--bg-elevated) shadow-xl py-1 ${
+            openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
+          } ${menuClassName}`}
+        >
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={String(opt.value)}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-left text-xs transition-colors cursor-pointer ${
+                  isSelected
+                    ? 'bg-(--accent-subtle) text-(--text-primary) font-bold'
+                    : 'text-(--text-primary) hover:bg-(--accent-subtle)'
+                }`}
+              >
+                <span className="truncate">{opt.label}</span>
+                {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface MasterRecord {
   id: string;
@@ -376,6 +482,29 @@ export function RcaSettings() {
     }
   };
 
+  // Dropdown Options
+  const detailFilterParentOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: 'All Categories (Filter)' },
+      ...masterList.map((m) => ({
+        value: m.id,
+        label: `${m.code}\n${m.description}`
+      }))
+    ],
+    [masterList]
+  );
+
+  const modalParentCategoryOptions = useMemo<DropdownOption<string>[]>(
+    () => [
+      { value: '', label: 'Select Parent Category...' },
+      ...masterList.map((m) => ({
+        value: m.id,
+        label: `${m.code}\n${m.description}`
+      }))
+    ],
+    [masterList]
+  );
+
   // Filtered & Paginated Lists
   const filteredMasterList = useMemo(() => {
     return masterList.filter(item => 
@@ -634,16 +763,12 @@ export function RcaSettings() {
                 />
               </div>
               <div className="w-full sm:w-64">
-                <select
+                <CustomDropdown
                   value={detailFilterParentId}
-                  onChange={(e) => setDetailFilterParentId(e.target.value)}
-                  className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
-                >
-                  <option value="">All Categories (Filter)</option>
-                  {masterList.map(m => (
-                    <option key={m.id} value={m.id}>{m.code} - {m.description}</option>
-                  ))}
-                </select>
+                  options={detailFilterParentOptions}
+                  onChange={(val) => setDetailFilterParentId(val)}
+                  buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:border-(--text-primary)"
+                />
               </div>
               <button
                 onClick={handleOpenAddDetail}
@@ -680,7 +805,9 @@ export function RcaSettings() {
                       return (
                         <tr key={item.id} className="hover:bg-(--accent-subtle) transition-colors">
                           <td className="py-2 px-3 font-mono font-bold text-(--text-primary)">{item.code}</td>
-                          <td className="py-2 px-3 text-(--text-muted) font-mono">{parentCat ? `${parentCat.code} - ${parentCat.description}` : '—'}</td>
+                          <td className="py-2 px-3 text-(--text-muted) font-medium">
+                            {parentCat ? `${parentCat.code}\n${parentCat.description}` : '—'}
+                          </td>
                           <td className="py-2 px-3 text-(--text-primary)">{item.description}</td>
                           <td className="py-2 px-3 text-right">
                             <div className="flex items-center justify-end gap-2">
@@ -822,23 +949,17 @@ export function RcaSettings() {
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">
                     Parent Category <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    required
+                  <CustomDropdown
                     value={detailFormParentId}
-                    onChange={(e) => {
-                      const newParentId = e.target.value;
+                    options={modalParentCategoryOptions}
+                    onChange={(newParentId) => {
                       setDetailFormParentId(newParentId);
                       const parentRec = masterList.find(m => m.id === newParentId);
                       const prefix = parentRec ? `${parentRec.code}-` : '';
                       setDetailForm(prev => ({ ...prev, code: prefix }));
                     }}
-                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
-                  >
-                    <option value="">Select Parent Category...</option>
-                    {masterList.map(m => (
-                      <option key={m.id} value={m.id}>{m.code} - {m.description}</option>
-                    ))}
-                  </select>
+                    buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:border-(--text-primary)"
+                  />
                 </div>
 
                 <div>
