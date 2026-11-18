@@ -28,7 +28,9 @@ import {
   ArrowLeft,
   Table as TableIcon,
   Calendar,
-  Check
+  Check,
+  Kanban,
+  Coins
 } from 'lucide-react';
 
 /* --- Reusable CustomDropdown Component --- */
@@ -212,15 +214,102 @@ interface JobOrderFlatRecord {
 }
 
 interface IncidentReportFlatRecord {
+  incident_id: string;
+  incident_refno: string;
   vehicle_id: string;
+  plate_no: string;
   incident_date: string;
   incident_loss: number;
+  incident_severity: string;
+  incident_description: string;
+  status_name: string;
 }
 
-type MainTab = 'risk' | 'reliability';
+interface IncidentKanbanCard {
+  incident_id: string;
+  incident_refno: string;
+  vehicle_id: string;
+  plate_no: string;
+  incident_date: string;
+  incident_loss: number;
+  incident_severity: string;
+  incident_description: string;
+  status_label: string;
+}
+
+interface IncidentPillarInspectionRow {
+  pillar: 'Unsafe Condition' | 'Unsafe Act' | 'Personal Factor' | 'Work-Related Cause';
+  detailCode: string;
+  description: string;
+  remarks: string;
+}
+
+type MainTab = 'risk' | 'reliability' | 'kanban';
 type RiskSubTab = 'exec_fmea' | 'op_incidents' | 'rca_breakdown';
 type ReliabilitySubTab = 'bad_actors' | 'reliability';
 type ReliabilityKpiFilter = 'ALL' | 'UNINSTALLED' | 'INSTALLED' | 'COST';
+type KanbanColumnKey = 'Queued' | 'On-hold' | 'In-Progress' | 'Delayed' | 'Completed' | 'Cancelled';
+
+const KANBAN_COLUMNS: {
+  key: KanbanColumnKey;
+  title: string;
+  badgeClass: string;
+  borderClass: string;
+  dotClass: string;
+}[] = [
+  {
+    key: 'Queued',
+    title: 'Queued',
+    badgeClass: 'bg-slate-500/15 text-slate-600 dark:text-slate-300 border-slate-500/30',
+    borderClass: 'border-t-slate-500',
+    dotClass: 'bg-slate-500'
+  },
+  {
+    key: 'On-hold',
+    title: 'On-hold',
+    badgeClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
+    borderClass: 'border-t-amber-500',
+    dotClass: 'bg-amber-500'
+  },
+  {
+    key: 'In-Progress',
+    title: 'In-Progress',
+    badgeClass: 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/30',
+    borderClass: 'border-t-sky-500',
+    dotClass: 'bg-sky-500'
+  },
+  {
+    key: 'Delayed',
+    title: 'Delayed',
+    badgeClass: 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30',
+    borderClass: 'border-t-orange-500',
+    dotClass: 'bg-orange-500'
+  },
+  {
+    key: 'Completed',
+    title: 'Completed',
+    badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+    borderClass: 'border-t-emerald-500',
+    dotClass: 'bg-emerald-500'
+  },
+  {
+    key: 'Cancelled',
+    title: 'Cancelled',
+    badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30',
+    borderClass: 'border-t-rose-500',
+    dotClass: 'bg-rose-500'
+  }
+];
+
+function normalizeKanbanStatus(rawStatus?: string | null): KanbanColumnKey {
+  const s = (rawStatus || '').trim().toLowerCase().replace(/[\s_]+/g, '-');
+  if (s === 'on-hold' || s === 'onhold' || s === 'hold') return 'On-hold';
+  if (s === 'in-progress' || s === 'inprogress' || s === 'ongoing' || s === 'active' || s === 'open' || s === 'investigating') return 'In-Progress';
+  if (s === 'delayed' || s === 'delay' || s === 'overdue') return 'Delayed';
+  if (s === 'completed' || s === 'complete' || s === 'closed' || s === 'done' || s === 'resolved') return 'Completed';
+  if (s === 'cancelled' || s === 'canceled' || s === 'cancel') return 'Cancelled';
+  return 'Queued';
+}
 
 /* Reusable Table Pagination Controls */
 interface TablePaginationProps {
@@ -427,6 +516,13 @@ export function FMEADashboard() {
   const [riskSubTab, setRiskSubTab] = useState<RiskSubTab>('exec_fmea');
   const [reliabilitySubTab, setReliabilitySubTab] = useState<ReliabilitySubTab>('bad_actors');
 
+  // Kanban Selected Card & Pillar Inspection State
+  const [selectedKanbanCard, setSelectedKanbanCard] = useState<IncidentKanbanCard | null>(null);
+  const [kanbanInspectionLoading, setKanbanInspectionLoading] = useState<boolean>(false);
+  const [kanbanPillarRows, setKanbanPillarRows] = useState<IncidentPillarInspectionRow[]>([]);
+  const [kanbanInspectionPage, setKanbanInspectionPage] = useState<number>(1);
+  const [kanbanInspectionPageSize, setKanbanInspectionPageSize] = useState<number>(10);
+
   // Interactive Graph Filter & Drilldown State for 3rd Sub-Tab
   const [rcaSourceFilter, setRcaSourceFilter] = useState<'ALL' | 'IRS' | 'INS'>('ALL');
   const [selectedPillarDrilldown, setSelectedPillarDrilldown] = useState<string | null>(null);
@@ -572,7 +668,11 @@ export function FMEADashboard() {
       supabase.from('vw_vehicle_bad_actor_metrics').select('*'),
       jobOrderQuery,
       supabase.from('vw_component_reliability_summary').select('*'),
-      supabase.from('incident_report').select('vehicle_id, incident_date, incident_loss')
+      supabase.from('incident_report').select(`
+        *,
+        vehicles ( plate_no ),
+        joborder_status ( status_name )
+      `)
     ]);
 
     if (resFmea.error) throw resFmea.error;
@@ -656,13 +756,41 @@ export function FMEADashboard() {
       };
     });
 
+    const badActorPlateMap = new Map<string, string>();
+    (resBadActors.data || []).forEach((ba: Record<string, unknown>) => {
+      if (ba.vehicle_id && ba.plate_no) {
+        badActorPlateMap.set(String(ba.vehicle_id), String(ba.plate_no));
+      }
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mappedIncidentReports: IncidentReportFlatRecord[] = (resIncidentReports.data || []).map((ir: any) => {
+      const vehId = String(ir.vehicle_id || '');
+      const joinedPlate = ir.vehicles?.plate_no;
+      const resolvedPlate = joinedPlate || badActorPlateMap.get(vehId) || 'N/A';
+      const joinedStatus = ir.joborder_status?.status_name || ir.incident_status || ir.status || 'Queued';
+      const refNo = ir.incident_refno || ir.incident_ref || `INC-${String(ir.incident_id || '').slice(0, 8)}`;
+
+      return {
+        incident_id: String(ir.incident_id || ''),
+        incident_refno: String(refNo),
+        vehicle_id: vehId,
+        plate_no: String(resolvedPlate),
+        incident_date: ir.incident_date ? String(ir.incident_date).substring(0, 10) : '—',
+        incident_loss: Number(ir.incident_loss || 0),
+        incident_severity: String(ir.incident_severity || 'Moderate'),
+        incident_description: String(ir.incident_description || ''),
+        status_name: String(joinedStatus)
+      };
+    });
+
     return {
       fmeaAnalytics: mappedFmea,
       opIncidents: mappedIncidents,
       badActors: (resBadActors.data || []) as VehicleBadActorRecord[],
       jobOrdersFlat: flattenedJOs,
       componentReliability: (resReliability.data || []) as ComponentReliabilityRecord[],
-      incidentReportsFlat: (resIncidentReports.data || []) as IncidentReportFlatRecord[]
+      incidentReportsFlat: mappedIncidentReports
     };
   }, []);
 
@@ -714,7 +842,318 @@ export function FMEADashboard() {
     }
   };
 
+  /* --- Inspect Kanban Incident Card (All 4 Pillars - Detail Code) --- */
+  const handleSelectKanbanCard = async (card: IncidentKanbanCard) => {
+    if (selectedKanbanCard?.incident_id === card.incident_id) {
+      setSelectedKanbanCard(null);
+      setKanbanPillarRows([]);
+      return;
+    }
+
+    setSelectedKanbanCard(card);
+    setKanbanInspectionPage(1);
+    setKanbanInspectionLoading(true);
+    setKanbanPillarRows([]);
+
+    try {
+      // 1. Fetch raw junction rows from all 4 incident pillar tables
+      const [condRes, actRes, persRes, workRes] = await Promise.all([
+        supabase.from('incident_conditions').select('*').eq('incident_id', card.incident_id),
+        supabase.from('incident_acts').select('*').eq('incident_id', card.incident_id),
+        supabase.from('incident_personal').select('*').eq('incident_id', card.incident_id),
+        supabase.from('incident_workrelated').select('*').eq('incident_id', card.incident_id)
+      ]);
+
+      const condRows = condRes.data || [];
+      const actRows = actRes.data || [];
+      const persRows = persRes.data || [];
+      const workRows = workRes.data || [];
+
+      // Collect referenced Detail IDs / FK IDs for each pillar
+      const condIds = Array.from(
+        new Set(
+          condRows
+            .map((r) => r.detail_id || r.icsubstandard_conditions_details_id || r.condition_id || r.icsubstandard_conditions_id)
+            .filter(Boolean)
+        )
+      );
+      const actIds = Array.from(
+        new Set(
+          actRows
+            .map((r) => r.detail_id || r.icsubstandard_acts_details_id || r.act_id || r.icsubstandard_acts_id)
+            .filter(Boolean)
+        )
+      );
+      const persIds = Array.from(
+        new Set(
+          persRows
+            .map((r) => r.detail_id || r.bcpersonal_factors_details_id || r.factor_id || r.bcpersonal_factors_id)
+            .filter(Boolean)
+        )
+      );
+      const workIds = Array.from(
+        new Set(
+          workRows
+            .map((r) => r.detail_id || r.bccauses_workrelated_details_id || r.cause_id || r.bccauses_workrelated_id)
+            .filter(Boolean)
+        )
+      );
+
+      // 2. Fetch matching lookup records from detail tables (primary) and parent/legacy tables (fallback)
+      const [
+        modernCondDetails,
+        shortCondDetails,
+        modernCondParent,
+        legacyCond,
+        modernActDetails,
+        shortActDetails,
+        modernActParent,
+        modernPersDetails,
+        shortPersDetails,
+        modernPersParent,
+        legacyPers,
+        modernWorkDetails,
+        shortWorkDetails,
+        modernWorkParent,
+        legacyWork
+      ] = await Promise.all([
+        condIds.length > 0
+          ? supabase.from('icsubstandard_conditions_details').select('*').in('icsubstandard_conditions_details_id', condIds)
+          : Promise.resolve({ data: [] }),
+        condIds.length > 0
+          ? supabase.from('condition_details').select('*').in('detail_id', condIds)
+          : Promise.resolve({ data: [] }),
+        condIds.length > 0
+          ? supabase.from('icsubstandard_conditions').select('*').in('icsubstandard_conditions_id', condIds)
+          : Promise.resolve({ data: [] }),
+        condIds.length > 0
+          ? supabase.from('unsafe_conditions').select('*').in('condition_id', condIds)
+          : Promise.resolve({ data: [] }),
+
+        actIds.length > 0
+          ? supabase.from('icsubstandard_acts_details').select('*').in('icsubstandard_acts_details_id', actIds)
+          : Promise.resolve({ data: [] }),
+        actIds.length > 0
+          ? supabase.from('act_details').select('*').in('detail_id', actIds)
+          : Promise.resolve({ data: [] }),
+        actIds.length > 0
+          ? supabase.from('icsubstandard_acts').select('*').in('icsubstandard_acts_id', actIds)
+          : Promise.resolve({ data: [] }),
+
+        persIds.length > 0
+          ? supabase.from('bcpersonal_factors_details').select('*').in('bcpersonal_factors_details_id', persIds)
+          : Promise.resolve({ data: [] }),
+        persIds.length > 0
+          ? supabase.from('factor_details').select('*').in('detail_id', persIds)
+          : Promise.resolve({ data: [] }),
+        persIds.length > 0
+          ? supabase.from('bcpersonal_factors').select('*').in('bcpersonal_factors_id', persIds)
+          : Promise.resolve({ data: [] }),
+        persIds.length > 0
+          ? supabase.from('personal_factors').select('*').in('factor_id', persIds)
+          : Promise.resolve({ data: [] }),
+
+        workIds.length > 0
+          ? supabase.from('bccauses_workrelated_details').select('*').in('bccauses_workrelated_details_id', workIds)
+          : Promise.resolve({ data: [] }),
+        workIds.length > 0
+          ? supabase.from('cause_details').select('*').in('detail_id', workIds)
+          : Promise.resolve({ data: [] }),
+        workIds.length > 0
+          ? supabase.from('bccauses_workrelated').select('*').in('bccauses_workrelated_id', workIds)
+          : Promise.resolve({ data: [] }),
+        workIds.length > 0
+          ? supabase.from('work_causes').select('*').in('cause_id', workIds)
+          : Promise.resolve({ data: [] })
+      ]);
+
+      // Build unified lookup dictionaries (ID -> { detailCode, description })
+      const condLookup = new Map<string, { detailCode: string; description: string }>();
+      (modernCondDetails.data || []).forEach((d) =>
+        condLookup.set(d.icsubstandard_conditions_details_id, {
+          detailCode: d.icsubstandard_conditions_details_code,
+          description: d.icsubstandard_conditions_details_description
+        })
+      );
+      (shortCondDetails.data || []).forEach((d) =>
+        condLookup.set(d.detail_id, {
+          detailCode: d.code || d.detail_code,
+          description: d.description || d.detail_description
+        })
+      );
+      (modernCondParent.data || []).forEach((d) => {
+        if (!condLookup.has(d.icsubstandard_conditions_id)) {
+          condLookup.set(d.icsubstandard_conditions_id, { detailCode: d.code, description: d.description });
+        }
+      });
+      (legacyCond.data || []).forEach((d) => {
+        if (!condLookup.has(d.condition_id)) {
+          condLookup.set(d.condition_id, { detailCode: d.code || d.condition_code, description: d.description || d.condition_desc });
+        }
+      });
+
+      const actLookup = new Map<string, { detailCode: string; description: string }>();
+      (modernActDetails.data || []).forEach((d) =>
+        actLookup.set(d.icsubstandard_acts_details_id, {
+          detailCode: d.icsubstandard_acts_details_code,
+          description: d.icsubstandard_acts_details_description
+        })
+      );
+      (shortActDetails.data || []).forEach((d) =>
+        actLookup.set(d.detail_id, {
+          detailCode: d.code || d.detail_code,
+          description: d.description || d.detail_description
+        })
+      );
+      (modernActParent.data || []).forEach((d) => {
+        if (!actLookup.has(d.icsubstandard_acts_id)) {
+          actLookup.set(d.icsubstandard_acts_id, { detailCode: d.code, description: d.description });
+        }
+      });
+
+      const persLookup = new Map<string, { detailCode: string; description: string }>();
+      (modernPersDetails.data || []).forEach((d) =>
+        persLookup.set(d.bcpersonal_factors_details_id, {
+          detailCode: d.bcpersonal_factors_details_code,
+          description: d.bcpersonal_factors_details_description
+        })
+      );
+      (shortPersDetails.data || []).forEach((d) =>
+        persLookup.set(d.detail_id, {
+          detailCode: d.code || d.detail_code,
+          description: d.description || d.detail_description
+        })
+      );
+      (modernPersParent.data || []).forEach((d) => {
+        if (!persLookup.has(d.bcpersonal_factors_id)) {
+          persLookup.set(d.bcpersonal_factors_id, { detailCode: d.code, description: d.description });
+        }
+      });
+      (legacyPers.data || []).forEach((d) => {
+        if (!persLookup.has(d.factor_id)) {
+          persLookup.set(d.factor_id, { detailCode: d.code || d.factor_code, description: d.description || d.factor_desc });
+        }
+      });
+
+      const workLookup = new Map<string, { detailCode: string; description: string }>();
+      (modernWorkDetails.data || []).forEach((d) =>
+        workLookup.set(d.bccauses_workrelated_details_id, {
+          detailCode: d.bccauses_workrelated_details_code,
+          description: d.bccauses_workrelated_details_description
+        })
+      );
+      (shortWorkDetails.data || []).forEach((d) =>
+        workLookup.set(d.detail_id, {
+          detailCode: d.code || d.detail_code,
+          description: d.description || d.detail_description
+        })
+      );
+      (modernWorkParent.data || []).forEach((d) => {
+        if (!workLookup.has(d.bccauses_workrelated_id)) {
+          workLookup.set(d.bccauses_workrelated_id, { detailCode: d.code, description: d.description });
+        }
+      });
+      (legacyWork.data || []).forEach((d) => {
+        if (!workLookup.has(d.cause_id)) {
+          workLookup.set(d.cause_id, { detailCode: d.code || d.cause_code, description: d.description || d.cause_desc });
+        }
+      });
+
+      // Also index vw_comprehensive_fmea_analytics by fmea_id / detail_code for detail code enrichment
+      const fmeaMap = new Map(fmeaAnalytics.map((f) => [f.fmea_id, f]));
+
+      // 3. Assemble rows across all 4 pillars prioritizing Detail Code
+      const rows: IncidentPillarInspectionRow[] = [];
+
+      condRows.forEach((r) => {
+        const fk = r.detail_id || r.icsubstandard_conditions_details_id || r.condition_id || r.icsubstandard_conditions_id;
+        const match = fk ? condLookup.get(fk) : undefined;
+        const fmeaMatch = fk ? fmeaMap.get(fk) : undefined;
+        rows.push({
+          pillar: 'Unsafe Condition',
+          detailCode: match?.detailCode || fmeaMatch?.detail_code || r.detail_code || r.condition_code || 'COND',
+          description: match?.description || fmeaMatch?.detail_description || r.description || 'Substandard Condition',
+          remarks: String(r.remarks || '—')
+        });
+      });
+
+      actRows.forEach((r) => {
+        const fk = r.detail_id || r.icsubstandard_acts_details_id || r.act_id || r.icsubstandard_acts_id;
+        const match = fk ? actLookup.get(fk) : undefined;
+        const fmeaMatch = fk ? fmeaMap.get(fk) : undefined;
+        rows.push({
+          pillar: 'Unsafe Act',
+          detailCode: match?.detailCode || fmeaMatch?.detail_code || r.detail_code || r.act_code || 'ACT',
+          description: match?.description || fmeaMatch?.detail_description || r.description || 'Substandard Act',
+          remarks: String(r.remarks || '—')
+        });
+      });
+
+      persRows.forEach((r) => {
+        const fk = r.detail_id || r.bcpersonal_factors_details_id || r.factor_id || r.bcpersonal_factors_id;
+        const match = fk ? persLookup.get(fk) : undefined;
+        const fmeaMatch = fk ? fmeaMap.get(fk) : undefined;
+        rows.push({
+          pillar: 'Personal Factor',
+          detailCode: match?.detailCode || fmeaMatch?.detail_code || r.detail_code || r.factor_code || 'PF',
+          description: match?.description || fmeaMatch?.detail_description || r.description || 'Personal Factor',
+          remarks: String(r.remarks || '—')
+        });
+      });
+
+      workRows.forEach((r) => {
+        const fk = r.detail_id || r.bccauses_workrelated_details_id || r.cause_id || r.bccauses_workrelated_id;
+        const match = fk ? workLookup.get(fk) : undefined;
+        const fmeaMatch = fk ? fmeaMap.get(fk) : undefined;
+        rows.push({
+          pillar: 'Work-Related Cause',
+          detailCode: match?.detailCode || fmeaMatch?.detail_code || r.detail_code || r.cause_code || 'WRK',
+          description: match?.description || fmeaMatch?.detail_description || r.description || 'Work-Related Cause',
+          remarks: String(r.remarks || '—')
+        });
+      });
+
+      setKanbanPillarRows(rows);
+    } catch (err) {
+      console.error('Error loading incident pillar details:', err);
+    } finally {
+      setKanbanInspectionLoading(false);
+    }
+  };
+
   /* --- Derived Computations --- */
+  const kanbanBoardData = useMemo(() => {
+    const grouped: Record<KanbanColumnKey, IncidentKanbanCard[]> = {
+      Queued: [],
+      'On-hold': [],
+      'In-Progress': [],
+      Delayed: [],
+      Completed: [],
+      Cancelled: []
+    };
+
+    incidentReportsFlat.forEach((ir) => {
+      const colKey = normalizeKanbanStatus(ir.status_name);
+      grouped[colKey].push({
+        incident_id: ir.incident_id,
+        incident_refno: ir.incident_refno,
+        vehicle_id: ir.vehicle_id,
+        plate_no: ir.plate_no,
+        incident_date: ir.incident_date,
+        incident_loss: ir.incident_loss,
+        incident_severity: ir.incident_severity,
+        incident_description: ir.incident_description,
+        status_label: ir.status_name || colKey
+      });
+    });
+
+    (Object.keys(grouped) as KanbanColumnKey[]).forEach((col) => {
+      grouped[col].sort((a, b) => b.incident_date.localeCompare(a.incident_date));
+    });
+
+    return grouped;
+  }, [incidentReportsFlat]);
+
   const filteredFmea = useMemo(() => {
     return fmeaAnalytics.filter(r => {
       if (filterRiskSource !== 'ALL' && r.risk_source !== filterRiskSource) return false;
@@ -1048,7 +1487,7 @@ export function FMEADashboard() {
         const meta = vehicleMeta.get(vId) || ({} as Partial<VehicleBadActorRecord>);
         badActorMap.set(vId, {
           vehicle_id: vId,
-          plate_no: meta.plate_no || 'N/A',
+          plate_no: inc.plate_no || meta.plate_no || 'N/A',
           customer_name: meta.customer_name || 'N/A',
           make_name: meta.make_name || 'N/A',
           model_name: meta.model_name || 'N/A',
@@ -1214,6 +1653,11 @@ export function FMEADashboard() {
     [decoupledComponentReliability, reliabilityPage, reliabilityPageSize]
   );
 
+  const paginatedKanbanPillarRows = useMemo(
+    () => paginateSlice(kanbanPillarRows, kanbanInspectionPage, kanbanInspectionPageSize),
+    [kanbanPillarRows, kanbanInspectionPage, kanbanInspectionPageSize]
+  );
+
   return (
     <div className="h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 flex flex-col overflow-hidden">
       {/* Top Header */}
@@ -1255,6 +1699,7 @@ export function FMEADashboard() {
               {activeMainTab === 'reliability' && (
                 reliabilitySubTab === 'bad_actors' ? 'Fleet Bad Actor Scorecard' : 'Component Reliability & System Analytics'
               )}
+              {activeMainTab === 'kanban' && 'Incident Report Kanban Board'}
             </h2>
           </div>
 
@@ -1290,7 +1735,8 @@ export function FMEADashboard() {
         <div className="flex border-b border-(--border-main) gap-2 shrink-0 overflow-x-auto">
           {[
             { id: 'risk', label: '1. Risk & Hazards', icon: ShieldAlert },
-            { id: 'reliability', label: '2. Asset Reliability & Component Ops', icon: TrendingUp }
+            { id: 'reliability', label: '2. Asset Reliability & Component Ops', icon: TrendingUp },
+            { id: 'kanban', label: '3. Kanban Board', icon: Kanban }
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeMainTab === tab.id;
@@ -2771,6 +3217,224 @@ export function FMEADashboard() {
                           />
                         </div>
                       </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* MAIN TAB 3: Kanban Board */}
+              {activeMainTab === 'kanban' && (
+                <div className="space-y-4 animate-fadeIn">
+                  <div className="flex flex-wrap items-center justify-between gap-2 bg-(--bg-surface) border border-(--border-main) px-3.5 py-2.5 rounded-xl shadow-xs">
+                    <div className="flex items-center gap-2">
+                      <Kanban className="w-4 h-4 text-rose-500" />
+                      <h3 className="text-xs font-extrabold uppercase text-(--text-primary)">
+                        Incident Report Status Kanban Board
+                      </h3>
+                    </div>
+                    <span className="text-[11px] text-(--text-muted)">
+                      Total Incidents: <strong className="text-(--text-primary) font-mono">{incidentReportsFlat.length}</strong> &bull; Click any card to inspect all 4 RCA pillars
+                    </span>
+                  </div>
+
+                  {/* 6-Column Kanban Grid */}
+                  <div className="overflow-x-auto pb-2">
+                    <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-3 min-w-255">
+                      {KANBAN_COLUMNS.map((col) => {
+                        const cards = kanbanBoardData[col.key] || [];
+                        return (
+                          <div
+                            key={col.key}
+                            className={`flex flex-col bg-(--bg-surface) border border-(--border-main) border-t-4 ${col.borderClass} rounded-xl shadow-xs max-h-120`}
+                          >
+                            {/* Column Header */}
+                            <div className="p-2.5 border-b border-(--border-main) flex items-center justify-between gap-2 shrink-0">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className={`w-2 h-2 rounded-full shrink-0 ${col.dotClass}`} />
+                                <span className="text-xs font-bold text-(--text-primary) truncate">
+                                  {col.title}
+                                </span>
+                              </div>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0 ${col.badgeClass}`}>
+                                {cards.length}
+                              </span>
+                            </div>
+
+                            {/* Column Cards */}
+                            <div className="p-2 space-y-2 overflow-y-auto flex-1">
+                              {cards.length === 0 ? (
+                                <div className="py-8 text-center text-[11px] text-(--text-muted) italic">
+                                  No incidents
+                                </div>
+                              ) : (
+                                cards.map((item) => {
+                                  const isSelected = selectedKanbanCard?.incident_id === item.incident_id;
+                                  return (
+                                    <button
+                                      type="button"
+                                      key={item.incident_id}
+                                      onClick={() => void handleSelectKanbanCard(item)}
+                                      className={`w-full text-left p-2.5 bg-(--bg-elevated) hover:bg-(--accent-subtle) border rounded-lg shadow-2xs transition-all space-y-1.5 cursor-pointer ${
+                                        isSelected
+                                          ? 'border-rose-500 ring-2 ring-rose-500/40 bg-rose-500/10'
+                                          : 'border-(--border-main)'
+                                      }`}
+                                    >
+                                      {/* Incident Ref # (Full line so Severity never blocks it) */}
+                                      <div>
+                                        <span className="font-mono text-xs font-extrabold text-rose-600 dark:text-rose-400 block break-all">
+                                          {item.incident_refno}
+                                        </span>
+                                      </div>
+
+                                      {/* Severity Badge on its own line */}
+                                      <div className="flex items-center">
+                                        <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-(--bg-surface) border border-(--border-main) text-(--text-muted)">
+                                          Severity: <strong className="text-(--text-primary)">{item.incident_severity}</strong>
+                                        </span>
+                                      </div>
+
+                                      {/* Equipment (Plate_no) */}
+                                      <div className="flex items-center gap-1.5 text-[11px]">
+                                        <Truck className="w-3.5 h-3.5 text-(--text-muted) shrink-0" />
+                                        <span className="font-bold text-(--text-primary) truncate">
+                                          {item.plate_no}
+                                        </span>
+                                      </div>
+
+                                      {/* Incident Date & Estimated Loss */}
+                                      <div className="pt-1 border-t border-(--border-main)/60 space-y-1 text-[10px] text-(--text-muted)">
+                                        <div className="flex items-center justify-between gap-1">
+                                          <span className="flex items-center gap-1">
+                                            <Calendar className="w-3 h-3 shrink-0" />
+                                            <span>Incident Date:</span>
+                                          </span>
+                                          <span className="font-mono font-semibold text-(--text-primary)">
+                                            {item.incident_date}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-1">
+                                          <span className="flex items-center gap-1">
+                                            <Coins className="w-3 h-3 shrink-0 text-amber-500" />
+                                            <span>Estimated Loss:</span>
+                                          </span>
+                                          <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                                            &#8369;{item.incident_loss.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </button>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Clicked Card Inspection Table: All Pillars of Incident Ref # */}
+                  {selectedKanbanCard && (
+                    <div className="p-4 bg-(--bg-surface) border-2 border-purple-500/40 rounded-xl space-y-3 shadow-lg animate-fadeIn">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-(--border-main) pb-2.5">
+                        <div className="flex items-center gap-2 text-xs">
+                          <TableIcon className="w-4 h-4 text-purple-500 shrink-0" />
+                          <span className="font-extrabold uppercase text-(--text-primary)">
+                            Category Table View: All Pillars of{' '}
+                            <strong className="text-purple-600 dark:text-purple-400 font-mono">
+                              {selectedKanbanCard.incident_refno}
+                            </strong>
+                          </span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-(--bg-elevated) border border-(--border-main) text-(--text-muted)">
+                            Equipment: {selectedKanbanCard.plate_no} &bull; {selectedKanbanCard.incident_date}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedKanbanCard(null);
+                            setKanbanPillarRows([]);
+                          }}
+                          className="px-3 py-1 bg-(--bg-elevated) hover:bg-(--accent-subtle) border border-(--border-main) text-(--text-primary) rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          Close Inspector
+                        </button>
+                      </div>
+
+                      {selectedKanbanCard.incident_description && (
+                        <div className="p-2.5 bg-(--bg-elevated) border border-(--border-main) rounded-lg text-xs text-(--text-secondary)">
+                          <strong className="text-(--text-primary) uppercase text-[10px] mr-1.5">Description:</strong>
+                          {selectedKanbanCard.incident_description}
+                        </div>
+                      )}
+
+                      {kanbanInspectionLoading ? (
+                        <div className="flex items-center justify-center py-8 gap-2 text-xs text-(--text-muted)">
+                          <RefreshCw className="w-4 h-4 animate-spin text-purple-500" />
+                          <span>Loading RCA pillars for {selectedKanbanCard.incident_refno}...</span>
+                        </div>
+                      ) : (
+                        <div className="border border-(--border-main) rounded-xl bg-(--bg-elevated) overflow-hidden shadow-xs">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs border-collapse">
+                              <thead className="bg-(--bg-surface) text-[10px] uppercase text-(--text-muted) border-b border-(--border-main)">
+                                <tr>
+                                  <th className="p-2.5">Pillar</th>
+                                  <th className="p-2.5">Detail Code</th>
+                                  <th className="p-2.5">Description</th>
+                                  <th className="p-2.5">Remarks</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-(--border-main)">
+                                {paginatedKanbanPillarRows.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={4} className="p-6 text-center text-(--text-muted)">
+                                      No RCA pillar records (Unsafe Condition, Unsafe Act, Personal Factor, Work-Related Cause) recorded for{' '}
+                                      <strong className="font-mono">{selectedKanbanCard.incident_refno}</strong>.
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  paginatedKanbanPillarRows.map((row, idx) => {
+                                    const pillarBadge =
+                                      row.pillar === 'Unsafe Condition'
+                                        ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                                        : row.pillar === 'Unsafe Act'
+                                        ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30'
+                                        : row.pillar === 'Personal Factor'
+                                        ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                                        : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30';
+
+                                    return (
+                                      <tr key={idx} className="hover:bg-(--accent-subtle)">
+                                        <td className="p-2.5">
+                                          <span className={`px-2 py-0.5 rounded border text-[10px] font-bold ${pillarBadge}`}>
+                                            {row.pillar}
+                                          </span>
+                                        </td>
+                                        <td className="p-2.5">
+                                          <span className="font-mono bg-purple-500/10 text-purple-600 dark:text-purple-400 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                                            {row.detailCode}
+                                          </span>
+                                        </td>
+                                        <td className="p-2.5 font-semibold text-(--text-primary)">{row.description}</td>
+                                        <td className="p-2.5 text-(--text-secondary)">{row.remarks}</td>
+                                      </tr>
+                                    );
+                                  })
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                          <TablePagination
+                            totalItems={kanbanPillarRows.length}
+                            currentPage={kanbanInspectionPage}
+                            pageSize={kanbanInspectionPageSize}
+                            onPageChange={setKanbanInspectionPage}
+                            onPageSizeChange={setKanbanInspectionPageSize}
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

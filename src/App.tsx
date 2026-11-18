@@ -21,6 +21,7 @@ import { ComponentHistory } from '@/components/ComponentHistory';
 import { IncidentReport } from '@/components/IncidentReport';
 import { FmeaSettings } from '@/components/FmeaSettings';
 import { RcaSettings } from '@/components/RcaSettings';
+import { OpsDashboard } from '@/components/OpsDashboard';
 import { DailyTripAssignment } from '@/components/DailyTripAssignment';
 import { Smartphone, Monitor } from 'lucide-react';
 import { Manual } from './components/ManualLayout';
@@ -100,6 +101,7 @@ export function App() {
                     <Routes>
                       <Route path="/" element={<Dashboard />} />
                       <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/operations/dashboard" element={<OpsDashboard />} />
                       <Route path="/operations/daily-trip-assignment" element={<DailyTripAssignment />} />
                       <Route path="/vehicles" element={<VehiclePmViewer />} />
                       <Route path="/daily-inspection" element={<DailyInspection />} />

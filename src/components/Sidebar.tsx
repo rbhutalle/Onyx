@@ -10,11 +10,29 @@ import {
 } from 'lucide-react';
 
 export type ThemeMode = 'light' | 'dark' | 'mixed';
+type MenuSection = 'operations' | 'maintenance' | 'job-orders' | 'incident' | 'registry' | 'settings' | 'help' | null;
 
 interface SidebarProps {
   themeMode?: ThemeMode;
   cycleTheme?: () => void;
 }
+
+const getActiveMenuFromPath = (path: string): MenuSection => {
+  if (path.startsWith('/operations')) return 'operations';
+  if (
+    path === '/daily-inspection' ||
+    path === '/vehicles' ||
+    path === '/component-history' ||
+    path === '/maintenance-forecast'
+  ) {
+    return 'maintenance';
+  }
+  if (path.startsWith('/job-orders')) return 'job-orders';
+  if (path.startsWith('/incident-management')) return 'incident';
+  if (path.startsWith('/global-settings')) return 'registry';
+  if (path.startsWith('/settings')) return 'settings';
+  return null;
+};
 
 export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
   const navigate = useNavigate();
@@ -22,19 +40,25 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
   const currentPath = location.pathname;
 
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
-  const [isOperationsOpen, setIsOperationsOpen] = useState<boolean>(
-    currentPath.startsWith('/operations')
-  );
-  const [isMaintenanceOpen, setIsMaintenanceOpen] = useState<boolean>(
-    currentPath === '/daily-inspection' || currentPath === '/vehicles' || currentPath === '/component-history' || currentPath === '/maintenance-forecast'
-  );
-  const [isJobOrderOpen, setIsJobOrderOpen] = useState<boolean>(currentPath.startsWith('/job-orders'));
-  const [isIncidentManagementOpen, setIsIncidentManagementOpen] = useState<boolean>(currentPath.startsWith('/incident-management'));
-  const [isAppRegistryOpen, setIsAppRegistryOpen] = useState<boolean>(currentPath.startsWith('/global-settings'));
-  const [isAppSettingsOpen, setIsAppSettingsOpen] = useState<boolean>(currentPath.startsWith('/settings'));
-  const [isHelpOpen, setIsHelpOpen] = useState<boolean>(false);
-
+  const [openMenu, setOpenMenu] = useState<MenuSection>(() => getActiveMenuFromPath(currentPath));
+  const [prevPath, setPrevPath] = useState<string>(currentPath);
   const [dbStatus, setDbStatus] = useState<'checking' | 'connected' | 'error'>('checking');
+
+  // Sync openMenu during render when the route changes (avoids cascading renders from useEffect)
+  if (currentPath !== prevPath) {
+    setPrevPath(currentPath);
+    setOpenMenu(getActiveMenuFromPath(currentPath));
+  }
+
+  // Toggle a single main menu accordion while auto-closing all others
+  const handleMenuToggle = (menu: Exclude<MenuSection, null>) => {
+    if (isMinimized) {
+      setIsMinimized(false);
+      setOpenMenu(menu);
+    } else {
+      setOpenMenu((prev) => (prev === menu ? null : menu));
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -63,6 +87,32 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
       }
     }
   };
+
+  const isLightOrMixed = themeMode === 'light' || themeMode === 'mixed';
+
+  const getActiveClasses = (path: string, isTopLevel = false) => {
+    const isActive = currentPath === path;
+    if (!isActive) {
+      return isTopLevel
+        ? 'text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
+        : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)';
+    }
+
+    const shadowClass = isTopLevel ? 'shadow-md shadow-black/15' : 'shadow-sm';
+
+    return isLightOrMixed
+      ? `bg-yellow-300! text-blue-700! font-semibold ${shadowClass} [&_svg]:text-blue-700! before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-blue-700`
+      : `bg-blue-700! text-yellow-300! font-semibold ${shadowClass} [&_svg]:text-yellow-300! before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-yellow-300`;
+  };
+
+  const getActiveTextClass = (path: string) => {
+    if (currentPath !== path) return '';
+    return isLightOrMixed ? 'text-blue-700!' : 'text-yellow-300!';
+  };
+
+  const accordionHeaderClass = `w-full flex items-center ${
+    isMinimized ? 'justify-center px-2 py-2' : 'justify-between px-3 py-2'
+  } rounded-xl text-xs sm:text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`;
 
   return (
     <aside className={`relative bg-(--sidebar-bg) border-r border-(--sidebar-border) text-(--sidebar-text-primary) flex flex-col h-screen max-h-screen select-none transition-all duration-300 ${isMinimized ? 'w-20' : 'w-64'}`}>
@@ -96,42 +146,44 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
       <nav className="flex-1 min-h-0 px-3 py-3 space-y-1.5 overflow-y-scroll overscroll-auto">
         {/* Dashboard */}
         <button
-          onClick={() => navigate('/dashboard')}
-          className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2'} rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer ${
-            currentPath === '/dashboard'
-              ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) shadow-md shadow-black/10 font-semibold'
-              : 'text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
-          }`}
+          onClick={() => {
+            setOpenMenu(null);
+            navigate('/dashboard');
+          }}
+          className={`relative overflow-hidden w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2'} rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer ${getActiveClasses('/dashboard', true)}`}
         >
           <LayoutDashboard className="w-4 h-4 shrink-0" />
-          {!isMinimized && <span className="truncate">Dashboard</span>}
+          {!isMinimized && <span className={`truncate ${getActiveTextClass('/dashboard')}`}>Dashboard</span>}
         </button>
 
         {/* Operations Accordion */}
         <div className="space-y-1">
           <button
-            onClick={() => isMinimized ? (setIsMinimized(false), setIsOperationsOpen(true)) : setIsOperationsOpen(!isOperationsOpen)}
-            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2' : 'justify-between px-3 py-2'} rounded-xl text-xs sm:text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
+            onClick={() => handleMenuToggle('operations')}
+            className={accordionHeaderClass}
           >
             <div className={`flex items-center ${isMinimized ? '' : 'gap-3'}`}>
-              <Compass className="w-4 h-4 text-(--sidebar-text-primary) shrink-0" />
+              <Compass className="w-4 h-4 shrink-0" />
               {!isMinimized && <span className="truncate">Operations</span>}
             </div>
-            {!isMinimized && (isOperationsOpen ? <ChevronDown className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" /> : <ChevronRight className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" />)}
+            {!isMinimized && (openMenu === 'operations' ? <ChevronDown className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" /> : <ChevronRight className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" />)}
           </button>
 
-          {isOperationsOpen && !isMinimized && (
+          {openMenu === 'operations' && !isMinimized && (
             <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-(--sidebar-border)">
               <button
+                onClick={() => navigate('/operations/dashboard')}
+                className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/operations/dashboard')}`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5 shrink-0" />
+                <span className={`truncate ${getActiveTextClass('/operations/dashboard')}`}>Ops Dashboard</span>
+              </button>
+              <button
                 onClick={() => navigate('/operations/daily-trip-assignment')}
-                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  currentPath === '/operations/daily-trip-assignment'
-                    ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
-                    : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
-                }`}
+                className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/operations/daily-trip-assignment')}`}
               >
                 <MapPin className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Daily Trip Assignment</span>
+                <span className={`truncate ${getActiveTextClass('/operations/daily-trip-assignment')}`}>Daily Trip Assignment</span>
               </button>
             </div>
           )}
@@ -140,61 +192,45 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
         {/* Maintenance Plan Accordion */}
         <div className="space-y-1">
           <button
-            onClick={() => isMinimized ? (setIsMinimized(false), setIsMaintenanceOpen(true)) : setIsMaintenanceOpen(!isMaintenanceOpen)}
-            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2' : 'justify-between px-3 py-2'} rounded-xl text-xs sm:text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
+            onClick={() => handleMenuToggle('maintenance')}
+            className={accordionHeaderClass}
           >
             <div className={`flex items-center ${isMinimized ? '' : 'gap-3'}`}>
-              <Wrench className="w-4 h-4 text-(--sidebar-text-primary) shrink-0" />
+              <Wrench className="w-4 h-4 shrink-0" />
               {!isMinimized && <span className="truncate">Maintenance Plan</span>}
             </div>
-            {!isMinimized && (isMaintenanceOpen ? <ChevronDown className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" /> : <ChevronRight className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" />)}
+            {!isMinimized && (openMenu === 'maintenance' ? <ChevronDown className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" /> : <ChevronRight className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" />)}
           </button>
 
-          {isMaintenanceOpen && !isMinimized && (
+          {openMenu === 'maintenance' && !isMinimized && (
             <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-(--sidebar-border)">
               <button
                 onClick={() => navigate('/daily-inspection')}
-                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  currentPath === '/daily-inspection'
-                    ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
-                    : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
-                }`}
+                className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/daily-inspection')}`}
               >
                 <ClipboardList className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Daily Inspection</span>
+                <span className={`truncate ${getActiveTextClass('/daily-inspection')}`}>Daily Inspection</span>
               </button>
               <button
                 onClick={() => navigate('/vehicles')}
-                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  currentPath === '/vehicles'
-                    ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
-                    : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
-                }`}
+                className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/vehicles')}`}
               >
                 <FileText className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Equipment PM Details</span>
+                <span className={`truncate ${getActiveTextClass('/vehicles')}`}>Equipment PM Details</span>
               </button>
               <button
                 onClick={() => navigate('/component-history')}
-                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  currentPath === '/component-history'
-                    ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
-                    : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
-                }`}
+                className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/component-history')}`}
               >
                 <History className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Component History</span>
+                <span className={`truncate ${getActiveTextClass('/component-history')}`}>Component History</span>
               </button>
               <button
                 onClick={() => navigate('/maintenance-forecast')}
-                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  currentPath === '/maintenance-forecast'
-                    ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
-                    : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
-                }`}
+                className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/maintenance-forecast')}`}
               >
                 <Calendar className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Maintenance Forecast</span>
+                <span className={`truncate ${getActiveTextClass('/maintenance-forecast')}`}>Maintenance Forecast</span>
               </button>
             </div>
           )}
@@ -203,39 +239,31 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
         {/* Job Order System Accordion */}
         <div className="space-y-1">
           <button
-            onClick={() => isMinimized ? (setIsMinimized(false), setIsJobOrderOpen(true)) : setIsJobOrderOpen(!isJobOrderOpen)}
-            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2' : 'justify-between px-3 py-2'} rounded-xl text-xs sm:text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
+            onClick={() => handleMenuToggle('job-orders')}
+            className={accordionHeaderClass}
           >
             <div className={`flex items-center ${isMinimized ? '' : 'gap-3'}`}>
-              <ClipboardCheck className="w-4 h-4 text-(--sidebar-text-primary) shrink-0" />
+              <ClipboardCheck className="w-4 h-4 shrink-0" />
               {!isMinimized && <span className="truncate">Job Order System</span>}
             </div>
-            {!isMinimized && (isJobOrderOpen ? <ChevronDown className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" /> : <ChevronRight className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" />)}
+            {!isMinimized && (openMenu === 'job-orders' ? <ChevronDown className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" /> : <ChevronRight className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" />)}
           </button>
 
-          {isJobOrderOpen && !isMinimized && (
+          {openMenu === 'job-orders' && !isMinimized && (
             <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-(--sidebar-border)">
               <button
                 onClick={() => navigate('/job-orders/dashboard')}
-                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  currentPath === '/job-orders/dashboard'
-                    ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
-                    : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
-                }`}
+                className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/job-orders/dashboard')}`}
               >
                 <LayoutGrid className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Dashboard</span>
+                <span className={`truncate ${getActiveTextClass('/job-orders/dashboard')}`}>Dashboard</span>
               </button>
               <button
                 onClick={() => navigate('/job-orders')}
-                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  currentPath === '/job-orders'
-                    ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
-                    : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
-                }`}
+                className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/job-orders')}`}
               >
                 <WrenchIcon className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Job Order</span>
+                <span className={`truncate ${getActiveTextClass('/job-orders')}`}>Job Order</span>
               </button>
             </div>
           )}
@@ -244,39 +272,31 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
         {/* Incident Management Accordion */}
         <div className="space-y-1">
           <button
-            onClick={() => isMinimized ? (setIsMinimized(false), setIsIncidentManagementOpen(true)) : setIsIncidentManagementOpen(!isIncidentManagementOpen)}
-            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2' : 'justify-between px-3 py-2'} rounded-xl text-xs sm:text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
+            onClick={() => handleMenuToggle('incident')}
+            className={accordionHeaderClass}
           >
             <div className={`flex items-center ${isMinimized ? '' : 'gap-3'}`}>
-              <AlertTriangle className="w-4 h-4 text-(--sidebar-text-primary) shrink-0" />
+              <AlertTriangle className="w-4 h-4 shrink-0" />
               {!isMinimized && <span className="truncate">Incident Mgmt</span>}
             </div>
-            {!isMinimized && (isIncidentManagementOpen ? <ChevronDown className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" /> : <ChevronRight className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" />)}
+            {!isMinimized && (openMenu === 'incident' ? <ChevronDown className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" /> : <ChevronRight className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" />)}
           </button>
 
-          {isIncidentManagementOpen && !isMinimized && (
+          {openMenu === 'incident' && !isMinimized && (
             <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-(--sidebar-border)">
               <button
                 onClick={() => navigate('/incident-management/fmea-dashboard')}
-                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  currentPath === '/incident-management/fmea-dashboard'
-                    ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
-                    : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
-                }`}
+                className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/incident-management/fmea-dashboard')}`}
               >
                 <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">FMEA Dashboard</span>
+                <span className={`truncate ${getActiveTextClass('/incident-management/fmea-dashboard')}`}>FMEA Dashboard</span>
               </button>
               <button
                 onClick={() => navigate('/incident-management/incident-report')}
-                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  currentPath === '/incident-management/incident-report'
-                    ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
-                    : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
-                }`}
+                className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/incident-management/incident-report')}`}
               >
                 <FileWarning className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Incident Report</span>
+                <span className={`truncate ${getActiveTextClass('/incident-management/incident-report')}`}>Incident Report</span>
               </button>
             </div>
           )}
@@ -285,50 +305,38 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
         {/* App Registry Accordion */}
         <div className="space-y-1">
           <button
-            onClick={() => isMinimized ? (setIsMinimized(false), setIsAppRegistryOpen(true)) : setIsAppRegistryOpen(!isAppRegistryOpen)}
-            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2' : 'justify-between px-3 py-2'} rounded-xl text-xs sm:text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
+            onClick={() => handleMenuToggle('registry')}
+            className={accordionHeaderClass}
           >
             <div className={`flex items-center ${isMinimized ? '' : 'gap-3'}`}>
-              <Globe className="w-4 h-4 text-(--sidebar-text-primary) shrink-0" />
+              <Globe className="w-4 h-4 shrink-0" />
               {!isMinimized && <span className="truncate">App Registry</span>}
             </div>
-            {!isMinimized && (isAppRegistryOpen ? <ChevronDown className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" /> : <ChevronRight className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" />)}
+            {!isMinimized && (openMenu === 'registry' ? <ChevronDown className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" /> : <ChevronRight className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" />)}
           </button>
 
-          {isAppRegistryOpen && !isMinimized && (
+          {openMenu === 'registry' && !isMinimized && (
             <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-(--sidebar-border)">
               <button
                 onClick={() => navigate('/global-settings/vehicle-registry')}
-                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  currentPath === '/global-settings/vehicle-registry'
-                    ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
-                    : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
-                }`}
+                className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/global-settings/vehicle-registry')}`}
               >
                 <Car className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Equipment Registry</span>
+                <span className={`truncate ${getActiveTextClass('/global-settings/vehicle-registry')}`}>Equipment Registry</span>
               </button>
               <button
                 onClick={() => navigate('/global-settings/employee-registry')}
-                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  currentPath === '/global-settings/employee-registry'
-                    ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
-                    : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
-                }`}
+                className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/global-settings/employee-registry')}`}
               >
                 <Users className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Employee Registry</span>
+                <span className={`truncate ${getActiveTextClass('/global-settings/employee-registry')}`}>Employee Registry</span>
               </button>
               <button
                 onClick={() => navigate('/global-settings/component-registry')}
-                className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  currentPath === '/global-settings/component-registry'
-                    ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm'
-                    : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'
-                }`}
+                className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/global-settings/component-registry')}`}
               >
                 <Layers className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Component Registry</span>
+                <span className={`truncate ${getActiveTextClass('/global-settings/component-registry')}`}>Component Registry</span>
               </button>
             </div>
           )}
@@ -337,49 +345,49 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
         {/* App Settings Accordion */}
         <div className="space-y-1">
           <button
-            onClick={() => isMinimized ? (setIsMinimized(false), setIsAppSettingsOpen(true)) : setIsAppSettingsOpen(!isAppSettingsOpen)}
-            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2' : 'justify-between px-3 py-2'} rounded-xl text-xs sm:text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
+            onClick={() => handleMenuToggle('settings')}
+            className={accordionHeaderClass}
           >
             <div className={`flex items-center ${isMinimized ? '' : 'gap-3'}`}>
-              <Settings className="w-4 h-4 text-(--sidebar-text-primary) shrink-0" />
+              <Settings className="w-4 h-4 shrink-0" />
               {!isMinimized && <span className="truncate">App Settings</span>}
             </div>
-            {!isMinimized && (isAppSettingsOpen ? <ChevronDown className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" /> : <ChevronRight className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" />)}
+            {!isMinimized && (openMenu === 'settings' ? <ChevronDown className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" /> : <ChevronRight className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" />)}
           </button>
 
-          {isAppSettingsOpen && !isMinimized && (
+          {openMenu === 'settings' && !isMinimized && (
             <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-(--sidebar-border)">
-              <button onClick={() => navigate('/settings/service-standards')} className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/service-standards' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
+              <button onClick={() => navigate('/settings/service-standards')} className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/settings/service-standards')}`}>
                 <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Service Standards</span>
+                <span className={`truncate ${getActiveTextClass('/settings/service-standards')}`}>Service Standards</span>
               </button>
-              <button onClick={() => navigate('/settings/operations-standards')} className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/operations-standards' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
+              <button onClick={() => navigate('/settings/operations-standards')} className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/settings/operations-standards')}`}>
                 <Activity className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Operations Standards</span>
+                <span className={`truncate ${getActiveTextClass('/settings/operations-standards')}`}>Operations Standards</span>
               </button>
-              <button onClick={() => navigate('/settings/vehicle-models')} className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/vehicle-models' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
+              <button onClick={() => navigate('/settings/vehicle-models')} className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/settings/vehicle-models')}`}>
                 <Car className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Equipment Models</span>
+                <span className={`truncate ${getActiveTextClass('/settings/vehicle-models')}`}>Equipment Models</span>
               </button>
-              <button onClick={() => navigate('/settings/system-components')} className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/system-components' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
+              <button onClick={() => navigate('/settings/system-components')} className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/settings/system-components')}`}>
                 <Cpu className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">System & Components</span>
+                <span className={`truncate ${getActiveTextClass('/settings/system-components')}`}>System & Components</span>
               </button>
-              <button onClick={() => navigate('/settings/task-standards')} className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/task-standards' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
+              <button onClick={() => navigate('/settings/task-standards')} className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/settings/task-standards')}`}>
                 <CheckSquare className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Task Standards</span>
+                <span className={`truncate ${getActiveTextClass('/settings/task-standards')}`}>Task Standards</span>
               </button>
-              <button onClick={() => navigate('/settings/job-order-config')} className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/job-order-config' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
+              <button onClick={() => navigate('/settings/job-order-config')} className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/settings/job-order-config')}`}>
                 <WrenchIcon className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Job Order Config</span>
+                <span className={`truncate ${getActiveTextClass('/settings/job-order-config')}`}>Job Order Config</span>
               </button>
-              <button onClick={() => navigate('/settings/rca')} className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/rca' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
+              <button onClick={() => navigate('/settings/rca')} className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/settings/rca')}`}>
                 <GitFork className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">RCA</span>
+                <span className={`truncate ${getActiveTextClass('/settings/rca')}`}>RCA</span>
               </button>
-              <button onClick={() => navigate('/settings/fmea')} className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentPath === '/settings/fmea' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) font-semibold shadow-sm' : 'text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg)'}`}>
+              <button onClick={() => navigate('/settings/fmea')} className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/settings/fmea')}`}>
                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">FMEA</span>
+                <span className={`truncate ${getActiveTextClass('/settings/fmea')}`}>FMEA</span>
               </button>
             </div>
           )}
@@ -388,17 +396,17 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
         {/* Help Menu Accordion */}
         <div className="space-y-1 pb-4">
           <button
-            onClick={() => isMinimized ? (setIsMinimized(false), setIsHelpOpen(true)) : setIsHelpOpen(!isHelpOpen)}
-            className={`w-full flex items-center ${isMinimized ? 'justify-center px-2 py-2' : 'justify-between px-3 py-2'} rounded-xl text-xs sm:text-sm font-medium text-(--sidebar-text-secondary) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer`}
+            onClick={() => handleMenuToggle('help')}
+            className={accordionHeaderClass}
           >
             <div className={`flex items-center ${isMinimized ? '' : 'gap-3'}`}>
-              <HelpCircle className="w-4 h-4 text-(--sidebar-text-primary) shrink-0" />
+              <HelpCircle className="w-4 h-4 shrink-0" />
               {!isMinimized && <span className="truncate">Help</span>}
             </div>
-            {!isMinimized && (isHelpOpen ? <ChevronDown className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" /> : <ChevronRight className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" />)}
+            {!isMinimized && (openMenu === 'help' ? <ChevronDown className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" /> : <ChevronRight className="w-4 h-4 text-(--sidebar-text-muted) shrink-0" />)}
           </button>
 
-          {isHelpOpen && !isMinimized && (
+          {openMenu === 'help' && !isMinimized && (
             <div className="ml-3 pl-2 pr-1 space-y-1 py-1 border-l border-(--sidebar-border)">
               {cycleTheme && (
                 <button
@@ -418,7 +426,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
                 onClick={() => window.open('/manual', '_blank')}
                 className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium text-(--sidebar-text-muted) hover:text-(--sidebar-text-primary) hover:bg-(--sidebar-hover-bg) transition-colors cursor-pointer"
               >
-                <BookOpen className="w-3.5 h-3.5 shrink-0 text-(--sidebar-text-primary)" />
+                <BookOpen className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">User Manual</span>
               </button>
             </div>
