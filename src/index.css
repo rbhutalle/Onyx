@@ -6,7 +6,7 @@
   --bg-elevated: #f1f5f9;
   --bg-card: #ffffff;
   --bg-card-hover: #f8fafc;
-  --border-main: #e2e8f0;
+  --border-main: #cbd5e1;
   --text-primary: #0f172a;
   --text-secondary: #334155;
   --text-muted: #64748b;
@@ -28,7 +28,7 @@
   --bg-elevated: #1e293b;
   --bg-card: #1e293b;
   --bg-card-hover: #334155;
-  --border-main: #1e293b;
+  --border-main: #475569;
   --text-primary: #f8fafc;
   --text-secondary: #cbd5e1;
   --text-muted: #94a3b8;
@@ -50,7 +50,7 @@
   --bg-elevated: #f1f5f9;
   --bg-card: #ffffff;
   --bg-card-hover: #f8fafc;
-  --border-main: #e2e8f0;
+  --border-main: #cbd5e1;
   --text-primary: #0f172a;
   --text-secondary: #334155;
   --text-muted: #64748b;
@@ -84,6 +84,30 @@ input, select, textarea, button {
   background-color: var(--bg-elevated);
   color: var(--text-primary);
   border-color: var(--border-main);
+}
+
+/* Ensure borders of textboxes, select dropdowns, and date/calendar inputs are always visible */
+input, select, textarea {
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--border-main);
+}
+
+input[type="date"], input[type="datetime-local"], input[type="time"] {
+  border: 1px solid var(--border-main) !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(0);
+}
+
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+.dark input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
 }
 
 /* Force dropdown select menus and options to use theme text and background */

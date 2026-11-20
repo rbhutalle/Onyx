@@ -265,8 +265,8 @@ function CustomDropdown({
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen(prev => !prev)}
-        className={`w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) px-3 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-          isOpen ? 'border-(--text-primary)' : ''
+        className={`w-full bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 text-(--text-primary) px-3 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+          isOpen ? 'border-blue-500 dark:border-blue-400 ring-1 ring-blue-500' : 'hover:border-slate-400 dark:hover:border-slate-500'
         }`}
       >
         <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
@@ -274,7 +274,7 @@ function CustomDropdown({
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-(--bg-elevated) border border-(--border-main) rounded-lg shadow-xl max-h-60 overflow-y-auto py-1 text-xs">
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto py-1 text-xs">
           {options.length === 0 ? (
             <div className="px-3 py-2 text-(--text-muted) italic text-center">No options available</div>
           ) : (
@@ -394,9 +394,18 @@ export function FmeaSettings() {
   const [editEffectRecordId, setEditEffectRecordId] = useState<string | null>(null);
   const [effectEditDesc, setEffectEditDesc] = useState<string>('');
 
+  // RPN Definitions Modal States
+  const [isAddRpnModalOpen, setIsAddRpnModalOpen] = useState<boolean>(false);
+  const [isEditRpnModalOpen, setIsEditRpnModalOpen] = useState<boolean>(false);
+  const [rpnModalId, setRpnModalId] = useState<string>('');
+  const [rpnModalDesc, setRpnModalDesc] = useState<string>('');
+  const [editRpnRecordId, setEditRpnRecordId] = useState<number | null>(null);
+  const [rpnEditDesc, setRpnEditDesc] = useState<string>('');
+
   // Search states
   const [controlSearch, setControlSearch] = useState<string>('');
   const [effectSearch, setEffectSearch] = useState<string>('');
+  const [rpnSearch, setRpnSearch] = useState<string>('');
   const [conditionSearch, setConditionSearch] = useState<string>('');
   const [actSearch, setActSearch] = useState<string>('');
   const [factorSearch, setFactorSearch] = useState<string>('');
@@ -407,9 +416,9 @@ export function FmeaSettings() {
   const [editTaskStandardId, setEditTaskStandardId] = useState<string>('');
 
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(6);
   const currentTabKey = `${mainTab}:${masterFmeaSubTab}:${constantsSubTab}:${rpnSubTab}`;
   const [paginationTabKey, setPaginationTabKey] = useState(currentTabKey);
-  const pageSize = 6;
 
   if (paginationTabKey !== currentTabKey) {
     setPaginationTabKey(currentTabKey);
@@ -1371,6 +1380,114 @@ export function FmeaSettings() {
     }
   };
 
+  // --- Handlers for RPN Definitions (Severity, Occurrence, Detection) ---
+  const handleAddRpnDefinition = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const numericId = Number(rpnModalId);
+    if (!rpnModalId.trim() || Number.isNaN(numericId) || !rpnModalDesc.trim()) {
+      setErrorMsg('Please provide a valid numeric Score ID and Description.');
+      return;
+    }
+
+    try {
+      setErrorMsg(null);
+      if (rpnSubTab === 'severity') {
+        const { error } = await supabase
+          .from('fmea_severity')
+          .insert([{ sev_id: numericId, sev_description: rpnModalDesc.trim() }]);
+        if (error) throw error;
+      } else if (rpnSubTab === 'occurrence') {
+        const { error } = await supabase
+          .from('fmea_occurence')
+          .insert([{ occ_id: numericId, occ_description: rpnModalDesc.trim() }]);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('fmea_detection')
+          .insert([{ det_id: numericId, det_description: rpnModalDesc.trim() }]);
+        if (error) throw error;
+      }
+
+      const label = rpnSubTab === 'severity' ? 'Severity' : rpnSubTab === 'occurrence' ? 'Occurrence' : 'Detection';
+      setRpnModalId('');
+      setRpnModalDesc('');
+      setIsAddRpnModalOpen(false);
+      setSuccessMsg(`${label} definition added successfully!`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+      fetchData();
+    } catch (err: unknown) {
+      const errObj = err as Record<string, unknown>;
+      setErrorMsg(`Failed to add RPN definition: ${(errObj?.message as string) || JSON.stringify(err)}`);
+    }
+  };
+
+  const handleUpdateRpnDefinition = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editRpnRecordId === null || !rpnEditDesc.trim()) return;
+
+    try {
+      setErrorMsg(null);
+      const updatedAt = new Date().toISOString();
+
+      if (rpnSubTab === 'severity') {
+        const { error } = await supabase
+          .from('fmea_severity')
+          .update({ sev_description: rpnEditDesc.trim(), updated_at: updatedAt })
+          .eq('sev_id', editRpnRecordId);
+        if (error) throw error;
+      } else if (rpnSubTab === 'occurrence') {
+        const { error } = await supabase
+          .from('fmea_occurence')
+          .update({ occ_description: rpnEditDesc.trim(), updated_at: updatedAt })
+          .eq('occ_id', editRpnRecordId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('fmea_detection')
+          .update({ det_description: rpnEditDesc.trim(), updated_at: updatedAt })
+          .eq('det_id', editRpnRecordId);
+        if (error) throw error;
+      }
+
+      const label = rpnSubTab === 'severity' ? 'Severity' : rpnSubTab === 'occurrence' ? 'Occurrence' : 'Detection';
+      setIsEditRpnModalOpen(false);
+      setEditRpnRecordId(null);
+      setRpnEditDesc('');
+      setSuccessMsg(`${label} definition updated successfully!`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+      fetchData();
+    } catch (err: unknown) {
+      const errObj = err as Record<string, unknown>;
+      setErrorMsg(`Failed to update RPN definition: ${(errObj?.message as string) || JSON.stringify(err)}`);
+    }
+  };
+
+  const handleDeleteRpnDefinition = async (id: number) => {
+    const label = rpnSubTab === 'severity' ? 'Severity' : rpnSubTab === 'occurrence' ? 'Occurrence' : 'Detection';
+    if (!confirm(`Are you sure you want to delete this ${label} definition (ID: ${id})?`)) return;
+
+    try {
+      setErrorMsg(null);
+      if (rpnSubTab === 'severity') {
+        const { error } = await supabase.from('fmea_severity').delete().eq('sev_id', id);
+        if (error) throw error;
+      } else if (rpnSubTab === 'occurrence') {
+        const { error } = await supabase.from('fmea_occurence').delete().eq('occ_id', id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('fmea_detection').delete().eq('det_id', id);
+        if (error) throw error;
+      }
+
+      setSuccessMsg(`${label} definition deleted successfully!`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+      fetchData();
+    } catch (err: unknown) {
+      const errObj = err as Record<string, unknown>;
+      setErrorMsg(`Failed to delete RPN definition: ${(errObj?.message as string) || JSON.stringify(err)}`);
+    }
+  };
+
   // Filtered master records
   const filteredConditions = conditionsFmeaList.filter(item => {
     const matchedDetail = conditionDetailsList.find(d => d.detail_id === item.detail_id);
@@ -1446,29 +1563,72 @@ export function FmeaSettings() {
 
   const filteredControls = controlsList.filter(c => (c.currentcontrols_desc || '').toLowerCase().includes(controlSearch.toLowerCase()));
   const filteredEffects = effectsList.filter(e => (e.potentialeffects_desc || '').toLowerCase().includes(effectSearch.toLowerCase()));
+  const filteredSeverity = severityList.filter(s =>
+    String(s.sev_id).includes(rpnSearch) ||
+    (s.sev_description || '').toLowerCase().includes(rpnSearch.toLowerCase())
+  );
+  const filteredOccurrence = occurrenceList.filter(o =>
+    String(o.occ_id).includes(rpnSearch) ||
+    (o.occ_description || '').toLowerCase().includes(rpnSearch.toLowerCase())
+  );
+  const filteredDetection = detectionList.filter(d =>
+    String(d.det_id).includes(rpnSearch) ||
+    (d.det_description || '').toLowerCase().includes(rpnSearch.toLowerCase())
+  );
 
   const paginateData = <T,>(list: T[]): T[] => {
-    const start = (currentPage - 1) * pageSize;
+    const totalPages = Math.ceil(list.length / pageSize) || 1;
+    const safePage = Math.min(currentPage, totalPages);
+    const start = (safePage - 1) * pageSize;
     return list.slice(start, start + pageSize);
   };
 
+  // Unified Tab & Sub-Tab Highlight Helper (matching Dashboard pattern)
+  const getTabClass = (isActive: boolean) =>
+    isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-solid border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-solid border-(--border-main)';
+
   const renderPagination = (totalItems: number) => {
     const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    const safePage = Math.min(currentPage, totalPages);
     return (
-      <div className="shrink-0 flex items-center justify-between pt-2 text-xs text-(--text-muted)">
-        <span>Showing {totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalItems)} of {totalItems} entries</span>
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-2 pt-2 text-xs text-(--text-muted)">
+        <div className="flex items-center gap-3">
+          <span>
+            Showing {totalItems === 0 ? 0 : (safePage - 1) * pageSize + 1} to {Math.min(safePage * pageSize, totalItems)} of {totalItems} entries
+          </span>
+          <label className="flex items-center gap-1.5">
+            <span>Rows per page:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              aria-label="Rows per page"
+              className="bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded px-1.5 py-0.5 text-xs focus:outline-none focus:border-blue-500 cursor-pointer"
+            >
+              <option value={6}>6</option>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+            </select>
+          </label>
+        </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-            disabled={currentPage === 1}
+            type="button"
+            onClick={() => setCurrentPage(Math.max(safePage - 1, 1))}
+            disabled={safePage === 1}
             className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
           </button>
-          <span>Page {currentPage} of {totalPages}</span>
+          <span>Page {safePage} of {totalPages}</span>
           <button
-            onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-            disabled={currentPage >= totalPages}
+            type="button"
+            onClick={() => setCurrentPage(Math.min(safePage + 1, totalPages))}
+            disabled={safePage >= totalPages}
             className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
           >
             <ChevronRight className="w-3.5 h-3.5" />
@@ -1478,8 +1638,10 @@ export function FmeaSettings() {
     );
   };
 
+  const currentRpnLabel = rpnSubTab === 'severity' ? 'Severity' : rpnSubTab === 'occurrence' ? 'Occurrence' : 'Detection';
+
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 overflow-hidden">
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-3">
         <div className="flex items-center gap-3">
@@ -1508,91 +1670,78 @@ export function FmeaSettings() {
         </div>
       )}
 
-      {/* Main Tab Bar */}
-      <div className="shrink-0 flex border-b border-(--border-main) gap-2 overflow-x-auto">
-        <button
-          onClick={() => setMainTab('master_fmea')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            mainTab === 'master_fmea' 
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' 
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <Database className="w-3.5 h-3.5" />
-          <span>Master FMEA</span>
-        </button>
-        <button
-          onClick={() => setMainTab('constants')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            mainTab === 'constants' 
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' 
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <Sliders className="w-3.5 h-3.5" />
-          <span>FMEA Constants</span>
-        </button>
-        <button
-          onClick={() => setMainTab('rpn_definitions')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            mainTab === 'rpn_definitions' 
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' 
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <ShieldAlert className="w-3.5 h-3.5" />
-          <span>RPN Definitions</span>
-        </button>
-      </div>
+      {/* Main Content Body Container */}
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-solid border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
+        {/* Primary Navigation Tabs */}
+        <div className="shrink-0 flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1">
+          <button
+            type="button"
+            onClick={() => setMainTab('master_fmea')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(mainTab === 'master_fmea')}`}
+          >
+            <Database className={`w-4 h-4 ${mainTab === 'master_fmea' ? '' : 'text-blue-500'}`} />
+            <span>Master FMEA</span>
+          </button>
 
-      {/* Main Panel Content */}
-      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-4 overflow-hidden space-y-3">
+          <button
+            type="button"
+            onClick={() => setMainTab('constants')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(mainTab === 'constants')}`}
+          >
+            <Sliders className={`w-4 h-4 ${mainTab === 'constants' ? '' : 'text-emerald-500'}`} />
+            <span>FMEA Constants</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMainTab('rpn_definitions')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(mainTab === 'rpn_definitions')}`}
+          >
+            <ShieldAlert className={`w-4 h-4 ${mainTab === 'rpn_definitions' ? '' : 'text-amber-500'}`} />
+            <span>RPN Definitions</span>
+          </button>
+        </div>
+
+        {/* Tab Content Area */}
         {mainTab === 'master_fmea' && (
           <div className="flex flex-col flex-1 min-h-0 space-y-3">
-            {/* Sub Tabs */}
-            <div className="shrink-0 flex items-center justify-between gap-2 border-b border-(--border-main) pb-2">
-              <div className="flex bg-(--bg-elevated) p-1 rounded-lg border border-(--border-main) gap-1 flex-wrap">
-                <button
-                  onClick={() => { setMasterFmeaSubTab('unsafe_conditions'); setCurrentPage(1); }}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    masterFmeaSubTab === 'unsafe_conditions' 
-                      ? 'bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) shadow' 
-                      : 'text-(--text-muted) hover:text-(--text-primary)'
-                  }`}
-                >
-                  <AlertOctagon className="w-3.5 h-3.5" /> Unsafe Conditions
-                </button>
-                <button
-                  onClick={() => { setMasterFmeaSubTab('unsafe_acts'); setCurrentPage(1); }}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    masterFmeaSubTab === 'unsafe_acts' 
-                      ? 'bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) shadow' 
-                      : 'text-(--text-muted) hover:text-(--text-primary)'
-                  }`}
-                >
-                  <UserX className="w-3.5 h-3.5" /> Unsafe Acts
-                </button>
-                <button
-                  onClick={() => { setMasterFmeaSubTab('personal_factors'); setCurrentPage(1); }}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    masterFmeaSubTab === 'personal_factors' 
-                      ? 'bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) shadow' 
-                      : 'text-(--text-muted) hover:text-(--text-primary)'
-                  }`}
-                >
-                  <UserCheck className="w-3.5 h-3.5" /> Personal Factors
-                </button>
-                <button
-                  onClick={() => { setMasterFmeaSubTab('work_related_causes'); setCurrentPage(1); }}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    masterFmeaSubTab === 'work_related_causes' 
-                      ? 'bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) shadow' 
-                      : 'text-(--text-muted) hover:text-(--text-primary)'
-                  }`}
-                >
-                  <Briefcase className="w-3.5 h-3.5" /> Work Related Causes
-                </button>
-              </div>
+            {/* Master FMEA Sub-Tabs */}
+            <div className="shrink-0 flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1">
+              <button
+                type="button"
+                onClick={() => { setMasterFmeaSubTab('unsafe_conditions'); setCurrentPage(1); }}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(masterFmeaSubTab === 'unsafe_conditions')}`}
+              >
+                <AlertOctagon className={`w-4 h-4 ${masterFmeaSubTab === 'unsafe_conditions' ? '' : 'text-red-500'}`} />
+                <span>Unsafe Conditions</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setMasterFmeaSubTab('unsafe_acts'); setCurrentPage(1); }}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(masterFmeaSubTab === 'unsafe_acts')}`}
+              >
+                <UserX className={`w-4 h-4 ${masterFmeaSubTab === 'unsafe_acts' ? '' : 'text-amber-500'}`} />
+                <span>Unsafe Acts</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setMasterFmeaSubTab('personal_factors'); setCurrentPage(1); }}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(masterFmeaSubTab === 'personal_factors')}`}
+              >
+                <UserCheck className={`w-4 h-4 ${masterFmeaSubTab === 'personal_factors' ? '' : 'text-indigo-500'}`} />
+                <span>Personal Factors</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setMasterFmeaSubTab('work_related_causes'); setCurrentPage(1); }}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(masterFmeaSubTab === 'work_related_causes')}`}
+              >
+                <Briefcase className={`w-4 h-4 ${masterFmeaSubTab === 'work_related_causes' ? '' : 'text-blue-500'}`} />
+                <span>Work Related Causes</span>
+              </button>
             </div>
 
             {/* 1. Unsafe Conditions Table */}
@@ -1606,7 +1755,7 @@ export function FmeaSettings() {
                       placeholder="Filter records..."
                       value={conditionSearch}
                       onChange={(e) => { setConditionSearch(e.target.value); setCurrentPage(1); }}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                   <button onClick={() => setIsConditionModalOpen(true)} className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap">
@@ -1614,7 +1763,7 @@ export function FmeaSettings() {
                   </button>
                 </div>
 
-                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
@@ -1691,7 +1840,7 @@ export function FmeaSettings() {
                               {isExpanded && (
                                 <tr className="bg-(--accent-subtle)/40">
                                   <td colSpan={9} className="p-3">
-                                    <div className="pl-6 pr-4 py-3 bg-(--bg-surface) border border-(--border-main) rounded-lg space-y-3">
+                                    <div className="pl-6 pr-4 py-3 bg-(--bg-elevated) border border-(--border-main) rounded-lg space-y-3">
                                       <div className="text-[11px] font-semibold uppercase tracking-wider text-(--text-muted) flex items-center justify-between">
                                         <span className="flex items-center gap-1.5">
                                           <Wrench className="w-3.5 h-3.5" /> Linked Equipment Task Standards
@@ -1768,7 +1917,7 @@ export function FmeaSettings() {
                       placeholder="Filter records..."
                       value={actSearch}
                       onChange={(e) => { setActSearch(e.target.value); setCurrentPage(1); }}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                   <button onClick={() => setIsActModalOpen(true)} className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap">
@@ -1776,7 +1925,7 @@ export function FmeaSettings() {
                   </button>
                 </div>
 
-                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
@@ -1855,7 +2004,7 @@ export function FmeaSettings() {
                               {isExpanded && (
                                 <tr className="bg-(--accent-subtle)/40">
                                   <td colSpan={9} className="p-3">
-                                    <div className="pl-6 pr-4 py-3 bg-(--bg-surface) border border-(--border-main) rounded-lg space-y-3">
+                                    <div className="pl-6 pr-4 py-3 bg-(--bg-elevated) border border-(--border-main) rounded-lg space-y-3">
                                       <div className="text-[11px] font-semibold uppercase tracking-wider text-(--text-muted) flex items-center justify-between">
                                         <span className="flex items-center gap-1.5">
                                           <Wrench className="w-3.5 h-3.5" /> Linked Equipment Task Standards
@@ -1932,7 +2081,7 @@ export function FmeaSettings() {
                       placeholder="Filter records..."
                       value={factorSearch}
                       onChange={(e) => { setFactorSearch(e.target.value); setCurrentPage(1); }}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                   <button onClick={() => setIsFactorModalOpen(true)} className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap">
@@ -1940,7 +2089,7 @@ export function FmeaSettings() {
                   </button>
                 </div>
 
-                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
@@ -2023,7 +2172,7 @@ export function FmeaSettings() {
                               {isExpanded && (
                                 <tr className="bg-(--accent-subtle)/40">
                                   <td colSpan={9} className="p-3">
-                                    <div className="pl-6 pr-4 py-3 bg-(--bg-surface) border border-(--border-main) rounded-lg space-y-3">
+                                    <div className="pl-6 pr-4 py-3 bg-(--bg-elevated) border border-(--border-main) rounded-lg space-y-3">
                                       <div className="text-[11px] font-semibold uppercase tracking-wider text-(--text-muted) flex items-center justify-between">
                                         <span className="flex items-center gap-1.5">
                                           <Wrench className="w-3.5 h-3.5" /> Linked Equipment Task Standards
@@ -2100,7 +2249,7 @@ export function FmeaSettings() {
                       placeholder="Filter records..."
                       value={causeSearch}
                       onChange={(e) => { setCauseSearch(e.target.value); setCurrentPage(1); }}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                   <button onClick={() => setIsCauseModalOpen(true)} className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap">
@@ -2108,7 +2257,7 @@ export function FmeaSettings() {
                   </button>
                 </div>
 
-                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
@@ -2187,7 +2336,7 @@ export function FmeaSettings() {
                               {isExpanded && (
                                 <tr className="bg-(--accent-subtle)/40">
                                   <td colSpan={9} className="p-3">
-                                    <div className="pl-6 pr-4 py-3 bg-(--bg-surface) border border-(--border-main) rounded-lg space-y-3">
+                                    <div className="pl-6 pr-4 py-3 bg-(--bg-elevated) border border-(--border-main) rounded-lg space-y-3">
                                       <div className="text-[11px] font-semibold uppercase tracking-wider text-(--text-muted) flex items-center justify-between">
                                         <span className="flex items-center gap-1.5">
                                           <Wrench className="w-3.5 h-3.5" /> Linked Equipment Task Standards
@@ -2258,25 +2407,25 @@ export function FmeaSettings() {
         {/* FMEA Constants Tab */}
         {mainTab === 'constants' && (
           <div className="flex flex-col flex-1 min-h-0 space-y-3">
-            <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-2">
-              <div className="flex bg-(--bg-elevated) p-1 rounded-lg border border-(--border-main) gap-1">
-                <button
-                  onClick={() => setConstantsSubTab('controls')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-                    constantsSubTab === 'controls' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text)' : 'text-(--text-muted) hover:text-(--text-primary)'
-                  }`}
-                >
-                  Current Controls ({controlsList.length})
-                </button>
-                <button
-                  onClick={() => setConstantsSubTab('effects')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-                    constantsSubTab === 'effects' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text)' : 'text-(--text-muted) hover:text-(--text-primary)'
-                  }`}
-                >
-                  Potential Effects ({effectsList.length})
-                </button>
-              </div>
+            {/* Constants Sub-Tabs */}
+            <div className="shrink-0 flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1">
+              <button
+                type="button"
+                onClick={() => { setConstantsSubTab('controls'); setCurrentPage(1); }}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(constantsSubTab === 'controls')}`}
+              >
+                <ShieldAlert className={`w-4 h-4 ${constantsSubTab === 'controls' ? '' : 'text-emerald-500'}`} />
+                <span>Current Controls ({controlsList.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setConstantsSubTab('effects'); setCurrentPage(1); }}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(constantsSubTab === 'effects')}`}
+              >
+                <AlertOctagon className={`w-4 h-4 ${constantsSubTab === 'effects' ? '' : 'text-red-500'}`} />
+                <span>Potential Effects ({effectsList.length})</span>
+              </button>
             </div>
 
             {constantsSubTab === 'controls' ? (
@@ -2288,15 +2437,15 @@ export function FmeaSettings() {
                       type="text"
                       placeholder="Search current controls..."
                       value={controlSearch}
-                      onChange={(e) => setControlSearch(e.target.value)}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none"
+                      onChange={(e) => { setControlSearch(e.target.value); setCurrentPage(1); }}
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                   <button onClick={() => setIsAddControlModalOpen(true)} className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap">
                     <Plus className="w-3.5 h-3.5" /> Add Control
                   </button>
                 </div>
-                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
@@ -2305,20 +2454,25 @@ export function FmeaSettings() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                      {filteredControls.map((c, _idx) => (
-                        <tr key={`ctrl-${c.currentcontrols_id || _idx}`} className="hover:bg-(--accent-subtle)">
-                          <td className="py-2 px-3 text-(--text-primary)">{c.currentcontrols_desc}</td>
-                          <td className="py-2 px-3 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button onClick={() => { setEditControlRecordId(c.currentcontrols_id); setControlEditDesc(c.currentcontrols_desc || ''); setIsEditControlModalOpen(true); }} className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"><Edit2 className="w-3 h-3" /> Edit</button>
-                              <button onClick={() => handleDeleteControl(c.currentcontrols_id)} className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"><Trash2 className="w-3 h-3" /> Delete</button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                      {filteredControls.length === 0 ? (
+                        <tr><td colSpan={2} className="p-4 text-center text-(--text-muted)">No current controls found.</td></tr>
+                      ) : (
+                        paginateData(filteredControls).map((c, _idx) => (
+                          <tr key={`ctrl-${c.currentcontrols_id || _idx}`} className="hover:bg-(--accent-subtle)">
+                            <td className="py-2 px-3 text-(--text-primary)">{c.currentcontrols_desc}</td>
+                            <td className="py-2 px-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button onClick={() => { setEditControlRecordId(c.currentcontrols_id); setControlEditDesc(c.currentcontrols_desc || ''); setIsEditControlModalOpen(true); }} className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"><Edit2 className="w-3 h-3" /> Edit</button>
+                                <button onClick={() => handleDeleteControl(c.currentcontrols_id)} className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"><Trash2 className="w-3 h-3" /> Delete</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
+                {renderPagination(filteredControls.length)}
               </div>
             ) : (
               <div className="flex flex-col flex-1 min-h-0 space-y-2">
@@ -2329,15 +2483,15 @@ export function FmeaSettings() {
                       type="text"
                       placeholder="Search potential effects..."
                       value={effectSearch}
-                      onChange={(e) => setEffectSearch(e.target.value)}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none"
+                      onChange={(e) => { setEffectSearch(e.target.value); setCurrentPage(1); }}
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                   <button onClick={() => setIsAddEffectModalOpen(true)} className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap">
                     <Plus className="w-3.5 h-3.5" /> Add Effect
                   </button>
                 </div>
-                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
@@ -2346,20 +2500,25 @@ export function FmeaSettings() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                      {filteredEffects.map((e, _idx) => (
-                        <tr key={`eff-${e.potentialeffects_id || _idx}`} className="hover:bg-(--accent-subtle)">
-                          <td className="py-2 px-3 text-(--text-primary)">{e.potentialeffects_desc}</td>
-                          <td className="py-2 px-3 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button onClick={() => { setEditEffectRecordId(e.potentialeffects_id); setEffectEditDesc(e.potentialeffects_desc || ''); setIsEditEffectModalOpen(true); }} className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"><Edit2 className="w-3 h-3" /> Edit</button>
-                              <button onClick={() => handleDeleteEffect(e.potentialeffects_id)} className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"><Trash2 className="w-3 h-3" /> Delete</button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                      {filteredEffects.length === 0 ? (
+                        <tr><td colSpan={2} className="p-4 text-center text-(--text-muted)">No potential effects found.</td></tr>
+                      ) : (
+                        paginateData(filteredEffects).map((e, _idx) => (
+                          <tr key={`eff-${e.potentialeffects_id || _idx}`} className="hover:bg-(--accent-subtle)">
+                            <td className="py-2 px-3 text-(--text-primary)">{e.potentialeffects_desc}</td>
+                            <td className="py-2 px-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button onClick={() => { setEditEffectRecordId(e.potentialeffects_id); setEffectEditDesc(e.potentialeffects_desc || ''); setIsEditEffectModalOpen(true); }} className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"><Edit2 className="w-3 h-3" /> Edit</button>
+                                <button onClick={() => handleDeleteEffect(e.potentialeffects_id)} className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"><Trash2 className="w-3 h-3" /> Delete</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
+                {renderPagination(filteredEffects.length)}
               </div>
             )}
           </div>
@@ -2368,34 +2527,212 @@ export function FmeaSettings() {
         {/* RPN Definitions Tab */}
         {mainTab === 'rpn_definitions' && (
           <div className="flex flex-col flex-1 min-h-0 space-y-3">
-            <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-2">
-              <div className="flex bg-(--bg-elevated) p-1 rounded-lg border border-(--border-main) gap-1">
-                <button onClick={() => setRpnSubTab('severity')} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${rpnSubTab === 'severity' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text)' : 'text-(--text-muted) hover:text-(--text-primary)'}`}>Severity ({severityList.length})</button>
-                <button onClick={() => setRpnSubTab('occurrence')} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${rpnSubTab === 'occurrence' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text)' : 'text-(--text-muted) hover:text-(--text-primary)'}`}>Occurrence ({occurrenceList.length})</button>
-                <button onClick={() => setRpnSubTab('detection')} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${rpnSubTab === 'detection' ? 'bg-(--btn-primary-bg) text-(--btn-primary-text)' : 'text-(--text-muted) hover:text-(--text-primary)'}`}>Detection ({detectionList.length})</button>
-              </div>
+            {/* RPN Sub-Tabs */}
+            <div className="shrink-0 flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1">
+              <button
+                type="button"
+                onClick={() => { setRpnSubTab('severity'); setRpnSearch(''); setCurrentPage(1); }}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(rpnSubTab === 'severity')}`}
+              >
+                <AlertOctagon className={`w-4 h-4 ${rpnSubTab === 'severity' ? '' : 'text-red-500'}`} />
+                <span>Severity ({severityList.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setRpnSubTab('occurrence'); setRpnSearch(''); setCurrentPage(1); }}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(rpnSubTab === 'occurrence')}`}
+              >
+                <Sliders className={`w-4 h-4 ${rpnSubTab === 'occurrence' ? '' : 'text-amber-500'}`} />
+                <span>Occurrence ({occurrenceList.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setRpnSubTab('detection'); setRpnSearch(''); setCurrentPage(1); }}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(rpnSubTab === 'detection')}`}
+              >
+                <Search className={`w-4 h-4 ${rpnSubTab === 'detection' ? '' : 'text-blue-500'}`} />
+                <span>Detection ({detectionList.length})</span>
+              </button>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
-              {rpnSubTab === 'severity' && (
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead><tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle)"><th className="py-2 px-3 w-16">ID</th><th className="py-2 px-3">Severity Description</th></tr></thead>
-                  <tbody className="divide-y divide-(--border-main)">{severityList.map((s, _idx) => (<tr key={`sev-tab-${s.sev_id || _idx}`} className="hover:bg-(--accent-subtle)"><td className="py-2 px-3 font-bold font-mono">{s.sev_id}</td><td className="py-2 px-3">{s.sev_description || '—'}</td></tr>))}</tbody>
-                </table>
-              )}
-              {rpnSubTab === 'occurrence' && (
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead><tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle)"><th className="py-2 px-3 w-16">ID</th><th className="py-2 px-3">Occurrence Description</th></tr></thead>
-                  <tbody className="divide-y divide-(--border-main)">{occurrenceList.map((o, _idx) => (<tr key={`occ-tab-${o.occ_id || _idx}`} className="hover:bg-(--accent-subtle)"><td className="py-2 px-3 font-bold font-mono">{o.occ_id}</td><td className="py-2 px-3">{o.occ_description || '—'}</td></tr>))}</tbody>
-                </table>
-              )}
-              {rpnSubTab === 'detection' && (
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead><tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle)"><th className="py-2 px-3 w-16">ID</th><th className="py-2 px-3">Detection Description</th></tr></thead>
-                  <tbody className="divide-y divide-(--border-main)">{detectionList.map((d, _idx) => (<tr key={`det-tab-${d.det_id || _idx}`} className="hover:bg-(--accent-subtle)"><td className="py-2 px-3 font-bold font-mono">{d.det_id}</td><td className="py-2 px-3">{d.det_description || '—'}</td></tr>))}</tbody>
-                </table>
-              )}
+            {/* RPN Search & Add Bar */}
+            <div className="shrink-0 flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="w-3.5 h-3.5 text-(--text-muted) absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  placeholder={`Search ${currentRpnLabel.toLowerCase()} definitions...`}
+                  value={rpnSearch}
+                  onChange={(e) => { setRpnSearch(e.target.value); setCurrentPage(1); }}
+                  className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const currentList = rpnSubTab === 'severity' ? severityList : rpnSubTab === 'occurrence' ? occurrenceList : detectionList;
+                  const maxId = currentList.reduce((max, item) => {
+                    const idVal = 'sev_id' in item ? item.sev_id : 'occ_id' in item ? item.occ_id : item.det_id;
+                    return Math.max(max, Number(idVal) || 0);
+                  }, 0);
+                  setRpnModalId(String(maxId + 1));
+                  setRpnModalDesc('');
+                  setIsAddRpnModalOpen(true);
+                }}
+                className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
+              >
+                <Plus className="w-3.5 h-3.5" /> Add {currentRpnLabel}
+              </button>
             </div>
+
+            {rpnSubTab === 'severity' && (
+              <div className="flex flex-col flex-1 min-h-0 space-y-2">
+                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
+                        <th className="py-2 px-3 w-16">ID</th>
+                        <th className="py-2 px-3">Severity Description</th>
+                        <th className="py-2 px-3 text-right w-28">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                      {filteredSeverity.length === 0 ? (
+                        <tr><td colSpan={3} className="p-4 text-center text-(--text-muted)">No severity definitions found.</td></tr>
+                      ) : (
+                        paginateData(filteredSeverity).map((s, _idx) => (
+                          <tr key={`sev-tab-${s.sev_id || _idx}`} className="hover:bg-(--accent-subtle)">
+                            <td className="py-2 px-3 font-bold font-mono text-(--text-primary)">{s.sev_id}</td>
+                            <td className="py-2 px-3 text-(--text-primary)">{s.sev_description || '—'}</td>
+                            <td className="py-2 px-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => {
+                                    setEditRpnRecordId(s.sev_id);
+                                    setRpnEditDesc(s.sev_description || '');
+                                    setIsEditRpnModalOpen(true);
+                                  }}
+                                  className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Edit2 className="w-3 h-3" /> Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteRpnDefinition(s.sev_id)}
+                                  className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Trash2 className="w-3 h-3" /> Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {renderPagination(filteredSeverity.length)}
+              </div>
+            )}
+
+            {rpnSubTab === 'occurrence' && (
+              <div className="flex flex-col flex-1 min-h-0 space-y-2">
+                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
+                        <th className="py-2 px-3 w-16">ID</th>
+                        <th className="py-2 px-3">Occurrence Description</th>
+                        <th className="py-2 px-3 text-right w-28">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                      {filteredOccurrence.length === 0 ? (
+                        <tr><td colSpan={3} className="p-4 text-center text-(--text-muted)">No occurrence definitions found.</td></tr>
+                      ) : (
+                        paginateData(filteredOccurrence).map((o, _idx) => (
+                          <tr key={`occ-tab-${o.occ_id || _idx}`} className="hover:bg-(--accent-subtle)">
+                            <td className="py-2 px-3 font-bold font-mono text-(--text-primary)">{o.occ_id}</td>
+                            <td className="py-2 px-3 text-(--text-primary)">{o.occ_description || '—'}</td>
+                            <td className="py-2 px-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => {
+                                    setEditRpnRecordId(o.occ_id);
+                                    setRpnEditDesc(o.occ_description || '');
+                                    setIsEditRpnModalOpen(true);
+                                  }}
+                                  className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Edit2 className="w-3 h-3" /> Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteRpnDefinition(o.occ_id)}
+                                  className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Trash2 className="w-3 h-3" /> Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {renderPagination(filteredOccurrence.length)}
+              </div>
+            )}
+
+            {rpnSubTab === 'detection' && (
+              <div className="flex flex-col flex-1 min-h-0 space-y-2">
+                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
+                        <th className="py-2 px-3 w-16">ID</th>
+                        <th className="py-2 px-3">Detection Description</th>
+                        <th className="py-2 px-3 text-right w-28">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                      {filteredDetection.length === 0 ? (
+                        <tr><td colSpan={3} className="p-4 text-center text-(--text-muted)">No detection definitions found.</td></tr>
+                      ) : (
+                        paginateData(filteredDetection).map((d, _idx) => (
+                          <tr key={`det-tab-${d.det_id || _idx}`} className="hover:bg-(--accent-subtle)">
+                            <td className="py-2 px-3 font-bold font-mono text-(--text-primary)">{d.det_id}</td>
+                            <td className="py-2 px-3 text-(--text-primary)">{d.det_description || '—'}</td>
+                            <td className="py-2 px-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => {
+                                    setEditRpnRecordId(d.det_id);
+                                    setRpnEditDesc(d.det_description || '');
+                                    setIsEditRpnModalOpen(true);
+                                  }}
+                                  className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Edit2 className="w-3 h-3" /> Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteRpnDefinition(d.det_id)}
+                                  className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Trash2 className="w-3 h-3" /> Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {renderPagination(filteredDetection.length)}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -2450,7 +2787,7 @@ export function FmeaSettings() {
                     placeholder="Search by description or item..."
                     value={taskStdSearch}
                     onChange={(e) => setTaskStdSearch(e.target.value)}
-                    className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg pl-8 pr-3 py-1.5 text-xs"
+                    className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg pl-8 pr-3 py-1.5 text-xs"
                   />
                   <Search className="w-3.5 h-3.5 text-(--text-muted) absolute left-2.5 top-2" />
                 </div>
@@ -2582,7 +2919,7 @@ export function FmeaSettings() {
                         placeholder="Search/filter potential effects..."
                         value={condEffectSearchFilter}
                         onChange={(e) => setCondEffectSearchFilter(e.target.value)}
-                        className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg pl-8 pr-3 py-1 text-xs"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg pl-8 pr-3 py-1 text-xs"
                       />
                     </div>
                     <CustomDropdown
@@ -2611,7 +2948,7 @@ export function FmeaSettings() {
                         placeholder="Search/filter current controls..."
                         value={condControlSearchFilter}
                         onChange={(e) => setCondControlSearchFilter(e.target.value)}
-                        className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg pl-8 pr-3 py-1 text-xs"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg pl-8 pr-3 py-1 text-xs"
                       />
                     </div>
                     <CustomDropdown
@@ -2677,7 +3014,7 @@ export function FmeaSettings() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">RPN</label>
-                    <div className="w-full bg-(--accent-subtle) border border-(--border-main) rounded-lg px-3 py-2 text-xs font-mono font-bold text-(--text-primary) text-center">{modalComputedRpn}</div>
+                    <div className="w-full bg-(--accent-subtle) border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-xs font-mono font-bold text-(--text-primary) text-center">{modalComputedRpn}</div>
                   </div>
                 </div>
               </div>
@@ -2749,7 +3086,7 @@ export function FmeaSettings() {
                         placeholder="Search/filter potential effects..."
                         value={editCondEffectSearchFilter}
                         onChange={(e) => setEditCondEffectSearchFilter(e.target.value)}
-                        className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg pl-8 pr-3 py-1 text-xs"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg pl-8 pr-3 py-1 text-xs"
                       />
                     </div>
                     <CustomDropdown
@@ -2778,7 +3115,7 @@ export function FmeaSettings() {
                         placeholder="Search/filter current controls..."
                         value={editCondControlSearchFilter}
                         onChange={(e) => setEditCondControlSearchFilter(e.target.value)}
-                        className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg pl-8 pr-3 py-1 text-xs"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg pl-8 pr-3 py-1 text-xs"
                       />
                     </div>
                     <CustomDropdown
@@ -2844,7 +3181,7 @@ export function FmeaSettings() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">RPN</label>
-                    <div className="w-full bg-(--accent-subtle) border border-(--border-main) rounded-lg px-3 py-2 text-xs font-mono font-bold text-(--text-primary) text-center">{editComputedRpn}</div>
+                    <div className="w-full bg-(--accent-subtle) border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-xs font-mono font-bold text-(--text-primary) text-center">{editComputedRpn}</div>
                   </div>
                 </div>
               </div>
@@ -2907,7 +3244,7 @@ export function FmeaSettings() {
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Equipment Task Standard</label>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs truncate">
+                    <div className="flex-1 bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs truncate">
                       {selectedTaskStandardId ? (
                         taskStandardsList.find(ts => ts.task_standard_id === selectedTaskStandardId)?.task_standard_desc || selectedTaskStandardId
                       ) : (
@@ -2920,7 +3257,7 @@ export function FmeaSettings() {
                         setTaskStdModalTarget({ type: 'act_add' });
                         setIsTaskStdSelectorModalOpen(true);
                       }}
-                      className="bg-(--accent-subtle) hover:bg-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0 border border-(--border-main)"
+                      className="bg-(--accent-subtle) hover:bg-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0 border border-slate-300 dark:border-slate-600"
                     >
                       <Search className="w-3.5 h-3.5" /> Browse & Select
                     </button>
@@ -3014,7 +3351,7 @@ export function FmeaSettings() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">RPN</label>
-                    <div className="w-full bg-(--accent-subtle) border border-(--border-main) rounded-lg px-3 py-2 text-xs font-mono font-bold text-(--text-primary) text-center">{actModalComputedRpn}</div>
+                    <div className="w-full bg-(--accent-subtle) border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-xs font-mono font-bold text-(--text-primary) text-center">{actModalComputedRpn}</div>
                   </div>
                 </div>
               </div>
@@ -3077,7 +3414,7 @@ export function FmeaSettings() {
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Equipment Task Standard</label>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs truncate">
+                    <div className="flex-1 bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs truncate">
                       {editTaskStandardId ? (
                         taskStandardsList.find(ts => ts.task_standard_id === editTaskStandardId)?.task_standard_desc || editTaskStandardId
                       ) : (
@@ -3090,7 +3427,7 @@ export function FmeaSettings() {
                         setTaskStdModalTarget({ type: 'act_edit' });
                         setIsTaskStdSelectorModalOpen(true);
                       }}
-                      className="bg-(--accent-subtle) hover:bg-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0 border border-(--border-main)"
+                      className="bg-(--accent-subtle) hover:bg-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0 border border-slate-300 dark:border-slate-600"
                     >
                       <Search className="w-3.5 h-3.5" /> Browse & Select
                     </button>
@@ -3184,7 +3521,7 @@ export function FmeaSettings() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">RPN</label>
-                    <div className="w-full bg-(--accent-subtle) border border-(--border-main) rounded-lg px-3 py-2 text-xs font-mono font-bold text-(--text-primary) text-center">{actEditComputedRpn}</div>
+                    <div className="w-full bg-(--accent-subtle) border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-xs font-mono font-bold text-(--text-primary) text-center">{actEditComputedRpn}</div>
                   </div>
                 </div>
               </div>
@@ -3247,7 +3584,7 @@ export function FmeaSettings() {
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Equipment Task Standard</label>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs truncate">
+                    <div className="flex-1 bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs truncate">
                       {selectedTaskStandardId ? (
                         taskStandardsList.find(ts => ts.task_standard_id === selectedTaskStandardId)?.task_standard_desc || selectedTaskStandardId
                       ) : (
@@ -3260,7 +3597,7 @@ export function FmeaSettings() {
                         setTaskStdModalTarget({ type: 'factor_add' });
                         setIsTaskStdSelectorModalOpen(true);
                       }}
-                      className="bg-(--accent-subtle) hover:bg-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0 border border-(--border-main)"
+                      className="bg-(--accent-subtle) hover:bg-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0 border border-slate-300 dark:border-slate-600"
                     >
                       <Search className="w-3.5 h-3.5" /> Browse & Select
                     </button>
@@ -3354,7 +3691,7 @@ export function FmeaSettings() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">RPN</label>
-                    <div className="w-full bg-(--accent-subtle) border border-(--border-main) rounded-lg px-3 py-2 text-xs font-mono font-bold text-(--text-primary) text-center">{factorModalComputedRpn}</div>
+                    <div className="w-full bg-(--accent-subtle) border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-xs font-mono font-bold text-(--text-primary) text-center">{factorModalComputedRpn}</div>
                   </div>
                 </div>
               </div>
@@ -3417,7 +3754,7 @@ export function FmeaSettings() {
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Equipment Task Standard</label>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs truncate">
+                    <div className="flex-1 bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs truncate">
                       {editTaskStandardId ? (
                         taskStandardsList.find(ts => ts.task_standard_id === editTaskStandardId)?.task_standard_desc || editTaskStandardId
                       ) : (
@@ -3430,7 +3767,7 @@ export function FmeaSettings() {
                         setTaskStdModalTarget({ type: 'factor_edit' });
                         setIsTaskStdSelectorModalOpen(true);
                       }}
-                      className="bg-(--accent-subtle) hover:bg-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0 border border-(--border-main)"
+                      className="bg-(--accent-subtle) hover:bg-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0 border border-slate-300 dark:border-slate-600"
                     >
                       <Search className="w-3.5 h-3.5" /> Browse & Select
                     </button>
@@ -3524,7 +3861,7 @@ export function FmeaSettings() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">RPN</label>
-                    <div className="w-full bg-(--accent-subtle) border border-(--border-main) rounded-lg px-3 py-2 text-xs font-mono font-bold text-(--text-primary) text-center">{factorEditComputedRpn}</div>
+                    <div className="w-full bg-(--accent-subtle) border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-xs font-mono font-bold text-(--text-primary) text-center">{factorEditComputedRpn}</div>
                   </div>
                 </div>
               </div>
@@ -3587,7 +3924,7 @@ export function FmeaSettings() {
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Equipment Task Standard</label>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs truncate">
+                    <div className="flex-1 bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs truncate">
                       {selectedTaskStandardId ? (
                         taskStandardsList.find(ts => ts.task_standard_id === selectedTaskStandardId)?.task_standard_desc || selectedTaskStandardId
                       ) : (
@@ -3600,7 +3937,7 @@ export function FmeaSettings() {
                         setTaskStdModalTarget({ type: 'cause_add' });
                         setIsTaskStdSelectorModalOpen(true);
                       }}
-                      className="bg-(--accent-subtle) hover:bg-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0 border border-(--border-main)"
+                      className="bg-(--accent-subtle) hover:bg-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0 border border-slate-300 dark:border-slate-600"
                     >
                       <Search className="w-3.5 h-3.5" /> Browse & Select
                     </button>
@@ -3694,7 +4031,7 @@ export function FmeaSettings() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">RPN</label>
-                    <div className="w-full bg-(--accent-subtle) border border-(--border-main) rounded-lg px-3 py-2 text-xs font-mono font-bold text-(--text-primary) text-center">{causeModalComputedRpn}</div>
+                    <div className="w-full bg-(--accent-subtle) border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-xs font-mono font-bold text-(--text-primary) text-center">{causeModalComputedRpn}</div>
                   </div>
                 </div>
               </div>
@@ -3757,7 +4094,7 @@ export function FmeaSettings() {
                 <div>
                   <label className="block text-xs font-semibold text-(--text-primary) mb-1">Equipment Task Standard</label>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs truncate">
+                    <div className="flex-1 bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs truncate">
                       {editTaskStandardId ? (
                         taskStandardsList.find(ts => ts.task_standard_id === editTaskStandardId)?.task_standard_desc || editTaskStandardId
                       ) : (
@@ -3770,7 +4107,7 @@ export function FmeaSettings() {
                         setTaskStdModalTarget({ type: 'cause_edit' });
                         setIsTaskStdSelectorModalOpen(true);
                       }}
-                      className="bg-(--accent-subtle) hover:bg-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0 border border-(--border-main)"
+                      className="bg-(--accent-subtle) hover:bg-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0 border border-slate-300 dark:border-slate-600"
                     >
                       <Search className="w-3.5 h-3.5" /> Browse & Select
                     </button>
@@ -3864,12 +4201,12 @@ export function FmeaSettings() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-(--text-primary) mb-1">RPN</label>
-                    <div className="w-full bg-(--accent-subtle) border border-(--border-main) rounded-lg px-3 py-2 text-xs font-mono font-bold text-(--text-primary) text-center">{causeEditComputedRpn}</div>
+                    <div className="w-full bg-(--accent-subtle) border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-xs font-mono font-bold text-(--text-primary) text-center">{causeEditComputedRpn}</div>
                   </div>
                 </div>
               </div>
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-(--border-main) shrink-0 mt-4">
-                <button type="button" onClick={() => setIsEditConditionModalOpen(false)} className="px-4 py-2 bg-(--accent-subtle) text-(--text-primary) hover:opacity-80 rounded-lg text-xs font-semibold cursor-pointer">Cancel</button>
+                <button type="button" onClick={() => setIsEditCauseModalOpen(false)} className="px-4 py-2 bg-(--accent-subtle) text-(--text-primary) hover:opacity-80 rounded-lg text-xs font-semibold cursor-pointer">Cancel</button>
                 <button type="submit" className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold cursor-pointer shadow">Update Record</button>
               </div>
             </form>
@@ -3888,11 +4225,11 @@ export function FmeaSettings() {
                 placeholder="Control description..."
                 value={controlModalDesc}
                 onChange={(e) => setControlModalDesc(e.target.value)}
-                className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none"
+                className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => setIsAddControlModalOpen(false)} className="px-3 py-1.5 bg-(--accent-subtle) text-(--text-primary) rounded-lg text-xs font-semibold">Cancel</button>
-                <button type="submit" className="px-3 py-1.5 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold">Save Control</button>
+                <button type="button" onClick={() => setIsAddControlModalOpen(false)} className="px-3 py-1.5 bg-(--accent-subtle) text-(--text-primary) rounded-lg text-xs font-semibold cursor-pointer">Cancel</button>
+                <button type="submit" className="px-3 py-1.5 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold cursor-pointer shadow">Save Control</button>
               </div>
             </form>
           </div>
@@ -3909,11 +4246,11 @@ export function FmeaSettings() {
                 type="text"
                 value={controlEditDesc}
                 onChange={(e) => setControlEditDesc(e.target.value)}
-                className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none"
+                className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => setIsEditControlModalOpen(false)} className="px-3 py-1.5 bg-(--accent-subtle) text-(--text-primary) rounded-lg text-xs font-semibold">Cancel</button>
-                <button type="submit" className="px-3 py-1.5 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold">Update Control</button>
+                <button type="button" onClick={() => setIsEditControlModalOpen(false)} className="px-3 py-1.5 bg-(--accent-subtle) text-(--text-primary) rounded-lg text-xs font-semibold cursor-pointer">Cancel</button>
+                <button type="submit" className="px-3 py-1.5 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold cursor-pointer shadow">Update Control</button>
               </div>
             </form>
           </div>
@@ -3931,11 +4268,11 @@ export function FmeaSettings() {
                 placeholder="Effect description..."
                 value={effectModalDesc}
                 onChange={(e) => setEffectModalDesc(e.target.value)}
-                className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none"
+                className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => setIsAddEffectModalOpen(false)} className="px-3 py-1.5 bg-(--accent-subtle) text-(--text-primary) rounded-lg text-xs font-semibold">Cancel</button>
-                <button type="submit" className="px-3 py-1.5 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold">Save Effect</button>
+                <button type="button" onClick={() => setIsAddEffectModalOpen(false)} className="px-3 py-1.5 bg-(--accent-subtle) text-(--text-primary) rounded-lg text-xs font-semibold cursor-pointer">Cancel</button>
+                <button type="submit" className="px-3 py-1.5 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold cursor-pointer shadow">Save Effect</button>
               </div>
             </form>
           </div>
@@ -3952,11 +4289,123 @@ export function FmeaSettings() {
                 type="text"
                 value={effectEditDesc}
                 onChange={(e) => setEffectEditDesc(e.target.value)}
-                className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none"
+                className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => setIsEditEffectModalOpen(false)} className="px-3 py-1.5 bg-(--accent-subtle) text-(--text-primary) rounded-lg text-xs font-semibold">Cancel</button>
-                <button type="submit" className="px-3 py-1.5 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold">Update Effect</button>
+                <button type="button" onClick={() => setIsEditEffectModalOpen(false)} className="px-3 py-1.5 bg-(--accent-subtle) text-(--text-primary) rounded-lg text-xs font-semibold cursor-pointer">Cancel</button>
+                <button type="submit" className="px-3 py-1.5 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold cursor-pointer shadow">Update Effect</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- ADD RPN DEFINITION MODAL --- */}
+      {isAddRpnModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-(--border-main) pb-3 mb-4">
+              <h3 className="text-lg font-bold text-(--text-primary)">Add {currentRpnLabel} Definition</h3>
+              <button
+                type="button"
+                onClick={() => setIsAddRpnModalOpen(false)}
+                className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleAddRpnDefinition} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-(--text-primary) mb-1">Score ID</label>
+                <input
+                  type="number"
+                  min={1}
+                  required
+                  placeholder="e.g., 1"
+                  value={rpnModalId}
+                  onChange={(e) => setRpnModalId(e.target.value)}
+                  className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-(--text-primary) mb-1">{currentRpnLabel} Description</label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder={`Enter ${currentRpnLabel.toLowerCase()} criteria description...`}
+                  value={rpnModalDesc}
+                  onChange={(e) => setRpnModalDesc(e.target.value)}
+                  className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddRpnModalOpen(false)}
+                  className="px-3 py-1.5 bg-(--accent-subtle) text-(--text-primary) rounded-lg text-xs font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-3 py-1.5 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold cursor-pointer shadow"
+                >
+                  Save {currentRpnLabel}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- EDIT RPN DEFINITION MODAL --- */}
+      {isEditRpnModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-(--border-main) pb-3 mb-4">
+              <h3 className="text-lg font-bold text-(--text-primary)">Edit {currentRpnLabel} Definition</h3>
+              <button
+                type="button"
+                onClick={() => setIsEditRpnModalOpen(false)}
+                className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateRpnDefinition} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-(--text-primary) mb-1">Score ID</label>
+                <input
+                  type="number"
+                  disabled
+                  value={editRpnRecordId ?? ''}
+                  className="w-full bg-(--accent-subtle) border border-slate-300 dark:border-slate-600 text-(--text-muted) rounded-lg px-3 py-2 text-xs font-mono cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-(--text-primary) mb-1">{currentRpnLabel} Description</label>
+                <textarea
+                  rows={3}
+                  required
+                  value={rpnEditDesc}
+                  onChange={(e) => setRpnEditDesc(e.target.value)}
+                  className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditRpnModalOpen(false)}
+                  className="px-3 py-1.5 bg-(--accent-subtle) text-(--text-primary) rounded-lg text-xs font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-3 py-1.5 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold cursor-pointer shadow"
+                >
+                  Update {currentRpnLabel}
+                </button>
               </div>
             </form>
           </div>

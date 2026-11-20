@@ -91,7 +91,7 @@ function CustomDropdown<T extends string | number>({
 
       {isOpen && (
         <div
-          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-(--border-main) bg-(--bg-elevated) shadow-xl py-1 ${
+          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-slate-300 dark:border-slate-600 bg-(--bg-elevated) shadow-xl py-1 ${
             openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
           } ${menuClassName}`}
         >
@@ -365,6 +365,12 @@ export function IncidentReport() {
     selectedFmeaId: '',
     remarks: ''
   });
+
+  // Unified Tab Highlight Helper (matching VehicleRegistry)
+  const getTabClass = (isActive: boolean) =>
+    isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-solid border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-solid border-(--border-main)';
 
   const conditionMap = useMemo(() => new Map(conditionOptions.map(c => [c.id, c])), [conditionOptions]);
   const conditionFmeaMap = useMemo(() => new Map(conditionFmeaList.map(f => [f.conditionsfmea_id, f])) as Map<string, ConditionFmeaOption>, [conditionFmeaList]);
@@ -1264,7 +1270,7 @@ export function IncidentReport() {
 
     return (
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-        <div className="flex-1 min-h-0 overflow-y-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+        <div className="flex-1 min-h-0 overflow-y-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-(--accent-subtle) text-(--text-muted) uppercase border-b border-(--border-main) sticky top-0 z-10 shadow-xs">
@@ -1357,41 +1363,47 @@ export function IncidentReport() {
 
   return (
     <div className="h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 flex flex-col overflow-hidden">
-      <div className="flex items-center gap-3 border-b border-(--border-main) pb-3 shrink-0">
-        <div className="bg-black text-white p-2 rounded-xl shadow-xs shrink-0">
-          <AlertTriangle className="w-6 h-6" />
+      {/* Header */}
+      <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-(--accent-subtle) text-(--text-primary) rounded-xl">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-(--text-primary)">
+              Incident Reports & Cause Analysis
+            </h1>
+            <p className="text-xs sm:text-sm text-(--text-muted)">
+              Log equipment incidents and analyze root causes from FMEA taxonomy tables.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-(--text-primary)">
-            Incident Reports & Cause Analysis
-          </h1>
-          <p className="text-xs sm:text-sm text-(--text-muted)">
-            Log equipment incidents and analyze root causes from FMEA taxonomy tables.
-          </p>
-        </div>
+        {(loadingIncidents || loadingChild) && <Loader2 className="w-5 h-5 text-(--text-primary) animate-spin" />}
       </div>
 
       {successMsg && (
-        <div className="bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-4 py-2.5 rounded-lg flex items-center gap-3 text-xs shrink-0">
+        <div className="shrink-0 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-3 py-2 rounded-lg flex items-center gap-2.5 text-xs">
           <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="bg-red-50 dark:bg-red-950/50 border border-red-300 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-2.5 rounded-lg flex items-center gap-3 text-xs shrink-0">
+        <div className="shrink-0 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-3 py-2 rounded-lg flex items-center gap-2.5 text-xs">
           <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
-      <div className="shrink-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-3.5 space-y-2.5">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-(--border-main) pb-2.5">
+      {/* Collapsible Master Incident Section (matching VehicleRegistry) */}
+      <div className="shrink-0 bg-(--bg-elevated) border border-(--border-main) shadow-xs rounded-xl overflow-hidden">
+        <div className="px-4 py-2.5 bg-(--accent-subtle) border-b border-(--border-main) flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3 min-w-0">
-            <div className="text-xs font-semibold min-w-0">
+            <div className="flex items-center gap-2 text-xs font-semibold min-w-0">
+              <Search className="w-4 h-4 text-(--text-primary) shrink-0" />
               {selectedIncidentRecord ? (
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                  <span className="text-(--text-primary) font-mono font-bold">
+                  <span className="text-xs bg-(--bg-surface) border border-(--border-main) text-(--text-primary) px-2 py-0.5 rounded font-mono font-bold">
                     {selectedIncidentRecord.incident_refno}
                   </span>
                   <span className="text-(--text-muted) font-normal">
@@ -1411,16 +1423,19 @@ export function IncidentReport() {
                   )}
                 </div>
               ) : (
-                <span className="text-(--text-muted) font-normal">No Incident Selected</span>
+                <span className="text-xs font-semibold text-(--text-primary) uppercase tracking-wider">
+                  No Incident Selected
+                </span>
               )}
             </div>
 
             <button
+              type="button"
               onClick={() => {
                 setIncidentSearchQuery('');
                 setIsIncidentSearchOpen(true);
               }}
-              className="bg-(--bg-elevated) hover:opacity-80 text-(--text-primary) border border-(--border-main) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+              className="bg-(--bg-surface) hover:bg-(--accent-subtle) text-(--text-primary) border border-slate-300 dark:border-slate-600 px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
             >
               <Search className="w-3.5 h-3.5 text-(--text-primary)" />
               <span>Search Incident Reports...</span>
@@ -1429,34 +1444,27 @@ export function IncidentReport() {
 
           <div className="flex items-center gap-2 shrink-0">
             <button
+              type="button"
               onClick={handleOpenCreateModal}
-              className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
+              className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow shrink-0"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>New Incident Report</span>
             </button>
 
             <button
+              type="button"
               onClick={() => setIsSecondAreaOpen(!isSecondAreaOpen)}
-              className="px-2.5 py-1.5 bg-(--accent-subtle) hover:opacity-80 text-(--text-primary) border border-(--border-main) rounded-lg transition-colors cursor-pointer text-xs font-semibold flex items-center gap-1.5"
+              className="flex items-center gap-1.5 text-xs text-(--text-muted) hover:text-(--text-primary) bg-(--bg-surface) border border-(--border-main) px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
             >
-              {isSecondAreaOpen ? (
-                <>
-                  <ChevronUp className="w-4 h-4" />
-                  <span>Collapse</span>
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="w-4 h-4" />
-                  <span>Expand</span>
-                </>
-              )}
+              <span>{isSecondAreaOpen ? 'Collapse' : 'Expand'}</span>
+              {isSecondAreaOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
           </div>
         </div>
 
         {isSecondAreaOpen && (
-          <div className="max-h-[25vh] overflow-y-auto pr-1 space-y-2.5">
+          <div className="p-3 max-h-[25vh] overflow-y-auto space-y-2.5">
             {loadingIncidents ? (
               <div className="py-4 text-center text-(--text-muted) flex items-center justify-center gap-2 text-xs">
                 <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
@@ -1467,18 +1475,19 @@ export function IncidentReport() {
                 <FolderSearch className="w-6 h-6 text-(--text-muted) mx-auto" />
                 <p className="text-xs">No Incident Report selected.</p>
                 <button
+                  type="button"
                   onClick={() => {
                     setIncidentSearchQuery('');
                     setIsIncidentSearchOpen(true);
                   }}
-                  className="mt-1 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1 cursor-pointer"
+                  className="mt-1 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1 cursor-pointer shadow"
                 >
                   <Search className="w-3.5 h-3.5" />
                   <span>Browse & Select Incident</span>
                 </button>
               </div>
             ) : (
-              <div className="bg-(--bg-elevated) border border-(--border-main) rounded-xl p-3 space-y-2">
+              <div className="bg-(--bg-surface) border border-(--border-main) rounded-xl p-3 space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-(--border-main) pb-2">
                   <div>
                     <span className="text-[10px] uppercase font-semibold text-(--text-muted) block">Incident Ref #</span>
@@ -1497,6 +1506,7 @@ export function IncidentReport() {
 
                   <div className="flex items-center gap-2">
                     <button
+                      type="button"
                       disabled={isLockedRecord}
                       onClick={() => handleOpenEditModal(selectedIncidentRecord)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors ${
@@ -1507,6 +1517,7 @@ export function IncidentReport() {
                       <span>Edit</span>
                     </button>
                     <button
+                      type="button"
                       disabled={isLockedRecord}
                       onClick={() => handleDeleteMaster(selectedIncidentRecord.incident_id, selectedIncidentRecord.status_name)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors ${
@@ -1560,14 +1571,14 @@ export function IncidentReport() {
 
                 <div className="pt-2 border-t border-(--border-main)">
                   <span className="text-[11px] text-(--text-muted) uppercase block mb-1">Description</span>
-                  <p className="text-xs text-(--text-secondary) leading-relaxed bg-(--bg-surface) p-2.5 rounded-lg border border-(--border-main)">
+                  <p className="text-xs text-(--text-secondary) leading-relaxed bg-(--bg-elevated) p-2.5 rounded-lg border border-(--border-main)">
                     {selectedIncidentRecord.incident_description || 'No description provided.'}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-(--border-main)">
-                  <div className="bg-(--bg-surface) p-2 rounded-lg border border-(--border-main) flex items-center gap-2.5">
-                    <div className="p-1.5 bg-black text-white rounded-lg shrink-0">
+                  <div className="bg-(--bg-elevated) p-2 rounded-lg border border-(--border-main) flex items-center gap-2.5">
+                    <div className="p-1.5 bg-(--accent-subtle) text-(--text-primary) rounded-lg shrink-0">
                       <User className="w-3.5 h-3.5" />
                     </div>
                     <div>
@@ -1576,8 +1587,8 @@ export function IncidentReport() {
                     </div>
                   </div>
 
-                  <div className="bg-(--bg-surface) p-2 rounded-lg border border-(--border-main) flex items-center gap-2.5">
-                    <div className="p-1.5 bg-black text-white rounded-lg shrink-0">
+                  <div className="bg-(--bg-elevated) p-2 rounded-lg border border-(--border-main) flex items-center gap-2.5">
+                    <div className="p-1.5 bg-(--accent-subtle) text-(--text-primary) rounded-lg shrink-0">
                       <UserCheck2 className="w-3.5 h-3.5" />
                     </div>
                     <div>
@@ -1592,8 +1603,9 @@ export function IncidentReport() {
         )}
       </div>
 
-      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) border border-(--border-main) rounded-xl p-3 shadow-xs overflow-hidden space-y-2">
-        <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-b border-(--border-main) pb-2">
+      {/* Main Content Body Container (matching VehicleRegistry) */}
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-solid border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
+        <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-b border-(--border-main) pb-2.5">
           <div>
             <h2 className="text-sm sm:text-base font-bold text-(--text-primary) flex items-center gap-2">
               <Layers className="w-4 h-4 text-(--text-primary)" />
@@ -1607,9 +1619,10 @@ export function IncidentReport() {
           </div>
 
           <button
+            type="button"
             disabled={!selectedIncidentId || isLockedRecord}
             onClick={handleOpenAddChild}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs shrink-0 ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow shrink-0 ${
               !selectedIncidentId || isLockedRecord ? 'bg-(--accent-subtle) text-(--text-muted) opacity-50 cursor-not-allowed' : 'bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) cursor-pointer'
             }`}
           >
@@ -1618,44 +1631,41 @@ export function IncidentReport() {
           </button>
         </div>
 
-        <div className="shrink-0 flex gap-2 border-b border-(--border-main) pb-2 overflow-x-auto">
+        {/* Primary Category Navigation Tab Bar (matching VehicleRegistry) */}
+        <div className="shrink-0 flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1 overflow-x-auto">
           <button
+            type="button"
             onClick={() => { setActiveAnalysisTab('conditions'); setCurrentPage(1); }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap border ${
-              activeAnalysisTab === 'conditions' ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
-            }`}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeAnalysisTab === 'conditions')}`}
           >
-            <AlertTriangle className="w-3.5 h-3.5" />
+            <AlertTriangle className="w-4 h-4" />
             <span>Unsafe Conditions ({incidentConditions.length})</span>
           </button>
 
           <button
+            type="button"
             onClick={() => { setActiveAnalysisTab('acts'); setCurrentPage(1); }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap border ${
-              activeAnalysisTab === 'acts' ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
-            }`}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeAnalysisTab === 'acts')}`}
           >
-            <ShieldAlert className="w-3.5 h-3.5" />
+            <ShieldAlert className="w-4 h-4" />
             <span>Unsafe Acts ({incidentActs.length})</span>
           </button>
 
           <button
+            type="button"
             onClick={() => { setActiveAnalysisTab('personal'); setCurrentPage(1); }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap border ${
-              activeAnalysisTab === 'personal' ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
-            }`}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeAnalysisTab === 'personal')}`}
           >
-            <UserCheck className="w-3.5 h-3.5" />
+            <UserCheck className="w-4 h-4" />
             <span>Personal Factors ({incidentPersonal.length})</span>
           </button>
 
           <button
+            type="button"
             onClick={() => { setActiveAnalysisTab('workrelated'); setCurrentPage(1); }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap border ${
-              activeAnalysisTab === 'workrelated' ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' : 'bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) border-(--border-main)'
-            }`}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeAnalysisTab === 'workrelated')}`}
           >
-            <Briefcase className="w-3.5 h-3.5" />
+            <Briefcase className="w-4 h-4" />
             <span>Work Related Causes ({incidentWorkRelated.length})</span>
           </button>
         </div>
@@ -1682,19 +1692,19 @@ export function IncidentReport() {
       </div>
 
       {isIncidentSearchOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-60">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-60">
           <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
-            <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 bg-(--accent-subtle) shrink-0">
+            <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 bg-(--bg-surface) shrink-0">
               <h3 className="text-lg font-bold text-(--text-primary) flex items-center gap-2">
                 <Search className="w-4 h-4 text-(--text-primary)" />
                 Search & Select Incident Report
               </h3>
-              <button onClick={() => setIsIncidentSearchOpen(false)} className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer"><X className="w-4 h-4" /></button>
+              <button type="button" onClick={() => setIsIncidentSearchOpen(false)} className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer"><X className="w-4 h-4" /></button>
             </div>
             <div className="p-3 border-b border-(--border-main) bg-(--bg-surface) shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
-                <input type="text" autoFocus placeholder="Filter ref #, equipment ID, make/model, type, reporter..." value={incidentSearchQuery} onChange={(e) => setIncidentSearchQuery(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)" />
+                <input type="text" autoFocus placeholder="Filter ref #, equipment ID, make/model, type, reporter..." value={incidentSearchQuery} onChange={(e) => setIncidentSearchQuery(e.target.value)} className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
               </div>
             </div>
             <div className="p-4 overflow-y-auto flex-1 space-y-2">
@@ -1702,7 +1712,7 @@ export function IncidentReport() {
                 <div className="text-center text-(--text-muted) text-xs py-8">No incident reports match your query.</div>
               ) : (
                 filteredIncidents.map(inc => (
-                  <div key={inc.incident_id} onClick={() => { setSelectedIncidentId(inc.incident_id); setIsIncidentSearchOpen(false); }} className={`p-3 border rounded-xl cursor-pointer transition-all flex items-center justify-between group ${inc.incident_id === selectedIncidentId ? 'bg-(--accent-subtle) border-(--text-primary) text-(--text-primary)' : 'bg-(--bg-elevated) hover:bg-(--accent-subtle) border-(--border-main)'}`}>
+                  <div key={inc.incident_id} onClick={() => { setSelectedIncidentId(inc.incident_id); setIsIncidentSearchOpen(false); }} className={`p-3 border rounded-xl cursor-pointer transition-all flex items-center justify-between group ${inc.incident_id === selectedIncidentId ? 'bg-(--accent-subtle) border-(--text-primary) text-(--text-primary)' : 'bg-(--bg-surface) hover:bg-(--accent-subtle) border-(--border-main)'}`}>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-bold text-(--text-primary) text-xs">{inc.incident_refno}</span>
@@ -1716,29 +1726,29 @@ export function IncidentReport() {
                 ))
               )}
             </div>
-            <div className="p-3 border-t border-(--border-main) bg-(--accent-subtle) text-right shrink-0">
-              <button onClick={() => setIsIncidentSearchOpen(false)} className="px-4 py-1.5 bg-(--accent-subtle) text-(--text-primary) rounded-lg text-xs font-semibold cursor-pointer">Close</button>
+            <div className="p-3 border-t border-(--border-main) bg-(--bg-surface) text-right shrink-0">
+              <button type="button" onClick={() => setIsIncidentSearchOpen(false)} className="px-4 py-1.5 bg-(--accent-subtle) text-(--text-primary) rounded-lg text-xs font-semibold cursor-pointer">Close</button>
             </div>
           </div>
         </div>
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 bg-(--accent-subtle) shrink-0">
+            <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 bg-(--bg-surface) shrink-0">
               <h3 className="text-lg font-bold text-(--text-primary) flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4" />
                 {editingId ? 'Edit Incident Report' : 'Create Incident Report'}
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer"><X className="w-5 h-5" /></button>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer"><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={handleSubmitMaster} className="flex flex-col flex-1 min-h-0 overflow-hidden">
               <div className="p-6 overflow-y-auto flex-1 min-h-0 space-y-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-(--text-muted) uppercase tracking-wider">Selected Active Equipment <span className="text-red-500">*</span></label>
+                  <label className="text-xs font-semibold text-(--text-primary) uppercase tracking-wider">Selected Active Equipment <span className="text-red-500">*</span></label>
                   {selectedEquipment ? (
-                    <div className="flex items-center justify-between bg-(--bg-surface) border border-(--border-main) p-3.5 rounded-xl">
+                    <div className="flex items-center justify-between bg-(--bg-surface) border border-slate-300 dark:border-slate-600 p-3.5 rounded-xl">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full text-xs">
                         <div><span className="text-[11px] text-(--text-muted) uppercase block">Equipment ID</span><div className="font-bold text-(--text-primary) text-sm font-mono">{selectedEquipment.plate_no}</div></div>
                         <div><span className="text-[11px] text-(--text-muted) uppercase block">Current Reading</span><div className="font-semibold text-(--text-primary)">{selectedEquipment.service_rdg ?? '0'}</div></div>
@@ -1748,7 +1758,7 @@ export function IncidentReport() {
                       <button type="button" onClick={() => { setSelectedEquipment(null); setFormData(prev => ({ ...prev, vehicle_id: '', vehicle_plate: '' })); }} className="text-(--text-muted) hover:text-red-500 p-2 cursor-pointer shrink-0"><X className="w-5 h-5" /></button>
                     </div>
                   ) : (
-                    <button type="button" onClick={() => { setShowEquipmentPicker(true); fetchEquipmentList(); }} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-secondary) px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-between cursor-pointer">
+                    <button type="button" onClick={() => { setShowEquipmentPicker(true); fetchEquipmentList(); }} className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-secondary) px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-between cursor-pointer hover:border-slate-400 dark:hover:border-slate-500">
                       <span className="flex items-center gap-2"><Search className="w-4 h-4 text-(--text-primary)" /> Click here to select an active equipment...</span>
                       <span className="text-xs bg-(--accent-subtle) text-(--text-primary) px-2 py-0.5 rounded font-medium">Browse</span>
                     </button>
@@ -1757,28 +1767,28 @@ export function IncidentReport() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Incident Ref # <span className="text-red-500">*</span></label>
-                    <input type="text" required value={formData.incident_refno} onChange={(e) => setFormData({ ...formData, incident_refno: e.target.value })} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-(--text-primary)" />
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">Incident Ref # <span className="text-red-500">*</span></label>
+                    <input type="text" required value={formData.incident_refno} onChange={(e) => setFormData({ ...formData, incident_refno: e.target.value })} className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Incident Date <span className="text-red-500">*</span></label>
-                    <input type="date" required value={formData.incident_date} onChange={(e) => setFormData({ ...formData, incident_date: e.target.value })} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)" />
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">Incident Date <span className="text-red-500">*</span></label>
+                    <input type="date" required value={formData.incident_date} onChange={(e) => setFormData({ ...formData, incident_date: e.target.value })} className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Severity Level</label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">Severity Level</label>
                     <CustomDropdown
                       value={formData.incident_severity}
                       options={severityDropdownOptions}
                       onChange={(val) => setFormData({ ...formData, incident_severity: val })}
-                      buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs"
+                      buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Estimated Loss (₱) <span className="text-red-500">*</span></label>
-                    <input type="number" step="0.01" required value={formData.incident_loss} onChange={(e) => setFormData({ ...formData, incident_loss: parseFloat(e.target.value) || 0 })} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs font-mono" />
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">Estimated Loss (₱) <span className="text-red-500">*</span></label>
+                    <input type="number" step="0.01" required value={formData.incident_loss} onChange={(e) => setFormData({ ...formData, incident_loss: parseFloat(e.target.value) || 0 })} className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                     {Number(formData.incident_loss) === 0 && (
                       <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1 font-medium">
                         <AlertCircle className="w-3 h-3 shrink-0" /> Notice: Estimated Loss is currently set to ₱0.
@@ -1786,41 +1796,41 @@ export function IncidentReport() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Status</label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">Status</label>
                     <CustomDropdown
                       value={formData.status_id}
                       options={statusDropdownOptions}
                       onChange={(val) => handleStatusChange(val)}
-                      buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs"
+                      buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Incident Description <span className="text-red-500">*</span></label>
-                  <textarea rows={3} required value={formData.incident_description} onChange={(e) => setFormData({ ...formData, incident_description: e.target.value })} placeholder="Describe what occurred..." className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3.5 py-2 text-xs" />
+                  <label className="block text-xs font-semibold text-(--text-primary) mb-1">Incident Description <span className="text-red-500">*</span></label>
+                  <textarea rows={3} required value={formData.incident_description} onChange={(e) => setFormData({ ...formData, incident_description: e.target.value })} placeholder="Describe what occurred..." className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Reported By (Active Employee) <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">Reported By (Active Employee) <span className="text-red-500">*</span></label>
                     <div className="flex gap-2">
-                      <input type="text" required readOnly value={formData.reported_by} placeholder="Select active employee..." className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs cursor-pointer" onClick={() => handleOpenEmployeeModal('reported_by')} />
-                      <button type="button" onClick={() => handleOpenEmployeeModal('reported_by')} className="bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer"><Search className="w-3.5 h-3.5" /></button>
+                      <input type="text" required readOnly value={formData.reported_by} placeholder="Select active employee..." className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs cursor-pointer" onClick={() => handleOpenEmployeeModal('reported_by')} />
+                      <button type="button" onClick={() => handleOpenEmployeeModal('reported_by')} className="bg-(--accent-subtle) text-(--text-primary) border border-slate-300 dark:border-slate-600 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer"><Search className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Validated By (Supervisor) <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">Validated By (Supervisor) <span className="text-red-500">*</span></label>
                     <div className="flex gap-2">
-                      <input type="text" required readOnly value={formData.validated_by} placeholder="Select active supervisor..." className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs cursor-pointer" onClick={() => handleOpenEmployeeModal('validated_by')} />
-                      <button type="button" onClick={() => handleOpenEmployeeModal('validated_by')} className="bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer"><Search className="w-3.5 h-3.5" /></button>
+                      <input type="text" required readOnly value={formData.validated_by} placeholder="Select active supervisor..." className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs cursor-pointer" onClick={() => handleOpenEmployeeModal('validated_by')} />
+                      <button type="button" onClick={() => handleOpenEmployeeModal('validated_by')} className="bg-(--accent-subtle) text-(--text-primary) border border-slate-300 dark:border-slate-600 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer"><Search className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="flex justify-end gap-3 px-6 py-4 border-t border-(--border-main) bg-(--accent-subtle) shrink-0">
+              <div className="flex justify-end gap-3 px-6 py-4 border-t border-(--border-main) bg-(--bg-surface) shrink-0">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-(--accent-subtle) text-(--text-primary) rounded-lg text-xs font-semibold cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold cursor-pointer shadow-xs">Save Incident Report</button>
+                <button type="submit" className="px-4 py-2 bg-(--btn-primary-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold cursor-pointer shadow">Save Incident Report</button>
               </div>
             </form>
           </div>
@@ -1830,13 +1840,13 @@ export function IncidentReport() {
       {showEquipmentPicker && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 p-4">
           <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-(--border-main) bg-(--accent-subtle)">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-(--border-main) bg-(--bg-surface)">
               <h3 className="text-lg font-bold text-(--text-primary)">Select Active Equipment</h3>
               <button type="button" onClick={() => setShowEquipmentPicker(false)} className="text-(--text-muted) cursor-pointer"><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={(e) => { e.preventDefault(); fetchEquipmentList(equipmentSearchQuery); }} className="p-3 border-b border-(--border-main) bg-(--bg-surface) flex gap-2">
-              <input type="text" placeholder="Filter by Equipment ID..." value={equipmentSearchQuery} onChange={(e) => setEquipmentSearchQuery(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs" />
-              <button type="submit" className="bg-(--btn-primary-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer">Search</button>
+              <input type="text" placeholder="Filter by Equipment ID..." value={equipmentSearchQuery} onChange={(e) => setEquipmentSearchQuery(e.target.value)} className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+              <button type="submit" className="bg-(--btn-primary-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer shadow">Search</button>
             </form>
             <div className="p-4 overflow-y-auto flex-1 space-y-2">
               {loadingEquipment ? (
@@ -1846,7 +1856,7 @@ export function IncidentReport() {
               ) : equipmentList.map((eq, index) => {
                 const vehId = String(eq.vehicle_id || eq.equipment_id || eq.id || '');
                 return (
-                  <div key={vehId || index} onClick={() => { setSelectedEquipment(eq); setFormData(prev => ({ ...prev, vehicle_id: vehId, vehicle_plate: eq.plate_no })); setShowEquipmentPicker(false); }} className="flex items-center justify-between bg-(--bg-elevated) hover:bg-(--accent-subtle) border border-(--border-main) p-2.5 rounded-lg cursor-pointer">
+                  <div key={vehId || index} onClick={() => { setSelectedEquipment(eq); setFormData(prev => ({ ...prev, vehicle_id: vehId, vehicle_plate: eq.plate_no })); setShowEquipmentPicker(false); }} className="flex items-center justify-between bg-(--bg-surface) hover:bg-(--accent-subtle) border border-(--border-main) p-2.5 rounded-lg cursor-pointer">
                     <div>
                       <div className="font-bold text-(--text-primary) text-xs font-mono">{eq.plate_no}</div>
                       <div className="text-[11px] text-(--text-muted)">{eq.make_name || 'N/A'} {eq.model_name ? `/ ${eq.model_name}` : ''} ({eq.type_description || 'N/A'})</div>
@@ -1863,21 +1873,21 @@ export function IncidentReport() {
       {isEmployeeModalOpen && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-60">
           <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
-            <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 bg-(--accent-subtle)">
+            <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 bg-(--bg-surface)">
               <h3 className="text-lg font-bold text-(--text-primary)">
                 {employeeModalTarget === 'validated_by' ? 'Select Active Supervisor' : 'Select Active Employee'}
               </h3>
-              <button onClick={() => setIsEmployeeModalOpen(false)} className="text-(--text-muted) cursor-pointer"><X className="w-4 h-4" /></button>
+              <button type="button" onClick={() => setIsEmployeeModalOpen(false)} className="text-(--text-muted) cursor-pointer"><X className="w-4 h-4" /></button>
             </div>
             <div className="p-3 border-b border-(--border-main) bg-(--bg-surface)">
-              <input type="text" autoFocus placeholder="Search employee name, department, position..." value={employeeSearchQuery} onChange={(e) => setEmployeeSearchQuery(e.target.value)} className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs" />
+              <input type="text" autoFocus placeholder="Search employee name, department, position..." value={employeeSearchQuery} onChange={(e) => setEmployeeSearchQuery(e.target.value)} className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
             </div>
             <div className="p-4 overflow-y-auto flex-1 space-y-2">
               {filteredEmployees.length === 0 ? (
                 <div className="text-center text-(--text-muted) text-xs py-8">No matching active employees found.</div>
               ) : (
                 filteredEmployees.map(emp => (
-                  <div key={emp.employee_id} onClick={() => handleSelectEmployee(emp)} className="p-3 bg-(--bg-elevated) hover:bg-(--accent-subtle) border border-(--border-main) rounded-xl cursor-pointer flex justify-between items-center">
+                  <div key={emp.employee_id} onClick={() => handleSelectEmployee(emp)} className="p-3 bg-(--bg-surface) hover:bg-(--accent-subtle) border border-(--border-main) rounded-xl cursor-pointer flex justify-between items-center">
                     <div>
                       <div className="text-xs font-bold text-(--text-primary) flex items-center gap-2">
                         {emp.full_name}
@@ -1897,9 +1907,9 @@ export function IncidentReport() {
       )}
 
       {isChildModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 z-50">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 z-50">
           <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
-            <div className="flex items-center justify-between border-b border-(--border-main) px-5 py-3 bg-(--accent-subtle) shrink-0">
+            <div className="flex items-center justify-between border-b border-(--border-main) px-5 py-3 bg-(--bg-surface) shrink-0">
               <h3 className="text-lg font-bold text-(--text-primary) uppercase tracking-wide">
                 {childEditingId ? 'Edit' : 'Add'} {
                   activeAnalysisTab === 'conditions' ? 'Unsafe Condition' :
@@ -1907,7 +1917,7 @@ export function IncidentReport() {
                   activeAnalysisTab === 'personal' ? 'Personal Factor' : 'Work Related Cause'
                 }
               </h3>
-              <button onClick={() => setIsChildModalOpen(false)} className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer">
+              <button type="button" onClick={() => setIsChildModalOpen(false)} className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -1915,14 +1925,14 @@ export function IncidentReport() {
             <form onSubmit={handleSubmitChild} className="flex flex-col flex-1 min-h-0 overflow-hidden">
               <div className="p-4 sm:p-5 overflow-y-auto flex-1 min-h-0 space-y-3">
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">Incident Ref</label>
+                  <label className="block text-xs font-semibold text-(--text-primary) mb-1">Incident Ref</label>
                   <input type="text" readOnly value={`${selectedIncidentRecord?.incident_refno} (${selectedIncidentRecord?.vehicle_plate})`} className="w-full bg-(--bg-surface) border border-(--border-main) rounded-lg px-3 py-1.5 text-xs text-(--text-muted) cursor-not-allowed" />
                 </div>
 
                 {activeAnalysisTab === 'conditions' && (
                   <>
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">
                         Unsafe Condition Category <span className="text-red-500">*</span>
                       </label>
                       <CustomDropdown
@@ -1936,12 +1946,12 @@ export function IncidentReport() {
                             selectedFmeaId: matchingFmeas[0]?.conditionsfmea_id || ''
                           }));
                         }}
-                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">
                         Condition FMEA Detail <span className="text-red-500">*</span>
                       </label>
                       <CustomDropdown
@@ -1955,7 +1965,7 @@ export function IncidentReport() {
                             selectedOptionId: matchedFmea ? matchedFmea.condition_id : prev.selectedOptionId
                           }));
                         }}
-                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs"
                       />
                     </div>
                   </>
@@ -1964,7 +1974,7 @@ export function IncidentReport() {
                 {activeAnalysisTab === 'acts' && (
                   <>
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">
                         Unsafe Act Category <span className="text-red-500">*</span>
                       </label>
                       <CustomDropdown
@@ -1978,12 +1988,12 @@ export function IncidentReport() {
                             selectedFmeaId: matchingFmeas[0]?.actfmea_id || ''
                           }));
                         }}
-                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">
                         Act FMEA Detail <span className="text-red-500">*</span>
                       </label>
                       <CustomDropdown
@@ -1997,7 +2007,7 @@ export function IncidentReport() {
                             selectedOptionId: matchedFmea ? matchedFmea.act_id : prev.selectedOptionId
                           }));
                         }}
-                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs"
                       />
                     </div>
                   </>
@@ -2006,7 +2016,7 @@ export function IncidentReport() {
                 {activeAnalysisTab === 'personal' && (
                   <>
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">
                         Personal Factor Category <span className="text-red-500">*</span>
                       </label>
                       <CustomDropdown
@@ -2020,12 +2030,12 @@ export function IncidentReport() {
                             selectedFmeaId: matchingFmeas[0]?.factors_fmea_id || ''
                           }));
                         }}
-                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">
                         Factor FMEA Detail <span className="text-red-500">*</span>
                       </label>
                       <CustomDropdown
@@ -2039,7 +2049,7 @@ export function IncidentReport() {
                             selectedOptionId: matchedFmea ? matchedFmea.factor_id : prev.selectedOptionId
                           }));
                         }}
-                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs"
                       />
                     </div>
                   </>
@@ -2048,7 +2058,7 @@ export function IncidentReport() {
                 {activeAnalysisTab === 'workrelated' && (
                   <>
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">
                         Work Related Cause Category <span className="text-red-500">*</span>
                       </label>
                       <CustomDropdown
@@ -2062,12 +2072,12 @@ export function IncidentReport() {
                             selectedFmeaId: matchingFmeas[0]?.cause_fmea_id || ''
                           }));
                         }}
-                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
+                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">
                         Cause FMEA Detail <span className="text-red-500">*</span>
                       </label>
                       <CustomDropdown
@@ -2081,14 +2091,14 @@ export function IncidentReport() {
                             selectedOptionId: matchedFmea ? matchedFmea.cause_id : prev.selectedOptionId
                           }));
                         }}
-                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs"
                       />
                     </div>
                   </>
                 )}
 
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase text-(--text-muted) mb-1">
+                  <label className="block text-xs font-semibold text-(--text-primary) mb-1">
                     Investigation Remarks
                   </label>
                   <textarea
@@ -2096,12 +2106,12 @@ export function IncidentReport() {
                     value={childForm.remarks}
                     onChange={(e) => setChildForm({ ...childForm, remarks: e.target.value })}
                     placeholder="Enter specific investigation notes or observations..."
-                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
+                    className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 px-5 py-3 border-t border-(--border-main) shrink-0 bg-(--accent-subtle)">
+              <div className="flex justify-end gap-3 px-5 py-3 border-t border-(--border-main) shrink-0 bg-(--bg-surface)">
                 <button
                   type="button"
                   onClick={() => setIsChildModalOpen(false)}
@@ -2111,7 +2121,7 @@ export function IncidentReport() {
                 </button>
                 <button
                   type="submit"
-                  className="px-3.5 py-1.5 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold cursor-pointer shadow-xs"
+                  className="px-3.5 py-1.5 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold cursor-pointer shadow"
                 >
                   Save Item
                 </button>

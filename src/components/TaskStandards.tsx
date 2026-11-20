@@ -92,7 +92,7 @@ function CustomDropdown<T extends string | number>({
 
       {isOpen && !disabled && (
         <div
-          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-(--border-main) bg-(--bg-elevated) shadow-xl py-1 ${
+          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-slate-300 dark:border-slate-600 bg-(--bg-elevated) shadow-xl py-1 ${
             openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
           } ${menuClassName}`}
         >
@@ -197,6 +197,12 @@ export function TaskStandards() {
     standard_time: '0', 
     item: ''
   });
+
+  // Unified Tab Highlight Helper (matching JobOrderSettings)
+  const getTabClass = (isActive: boolean) =>
+    isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-solid border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-solid border-(--border-main)';
 
   const loadData = useCallback(async () => {
     try {
@@ -437,8 +443,7 @@ export function TaskStandards() {
   );
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
-      
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 overflow-hidden">
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-3">
         <div className="flex items-center gap-3">
@@ -450,8 +455,10 @@ export function TaskStandards() {
             <p className="text-xs sm:text-sm text-(--text-muted)">Configure equipment tasks and their associated engineering standards, labor, and costs.</p>
           </div>
         </div>
+        {loading && <Loader2 className="w-5 h-5 text-(--text-primary) animate-spin" />}
       </div>
 
+      {/* Messages */}
       {successMsg && (
         <div className="shrink-0 bg-(--accent-subtle) border border-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg flex items-center gap-2.5 text-xs">
           <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -466,199 +473,203 @@ export function TaskStandards() {
         </div>
       )}
 
-      {/* Tab Navigation */}
-      <div className="shrink-0 flex border-b border-(--border-main) gap-2 overflow-x-auto">
-        <button
-          onClick={() => setActiveTab('tasks')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'tasks'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <CheckSquare className="w-3.5 h-3.5" />
-          <span>Equipment Tasks</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('standards')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'standards'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>Task Standards</span>
-        </button>
-      </div>
-
-      {/* Tab Content Container */}
-      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-4 overflow-hidden space-y-3">
-        <div className="shrink-0 flex flex-wrap items-center gap-2">
-          {activeTab === 'standards' && (
-            <div className="flex items-center gap-2">
-              <Filter className="w-3.5 h-3.5 text-(--text-muted)" />
-              <CustomDropdown
-                value={selectedTaskFilter}
-                options={filterTaskOptions}
-                onChange={(val) => setSelectedTaskFilter(val)}
-                buttonClassName="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:border-(--text-primary)"
-              />
-            </div>
-          )}
-
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
-            <input
-              type="text"
-              placeholder={activeTab === 'tasks' ? 'Filter tasks...' : 'Search by description or item...'}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
-            />
-          </div>
+      {/* Main Content Body Container (matching JobOrderSettings) */}
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-solid border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
+        {/* Primary Category Navigation Tabs */}
+        <div className="shrink-0 flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('tasks')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'tasks')}`}
+          >
+            <CheckSquare className={`w-4 h-4 ${activeTab === 'tasks' ? '' : 'text-blue-500'}`} />
+            <span>Equipment Tasks</span>
+          </button>
 
           <button
-            onClick={handleOpenAdd}
-            className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
+            type="button"
+            onClick={() => setActiveTab('standards')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'standards')}`}
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Record</span>
+            <Layers className={`w-4 h-4 ${activeTab === 'standards' ? '' : 'text-amber-500'}`} />
+            <span>Task Standards</span>
           </button>
         </div>
 
-        {/* Scrollable Container with Sticky Table Headers */}
-        <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
-          {loading ? (
-            <div className="h-full flex items-center justify-center text-(--text-muted) gap-2 text-xs">
-              <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
-              <span>Loading records...</span>
+        {/* Tab Content Area */}
+        <div className="flex flex-col flex-1 min-h-0 space-y-2">
+          <div className="shrink-0 flex flex-wrap items-center gap-2">
+            {activeTab === 'standards' && (
+              <div className="flex items-center gap-2">
+                <Filter className="w-3.5 h-3.5 text-(--text-muted)" />
+                <CustomDropdown
+                  value={selectedTaskFilter}
+                  options={filterTaskOptions}
+                  onChange={(val) => setSelectedTaskFilter(val)}
+                  buttonClassName="bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-1.5 text-xs hover:border-slate-400 dark:hover:border-slate-500"
+                />
+              </div>
+            )}
+
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
+              <input
+                type="text"
+                placeholder={activeTab === 'tasks' ? 'Filter tasks...' : 'Search by description or item...'}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
             </div>
-          ) : activeTab === 'tasks' ? (
-            filteredTasks.length === 0 ? (
-              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
-                No equipment tasks found. Click &quot;Add Record&quot; above.
+
+            <button
+              type="button"
+              onClick={handleOpenAdd}
+              className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Record</span>
+            </button>
+          </div>
+
+          {/* Scrollable Container with Sticky Table Headers */}
+          <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
+            {loading ? (
+              <div className="h-full flex items-center justify-center text-(--text-muted) gap-2 text-xs">
+                <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
+                <span>Loading records...</span>
               </div>
+            ) : activeTab === 'tasks' ? (
+              filteredTasks.length === 0 ? (
+                <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                  No equipment tasks found. Click &quot;Add Record&quot; above.
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                      <th className="py-2 px-3">Task Name</th>
+                      <th className="py-2 px-3">Description</th>
+                      <th className="py-2 px-3 text-right w-28">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                    {paginatedList.map((item) => {
+                      const task = item as EquipmentTaskRecord;
+                      return (
+                        <tr key={task.task_id} className="hover:bg-(--accent-subtle) transition-colors">
+                          <td className="py-2 px-3 font-semibold text-(--text-primary)">{task.task_name}</td>
+                          <td className="py-2 px-3 text-(--text-muted)">{task.task_description || '—'}</td>
+                          <td className="py-2 px-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEdit(task)}
+                                className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Edit2 className="w-3 h-3" /> Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(task.task_id, 'equipment_tasks', 'task_id')}
+                                className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" /> Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )
             ) : (
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
-                    <th className="py-2 px-3">Task Name</th>
-                    <th className="py-2 px-3">Description</th>
-                    <th className="py-2 px-3 text-right w-28">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                  {paginatedList.map((item) => {
-                    const task = item as EquipmentTaskRecord;
-                    return (
-                      <tr key={task.task_id} className="hover:bg-(--accent-subtle) transition-colors">
-                        <td className="py-2 px-3 font-semibold text-(--text-primary)">{task.task_name}</td>
-                        <td className="py-2 px-3 text-(--text-muted)">{task.task_description || '—'}</td>
-                        <td className="py-2 px-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleOpenEdit(task)}
-                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Edit2 className="w-3 h-3" /> Edit
-                            </button>
-                            <button
-                              onClick={() => handleDelete(task.task_id, 'equipment_tasks', 'task_id')}
-                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Trash2 className="w-3 h-3" /> Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )
-          ) : (
-            filteredStandards.length === 0 ? (
-              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
-                No task standards found. Click &quot;Add Record&quot; above.
+              filteredStandards.length === 0 ? (
+                <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                  No task standards found. Click &quot;Add Record&quot; above.
+                </div>
+              ) : (
+                <table className="w-full min-w-187.5 text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                      <th className="py-2 px-3">Task</th>
+                      <th className="py-2 px-3">System / Component</th>
+                      <th className="py-2 px-3">Description</th>
+                      <th className="py-2 px-3">Std. Time</th>
+                      <th className="py-2 px-3 text-right w-28">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                    {paginatedList.map((item) => {
+                      const standard = item as EquipmentTaskStandardRecord;
+                      const matchedTask = tasks.find((t) => t.task_id === standard.task_id);
+                      const matchedSystem = systems.find((s) => s.system_id === standard.system_id);
+                      const matchedComp = components.find((c) => c.component_id === standard.component_id);
+                      return (
+                        <tr key={standard.task_standard_id} className="hover:bg-(--accent-subtle) transition-colors">
+                          <td className="py-2 px-3 font-semibold text-(--text-primary)">{matchedTask ? matchedTask.task_name : '—'}</td>
+                          <td className="py-2 px-3">
+                            <div className="text-(--text-primary) font-medium">{matchedSystem ? matchedSystem.system_code : '—'}</div>
+                            <div className="text-[10px] text-(--text-muted)">{matchedComp ? matchedComp.component_code : '—'}</div>
+                          </td>
+                          <td className="py-2 px-3 text-(--text-secondary) max-w-50 truncate">{standard.task_standard_desc}</td>
+                          <td className="py-2 px-3 font-mono whitespace-nowrap">{standard.standard_time} HR</td>
+                          <td className="py-2 px-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEdit(standard)}
+                                className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Edit2 className="w-3 h-3" /> Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(standard.task_standard_id, 'equipment_taskstandards', 'task_standard_id')}
+                                className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" /> Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )
+            )}
+          </div>
+
+          {/* Pagination */}
+          {!loading && ((activeTab === 'tasks' && filteredTasks.length > 0) || (activeTab === 'standards' && filteredStandards.length > 0)) && (
+            <div className="shrink-0 flex items-center justify-between pt-2 text-xs text-(--text-muted)">
+              <span>
+                Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, activeTab === 'tasks' ? filteredTasks.length : filteredStandards.length)} of {activeTab === 'tasks' ? filteredTasks.length : filteredStandards.length} entries
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <span>Page {currentPage} of {totalPages}</span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage >= totalPages}
+                  className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
               </div>
-            ) : (
-              <table className="w-full min-w-187.5 text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
-                    <th className="py-2 px-3">Task</th>
-                    <th className="py-2 px-3">System / Component</th>
-                    <th className="py-2 px-3">Description</th>
-                    <th className="py-2 px-3">Std. Time</th>
-                    <th className="py-2 px-3 text-right w-28">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                  {paginatedList.map((item) => {
-                    const standard = item as EquipmentTaskStandardRecord;
-                    const matchedTask = tasks.find((t) => t.task_id === standard.task_id);
-                    const matchedSystem = systems.find((s) => s.system_id === standard.system_id);
-                    const matchedComp = components.find((c) => c.component_id === standard.component_id);
-                    return (
-                      <tr key={standard.task_standard_id} className="hover:bg-(--accent-subtle) transition-colors">
-                        <td className="py-2 px-3 font-semibold text-(--text-primary)">{matchedTask ? matchedTask.task_name : '—'}</td>
-                        <td className="py-2 px-3">
-                          <div className="text-(--text-primary) font-medium">{matchedSystem ? matchedSystem.system_code : '—'}</div>
-                          <div className="text-[10px] text-(--text-muted)">{matchedComp ? matchedComp.component_code : '—'}</div>
-                        </td>
-                        <td className="py-2 px-3 text-(--text-secondary) max-w-50 truncate">{standard.task_standard_desc}</td>
-                        <td className="py-2 px-3 font-mono whitespace-nowrap">{standard.standard_time} HR</td>
-                        <td className="py-2 px-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleOpenEdit(standard)}
-                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Edit2 className="w-3 h-3" /> Edit
-                            </button>
-                            <button
-                              onClick={() => handleDelete(standard.task_standard_id, 'equipment_taskstandards', 'task_standard_id')}
-                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Trash2 className="w-3 h-3" /> Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )
+            </div>
           )}
         </div>
-
-        {/* Pagination */}
-        {!loading && ((activeTab === 'tasks' && filteredTasks.length > 0) || (activeTab === 'standards' && filteredStandards.length > 0)) && (
-          <div className="shrink-0 flex items-center justify-between pt-2 text-xs text-(--text-muted)">
-            <span>
-              Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, activeTab === 'tasks' ? filteredTasks.length : filteredStandards.length)} of {activeTab === 'tasks' ? filteredTasks.length : filteredStandards.length} entries
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <span>Page {currentPage} of {totalPages}</span>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage >= totalPages}
-                className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* FORM MODAL */}
@@ -670,6 +681,7 @@ export function TaskStandards() {
                 {editingId ? 'Edit Record' : 'Add New Record'}
               </h3>
               <button 
+                type="button"
                 onClick={() => setIsModalOpen(false)}
                 className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer p-1"
               >
@@ -691,7 +703,7 @@ export function TaskStandards() {
                         value={taskForm.task_name}
                         onChange={(e) => setTaskForm({ ...taskForm, task_name: e.target.value })}
                         placeholder="e.g. Oil Change & Filter Replacement"
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                     <div>
@@ -701,7 +713,7 @@ export function TaskStandards() {
                         value={taskForm.task_description}
                         onChange={(e) => setTaskForm({ ...taskForm, task_description: e.target.value })}
                         placeholder="Task details and instructions..."
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                   </>
@@ -717,7 +729,7 @@ export function TaskStandards() {
                         value={standardForm.task_id}
                         options={modalTaskOptions}
                         onChange={(val) => setStandardForm({ ...standardForm, task_id: val })}
-                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:border-(--text-primary)"
+                        buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs hover:border-slate-400 dark:hover:border-slate-500"
                       />
                     </div>
 
@@ -730,7 +742,7 @@ export function TaskStandards() {
                           value={standardForm.system_id}
                           options={modalSystemOptions}
                           onChange={(val) => setStandardForm({ ...standardForm, system_id: val, component_id: '' })}
-                          buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:border-(--text-primary)"
+                          buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs hover:border-slate-400 dark:hover:border-slate-500"
                         />
                       </div>
 
@@ -742,7 +754,7 @@ export function TaskStandards() {
                           value={standardForm.component_id}
                           options={modalComponentOptions}
                           onChange={(val) => setStandardForm({ ...standardForm, component_id: val })}
-                          buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:border-(--text-primary)"
+                          buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs hover:border-slate-400 dark:hover:border-slate-500"
                         />
                       </div>
                     </div>
@@ -757,7 +769,7 @@ export function TaskStandards() {
                         value={standardForm.task_standard_desc}
                         onChange={(e) => setStandardForm({ ...standardForm, task_standard_desc: e.target.value })}
                         placeholder="Detailed standard guidelines..."
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
 
@@ -770,18 +782,7 @@ export function TaskStandards() {
                         min="0"
                         value={standardForm.standard_time}
                         onChange={(e) => setStandardForm({ ...standardForm, standard_time: e.target.value })}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-(--text-primary) mb-1">Item / Part No (Optional)</label>
-                      <input
-                        type="text"
-                        value={standardForm.item}
-                        onChange={(e) => setStandardForm({ ...standardForm, item: e.target.value })}
-                        placeholder="e.g. FLT-01"
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                   </>

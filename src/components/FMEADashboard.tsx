@@ -132,6 +132,317 @@ function CustomDropdown<T extends string | number>({
   );
 }
 
+/* --- Dual-Series Monthly Bar / Line Chart (Switches to Line Graph when > 3 months) --- */
+interface DualSeriesMonthBucket {
+  monthKey: string;
+  monthLabel: string;
+  s1: number;
+  s2: number;
+}
+
+interface DualSeriesConfig {
+  label: string;
+  barClass: string;
+  textClass: string;
+  strokeHex: string;
+}
+
+interface MonthlyDualSeriesChartProps {
+  data: DualSeriesMonthBucket[];
+  isLineChart: boolean;
+  selectedMonthKey: string | null;
+  onSelectMonth: (monthKey: string | null) => void;
+  series: [DualSeriesConfig, DualSeriesConfig];
+  showCombinedTotalInTooltip?: boolean;
+  tooltipActionHint?: string;
+  isCurrency?: boolean;
+  minMaxTick?: number;
+  emptyMessage: string;
+}
+
+function MonthlyDualSeriesChart({
+  data,
+  isLineChart,
+  selectedMonthKey,
+  onSelectMonth,
+  series,
+  showCombinedTotalInTooltip = false,
+  tooltipActionHint = 'Click to filter KPIs',
+  isCurrency = false,
+  minMaxTick = 1,
+  emptyMessage
+}: MonthlyDualSeriesChartProps) {
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
+  if (data.length === 0) {
+    return <div className="py-12 text-center text-xs text-(--text-muted)">{emptyMessage}</div>;
+  }
+
+  const formatVal = (val: number) =>
+    isCurrency
+      ? `₱${val.toLocaleString()}`
+      : val.toLocaleString();
+
+  const formatCompactTick = (val: number) => {
+    if (isCurrency) {
+      if (val >= 1_000_000) return `₱${(val / 1_000_000).toFixed(1)}M`;
+      if (val >= 1_000) return `₱${(val / 1_000).toFixed(0)}k`;
+      return `₱${Math.round(val)}`;
+    }
+    if (val >= 1_000) return `${(val / 1_000).toFixed(1)}k`;
+    return `${Math.round(val)}`;
+  };
+
+  const rawMax = Math.max(...data.map((m) => Math.max(m.s1, m.s2)), minMaxTick);
+  const stepUnit = rawMax <= 4 ? 1 : Math.ceil(rawMax / 4);
+  const yMax = stepUnit * 4;
+  const yTicks = [yMax, stepUnit * 3, stepUnit * 2, stepUnit, 0];
+
+  /* --- LINE GRAPH VIEW (> 3 MONTHS) --- */
+  if (isLineChart) {
+    const svgWidth = Math.max(640, data.length * 90);
+    const svgHeight = 200;
+    const padLeft = 56;
+    const padRight = 28;
+    const padTop = 18;
+    const padBottom = 32;
+    const plotWidth = svgWidth - padLeft - padRight;
+    const plotHeight = svgHeight - padTop - padBottom;
+
+    const getX = (idx: number) =>
+      data.length === 1
+        ? padLeft + plotWidth / 2
+        : padLeft + (idx / (data.length - 1)) * plotWidth;
+
+    const getY = (val: number) =>
+      padTop + plotHeight - Math.min(1, Math.max(0, val / yMax)) * plotHeight;
+
+    const buildPoints = (getter: (d: DualSeriesMonthBucket) => number) =>
+      data.map((d, i) => `${getX(i)},${getY(getter(d))}`).join(' ');
+
+    const hoveredBucket = hoveredIdx !== null ? data[hoveredIdx] : null;
+
+    return (
+      <div className="pt-2 pb-1 overflow-x-auto relative">
+        {hoveredBucket && hoveredIdx !== null && (
+          <div
+            style={{
+              left: `${Math.min(82, Math.max(18, (getX(hoveredIdx) / svgWidth) * 100))}%`
+            }}
+            className="absolute top-2 -translate-x-1/2 flex flex-col bg-(--bg-elevated)/95 backdrop-blur-sm border border-(--border-main) p-2 rounded shadow-lg text-[10px] z-30 whitespace-nowrap pointer-events-none space-y-0.5"
+          >
+            <span className="font-bold text-(--text-primary)">{hoveredBucket.monthLabel}</span>
+            <span className={series[0].textClass}>
+              {series[0].label}: {formatVal(hoveredBucket.s1)}
+            </span>
+            <span className={series[1].textClass}>
+              {series[1].label}: {formatVal(hoveredBucket.s2)}
+            </span>
+            {showCombinedTotalInTooltip && (
+              <span className="text-blue-500 font-bold">
+                Total: {formatVal(hoveredBucket.s1 + hoveredBucket.s2)}
+              </span>
+            )}
+            <span className="text-[9px] text-(--text-muted) italic mt-0.5">{tooltipActionHint}</span>
+          </div>
+        )}
+
+        <svg
+          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+          className="w-full h-52 min-w-140 select-none overflow-visible"
+          role="img"
+          aria-label="Monthly dual-series trend line chart"
+        >
+          {/* Horizontal Gridlines & Y-Axis Ticks */}
+          {yTicks.map((tickVal, idx) => {
+            const yPos = getY(tickVal);
+            return (
+              <g key={idx}>
+                <line
+                  x1={padLeft}
+                  y1={yPos}
+                  x2={svgWidth - padRight}
+                  y2={yPos}
+                  stroke="currentColor"
+                  className="text-(--border-main)"
+                  strokeDasharray={tickVal === 0 ? undefined : '3 3'}
+                  strokeWidth={tickVal === 0 ? 1.2 : 0.8}
+                />
+                <text
+                  x={padLeft - 8}
+                  y={yPos + 3}
+                  textAnchor="end"
+                  className="fill-(--text-muted) text-[9px] font-mono"
+                >
+                  {formatCompactTick(tickVal)}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Selected / Hovered Vertical Guide */}
+          {data.map((m, idx) => {
+            const xPos = getX(idx);
+            const isSelected = selectedMonthKey === m.monthKey;
+            const isHovered = hoveredIdx === idx;
+            if (!isSelected && !isHovered) return null;
+            return (
+              <line
+                key={`guide-${m.monthKey}`}
+                x1={xPos}
+                y1={padTop}
+                x2={xPos}
+                y2={padTop + plotHeight}
+                stroke={isSelected ? '#a855f7' : 'currentColor'}
+                className={!isSelected ? 'text-(--text-muted)/40' : undefined}
+                strokeWidth={isSelected ? 1.75 : 1}
+                strokeDasharray="3 3"
+              />
+            );
+          })}
+
+          {/* Series Polylines */}
+          <polyline
+            fill="none"
+            stroke={series[0].strokeHex}
+            strokeWidth={2.25}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            points={buildPoints((d) => d.s1)}
+          />
+          <polyline
+            fill="none"
+            stroke={series[1].strokeHex}
+            strokeWidth={2.25}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            points={buildPoints((d) => d.s2)}
+          />
+
+          {/* Interactive Data Points & X-Axis Labels */}
+          {data.map((m, idx) => {
+            const xPos = getX(idx);
+            const isSelected = selectedMonthKey === m.monthKey;
+            const isHovered = hoveredIdx === idx;
+            const colWidth = data.length > 1 ? plotWidth / (data.length - 1) : plotWidth;
+
+            return (
+              <g
+                key={m.monthKey}
+                className="cursor-pointer"
+                onMouseEnter={() => setHoveredIdx(idx)}
+                onMouseLeave={() => setHoveredIdx(null)}
+                onClick={() => onSelectMonth(isSelected ? null : m.monthKey)}
+              >
+                <rect
+                  x={xPos - colWidth / 2}
+                  y={padTop}
+                  width={colWidth}
+                  height={plotHeight + padBottom}
+                  fill="transparent"
+                />
+
+                <circle
+                  cx={xPos}
+                  cy={getY(m.s1)}
+                  r={isSelected || isHovered ? 5 : 3.5}
+                  fill={series[0].strokeHex}
+                  stroke="var(--bg-surface)"
+                  strokeWidth={1.5}
+                />
+                <circle
+                  cx={xPos}
+                  cy={getY(m.s2)}
+                  r={isSelected || isHovered ? 5 : 3.5}
+                  fill={series[1].strokeHex}
+                  stroke="var(--bg-surface)"
+                  strokeWidth={1.5}
+                />
+
+                <text
+                  x={xPos}
+                  y={svgHeight - 8}
+                  textAnchor="middle"
+                  className={`text-[10px] font-bold transition-colors ${
+                    isSelected
+                      ? 'fill-purple-500 underline'
+                      : isHovered
+                      ? 'fill-(--text-primary)'
+                      : 'fill-(--text-muted)'
+                  }`}
+                >
+                  {m.monthLabel}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+    );
+  }
+
+  /* --- BAR GRAPH VIEW (<= 3 MONTHS) --- */
+  return (
+    <div className="pt-2 pb-2 overflow-x-auto">
+      <div className="flex items-end justify-around gap-4 min-w-[320px] h-44 px-2 border-b border-(--border-main) pb-1">
+        {data.map((m, idx) => {
+          const h1 = Math.max(4, Math.round((m.s1 / rawMax) * 120));
+          const h2 = Math.max(4, Math.round((m.s2 / rawMax) * 120));
+          const isSelected = selectedMonthKey === m.monthKey;
+
+          return (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => onSelectMonth(isSelected ? null : m.monthKey)}
+              className={`flex flex-col items-center flex-1 h-full justify-end group relative transition-all rounded-lg p-1 cursor-pointer ${
+                isSelected ? 'bg-purple-500/15 ring-2 ring-purple-500' : 'hover:bg-(--accent-subtle)'
+              }`}
+            >
+              <div className="absolute left-1/2 -translate-x-1/2 top-2 hidden group-hover:flex flex-col bg-(--bg-elevated)/90 backdrop-blur-sm border border-(--border-main) p-2 rounded shadow-lg text-[10px] z-30 whitespace-nowrap pointer-events-none space-y-0.5">
+                <span className="font-bold text-(--text-primary)">{m.monthLabel}</span>
+                <span className={series[0].textClass}>
+                  {series[0].label}: {formatVal(m.s1)}
+                </span>
+                <span className={series[1].textClass}>
+                  {series[1].label}: {formatVal(m.s2)}
+                </span>
+                {showCombinedTotalInTooltip && (
+                  <span className="text-blue-500 font-bold">
+                    Total: {formatVal(m.s1 + m.s2)}
+                  </span>
+                )}
+                <span className="text-[9px] text-(--text-muted) italic mt-1">{tooltipActionHint}</span>
+              </div>
+
+              <div className="flex items-end justify-center gap-1 w-full max-w-20 h-32 px-1">
+                <div
+                  className={`w-3.5 ${series[0].barClass} rounded-t-sm transition-all duration-300 hover:opacity-90`}
+                  style={{ height: `${h1}px` }}
+                  title={`${series[0].label}: ${formatVal(m.s1)}`}
+                />
+                <div
+                  className={`w-3.5 ${series[1].barClass} rounded-t-sm transition-all duration-300 hover:opacity-90`}
+                  style={{ height: `${h2}px` }}
+                  title={`${series[1].label}: ${formatVal(m.s2)}`}
+                />
+              </div>
+
+              <span
+                className={`text-[10px] font-bold mt-2 truncate w-full text-center ${
+                  isSelected ? 'text-purple-600 dark:text-purple-400 font-black underline' : 'text-(--text-muted)'
+                }`}
+              >
+                {m.monthLabel}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* --- Interfaces --- */
 
 interface FmeaAnalyticsRecord {
@@ -566,6 +877,17 @@ export function FMEADashboard() {
 
   const [dateTo, setDateTo] = useState<string>(defaultEndDate);
   const [dateFrom, setDateFrom] = useState<string>(defaultStartDate);
+
+  // Timezone-safe month span check (> 3 months switches bar graphs to line graphs)
+  const isPeriodTraversingOver3Months = useMemo(() => {
+    if (!dateFrom || !dateTo) return false;
+    const [sYear, sMonth] = dateFrom.split('-').map(Number);
+    const [eYear, eMonth] = dateTo.split('-').map(Number);
+    if (!sYear || !sMonth || !eYear || !eMonth) return false;
+
+    const monthSpan = (eYear - sYear) * 12 + (eMonth - sMonth) + 1;
+    return monthSpan > 3;
+  }, [dateFrom, dateTo]);
 
   const handleDateToChange = (newDateTo: string) => {
     setDateTo(newDateTo);
@@ -1201,7 +1523,7 @@ export function FMEADashboard() {
       });
   }, [periodIncidents, filterSeverityLevel]);
 
-  // Month-on-Month Trend Aggregates for Vertical Bar Chart (INS vs IRS) aligned to month start
+  // Month-on-Month Trend Aggregates for Vertical Bar / Line Chart (INS vs IRS) aligned to month start
   const monthOnMonthIncidentVolume = useMemo(() => {
     const monthMap = new Map<string, { monthKey: string; monthLabel: string; ins: number; irs: number; total: number }>();
 
@@ -1658,6 +1980,30 @@ export function FMEADashboard() {
     [kanbanPillarRows, kanbanInspectionPage, kanbanInspectionPageSize]
   );
 
+  const useLineGraphRcaVolume = isPeriodTraversingOver3Months || monthOnMonthIncidentVolume.length > 3;
+  const useLineGraphBadActor = isPeriodTraversingOver3Months || monthOnMonthBadActorMetrics.length > 3;
+
+  const getMainTabClass = (tabKey: MainTab) => {
+    const isActive = activeMainTab === tabKey;
+    return isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-(--border-main)';
+  };
+
+  const getRiskSubTabClass = (tabKey: RiskSubTab) => {
+    const isActive = riskSubTab === tabKey;
+    return isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-(--border-main)';
+  };
+
+  const getReliabilitySubTabClass = (tabKey: ReliabilitySubTab) => {
+    const isActive = reliabilitySubTab === tabKey;
+    return isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-(--border-main)';
+  };
+
   return (
     <div className="h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 flex flex-col overflow-hidden">
       {/* Top Header */}
@@ -1732,25 +2078,22 @@ export function FMEADashboard() {
         </div>
 
         {/* Primary Navigation Tabs */}
-        <div className="flex border-b border-(--border-main) gap-2 shrink-0 overflow-x-auto">
+        <div className="flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1 shrink-0">
           {[
             { id: 'risk', label: '1. Risk & Hazards', icon: ShieldAlert },
             { id: 'reliability', label: '2. Asset Reliability & Component Ops', icon: TrendingUp },
             { id: 'kanban', label: '3. Kanban Board', icon: Kanban }
           ].map((tab) => {
             const Icon = tab.icon;
-            const isActive = activeMainTab === tab.id;
+            const tabKey = tab.id as MainTab;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveMainTab(tab.id as MainTab)}
-                className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors cursor-pointer border-b-2 whitespace-nowrap ${
-                  isActive
-                    ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-                    : 'border-transparent text-(--text-secondary) hover:text-(--text-primary)'
-                }`}
+                type="button"
+                onClick={() => setActiveMainTab(tabKey)}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getMainTabClass(tabKey)}`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-rose-500' : 'text-(--text-muted)'}`} />
+                <Icon className="w-4 h-4" />
                 <span>{tab.label}</span>
               </button>
             );
@@ -1769,40 +2112,31 @@ export function FMEADashboard() {
               {/* MAIN TAB 1: Risk & Hazards */}
               {activeMainTab === 'risk' && (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 border-b border-(--border-main) pb-2 text-xs font-bold overflow-x-auto">
+                  <div className="flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1">
                     <button
+                      type="button"
                       onClick={() => setRiskSubTab('exec_fmea')}
-                      className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                        riskSubTab === 'exec_fmea'
-                          ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30'
-                          : 'text-(--text-muted) hover:text-(--text-primary)'
-                      }`}
+                      className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getRiskSubTabClass('exec_fmea')}`}
                     >
-                      <ShieldAlert className="w-3.5 h-3.5" />
+                      <ShieldAlert className="w-4 h-4" />
                       <span>Executive Risk Matrix</span>
                     </button>
 
                     <button
+                      type="button"
                       onClick={() => setRiskSubTab('op_incidents')}
-                      className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                        riskSubTab === 'op_incidents'
-                          ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                          : 'text-(--text-muted) hover:text-(--text-primary)'
-                      }`}
+                      className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getRiskSubTabClass('op_incidents')}`}
                     >
-                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <AlertTriangle className="w-4 h-4" />
                       <span>Operational Hazard Log</span>
                     </button>
 
                     <button
+                      type="button"
                       onClick={() => setRiskSubTab('rca_breakdown')}
-                      className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                        riskSubTab === 'rca_breakdown'
-                          ? 'bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30'
-                          : 'text-(--text-muted) hover:text-(--text-primary)'
-                      }`}
+                      className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getRiskSubTabClass('rca_breakdown')}`}
                     >
-                      <BarChart3 className="w-3.5 h-3.5" />
+                      <BarChart3 className="w-4 h-4" />
                       <span>RCA Category & Incident Counts</span>
                     </button>
                   </div>
@@ -2373,15 +2707,19 @@ export function FMEADashboard() {
                     </div>
                   )}
 
-                  {/* SUB-TAB 3: Month-on-Month Trend Bar Chart & RCA Breakdown */}
+                  {/* SUB-TAB 3: Month-on-Month Trend Chart (Bar <= 3 mos | Line > 3 mos) & RCA Breakdown */}
                   {riskSubTab === 'rca_breakdown' && (
                     <div className="space-y-4 animate-fadeIn">
                       
-                      {/* 1. Month-on-Month Vertical Bar Chart (INS vs IRS) */}
+                      {/* 1. Month-on-Month Chart (INS vs IRS) */}
                       <div className="p-4 bg-(--bg-surface) border border-(--border-main) rounded-xl space-y-3 shadow-xs">
                         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-(--border-main) pb-2">
                           <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-blue-500" />
+                            {useLineGraphRcaVolume ? (
+                              <TrendingUp className="w-4 h-4 text-blue-500" />
+                            ) : (
+                              <Calendar className="w-4 h-4 text-blue-500" />
+                            )}
                             <h3 className="text-xs font-bold uppercase text-(--text-primary)">
                               Month-on-Month Incident & Inspection Volume (INS vs IRS)
                             </h3>
@@ -2405,70 +2743,41 @@ export function FMEADashboard() {
 
                         <p className="text-[11px] text-(--text-muted)">
                           {selectedMonthKey
-                            ? `Currently showing data for selected month: ${monthOnMonthIncidentVolume.find(m => m.monthKey === selectedMonthKey)?.monthLabel || selectedMonthKey}. Click the selected bar again to view the entire period range.`
-                            : `Click any month bar to filter KPI cards and category details for that specific month (${dateFrom} to ${dateTo}).`}
+                            ? `Currently showing data for selected month: ${monthOnMonthIncidentVolume.find(m => m.monthKey === selectedMonthKey)?.monthLabel || selectedMonthKey}. Click the selected ${useLineGraphRcaVolume ? 'point' : 'bar'} again to view the entire period range.`
+                            : `Click any month ${useLineGraphRcaVolume ? 'point' : 'bar'} to filter KPI cards and category details for that specific month (${dateFrom} to ${dateTo}).`}
                         </p>
 
-                        {monthOnMonthIncidentVolume.length === 0 ? (
-                          <div className="py-12 text-center text-xs text-(--text-muted)">No monthly volume data available for the selected period.</div>
-                        ) : (
-                          <div className="pt-2 pb-2 overflow-x-auto">
-                            <div className="flex items-end justify-around gap-4 min-w-[320px] h-44 px-2 border-b border-(--border-main) pb-1">
-                              {(() => {
-                                const maxVolVal = Math.max(
-                                  ...monthOnMonthIncidentVolume.map(m => Math.max(m.ins, m.irs)),
-                                  1
-                                );
-
-                                return monthOnMonthIncidentVolume.map((m, idx) => {
-                                  const insHeight = Math.max(4, Math.round((m.ins / maxVolVal) * 120));
-                                  const irsHeight = Math.max(4, Math.round((m.irs / maxVolVal) * 120));
-                                  const isSelected = selectedMonthKey === m.monthKey;
-
-                                  return (
-                                    <button
-                                      key={idx}
-                                      onClick={() => {
-                                        setSelectedMonthKey(isSelected ? null : m.monthKey);
-                                        setRcaTablePage(1);
-                                      }}
-                                      className={`flex flex-col items-center flex-1 h-full justify-end group relative transition-all rounded-lg p-1 cursor-pointer ${
-                                        isSelected ? 'bg-purple-500/15 ring-2 ring-purple-500' : 'hover:bg-(--accent-subtle)'
-                                      }`}
-                                    >
-                                      <div className="absolute left-1/2 -translate-x-1/2 top-2 hidden group-hover:flex flex-col bg-(--bg-elevated)/90 backdrop-blur-sm border border-(--border-main) p-2 rounded shadow-lg text-[10px] z-30 whitespace-nowrap pointer-events-none space-y-0.5">
-                                        <span className="font-bold text-(--text-primary)">{m.monthLabel}</span>
-                                        <span className="text-emerald-500">INS (Inspections): {m.ins.toLocaleString()}</span>
-                                        <span className="text-purple-500">IRS (Incidents): {m.irs.toLocaleString()}</span>
-                                        <span className="text-blue-500 font-bold">Total: {m.total.toLocaleString()}</span>
-                                        <span className="text-[9px] text-(--text-muted) italic mt-1">Click to filter KPIs</span>
-                                      </div>
-
-                                      <div className="flex items-end justify-center gap-1 w-full max-w-20 h-32 px-1">
-                                        <div 
-                                          className="w-3.5 bg-emerald-500 rounded-t-sm transition-all duration-300 hover:opacity-90" 
-                                          style={{ height: `${insHeight}px` }}
-                                          title={`INS: ${m.ins}`}
-                                        ></div>
-                                        <div 
-                                          className="w-3.5 bg-purple-500 rounded-t-sm transition-all duration-300 hover:opacity-90" 
-                                          style={{ height: `${irsHeight}px` }}
-                                          title={`IRS: ${m.irs}`}
-                                        ></div>
-                                      </div>
-
-                                      <span className={`text-[10px] font-bold mt-2 truncate w-full text-center ${
-                                        isSelected ? 'text-purple-600 dark:text-purple-400 font-black underline' : 'text-(--text-muted)'
-                                      }`}>
-                                        {m.monthLabel}
-                                      </span>
-                                    </button>
-                                  );
-                                });
-                              })()}
-                            </div>
-                          </div>
-                        )}
+                        <MonthlyDualSeriesChart
+                          data={monthOnMonthIncidentVolume.map((m) => ({
+                            monthKey: m.monthKey,
+                            monthLabel: m.monthLabel,
+                            s1: m.ins,
+                            s2: m.irs
+                          }))}
+                          isLineChart={useLineGraphRcaVolume}
+                          selectedMonthKey={selectedMonthKey}
+                          onSelectMonth={(key) => {
+                            setSelectedMonthKey(key);
+                            setRcaTablePage(1);
+                          }}
+                          series={[
+                            {
+                              label: 'INS (Inspections)',
+                              barClass: 'bg-emerald-500',
+                              textClass: 'text-emerald-500',
+                              strokeHex: '#10b981'
+                            },
+                            {
+                              label: 'IRS (Incidents)',
+                              barClass: 'bg-purple-500',
+                              textClass: 'text-purple-500',
+                              strokeHex: '#a855f7'
+                            }
+                          ]}
+                          showCombinedTotalInTooltip
+                          tooltipActionHint="Click to filter KPIs"
+                          emptyMessage="No monthly volume data available for the selected period."
+                        />
                       </div>
 
                       {/* 2. Clickable KPI Cards - Dynamically Filtered */}
@@ -2706,28 +3015,22 @@ export function FMEADashboard() {
               {/* MAIN TAB 2: Asset Reliability & Component Ops */}
               {activeMainTab === 'reliability' && (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 border-b border-(--border-main) pb-2 text-xs font-bold overflow-x-auto">
+                  <div className="flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1">
                     <button
+                      type="button"
                       onClick={() => setReliabilitySubTab('bad_actors')}
-                      className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                        reliabilitySubTab === 'bad_actors'
-                          ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30'
-                          : 'text-(--text-muted) hover:text-(--text-primary)'
-                      }`}
+                      className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getReliabilitySubTabClass('bad_actors')}`}
                     >
-                      <Truck className="w-3.5 h-3.5" />
+                      <Truck className="w-4 h-4" />
                       <span>Fleet Bad Actor Scorecard</span>
                     </button>
 
                     <button
+                      type="button"
                       onClick={() => setReliabilitySubTab('reliability')}
-                      className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                        reliabilitySubTab === 'reliability'
-                          ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30'
-                          : 'text-(--text-muted) hover:text-(--text-primary)'
-                      }`}
+                      className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getReliabilitySubTabClass('reliability')}`}
                     >
-                      <Activity className="w-3.5 h-3.5" />
+                      <Activity className="w-4 h-4" />
                       <span>Component Reliability & System Analytics</span>
                     </button>
                   </div>
@@ -2776,11 +3079,15 @@ export function FMEADashboard() {
                         )}
                       </div>
 
-                      {/* Month-on-Month Fleet Repair Cost vs Incident Financial Loss Vertical Bar Chart */}
+                      {/* Month-on-Month Fleet Repair Cost vs Incident Financial Loss Chart (Bar <= 3 mos | Line > 3 mos) */}
                       <div className="p-4 bg-(--bg-surface) border border-(--border-main) rounded-xl space-y-3 shadow-xs">
                         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-(--border-main) pb-2">
                           <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-purple-500" />
+                            {useLineGraphBadActor ? (
+                              <TrendingUp className="w-4 h-4 text-purple-500" />
+                            ) : (
+                              <Calendar className="w-4 h-4 text-purple-500" />
+                            )}
                             <h3 className="text-xs font-bold uppercase text-(--text-primary)">
                               Month-on-Month Fleet Repair Expense vs. Financial Loss
                             </h3>
@@ -2804,69 +3111,42 @@ export function FMEADashboard() {
 
                         <p className="text-[11px] text-(--text-muted)">
                           {selectedBadActorMonthKey
-                            ? `Currently showing bad actor metrics for: ${monthOnMonthBadActorMetrics.find(m => m.monthKey === selectedBadActorMonthKey)?.monthLabel || selectedBadActorMonthKey}. Click the selected bar to clear.`
-                            : `Comparing monthly repair expenses against financial losses. Click a bar to filter scorecard.`}
+                            ? `Currently showing bad actor metrics for: ${monthOnMonthBadActorMetrics.find(m => m.monthKey === selectedBadActorMonthKey)?.monthLabel || selectedBadActorMonthKey}. Click the selected ${useLineGraphBadActor ? 'point' : 'bar'} to clear.`
+                            : `Comparing monthly repair expenses against financial losses. Click a ${useLineGraphBadActor ? 'point' : 'bar'} to filter scorecard.`}
                         </p>
 
-                        {monthOnMonthBadActorMetrics.length === 0 ? (
-                          <div className="py-12 text-center text-xs text-(--text-muted)">No bad actor financial data available for the selected period.</div>
-                        ) : (
-                          <div className="pt-2 pb-2 overflow-x-auto">
-                            <div className="flex items-end justify-around gap-4 min-w-[320px] h-44 px-2 border-b border-(--border-main) pb-1">
-                              {(() => {
-                                const maxCostVal = Math.max(
-                                  ...monthOnMonthBadActorMetrics.map(m => Math.max(m.repairCost, m.financialLoss)),
-                                  1000
-                                );
-
-                                return monthOnMonthBadActorMetrics.map((m, idx) => {
-                                  const repairHeight = Math.max(4, Math.round((m.repairCost / maxCostVal) * 120));
-                                  const lossHeight = Math.max(4, Math.round((m.financialLoss / maxCostVal) * 120));
-                                  const isSelected = selectedBadActorMonthKey === m.monthKey;
-
-                                  return (
-                                    <button
-                                      key={idx}
-                                      onClick={() => {
-                                        setSelectedBadActorMonthKey(isSelected ? null : m.monthKey);
-                                        setBadActorsPage(1);
-                                      }}
-                                      className={`flex flex-col items-center flex-1 h-full justify-end group relative transition-all rounded-lg p-1 cursor-pointer ${
-                                        isSelected ? 'bg-purple-500/15 ring-2 ring-purple-500' : 'hover:bg-(--accent-subtle)'
-                                      }`}
-                                    >
-                                      <div className="absolute left-1/2 -translate-x-1/2 top-2 hidden group-hover:flex flex-col bg-(--bg-elevated)/90 backdrop-blur-sm border border-(--border-main) p-2 rounded shadow-lg text-[10px] z-30 whitespace-nowrap pointer-events-none space-y-0.5">
-                                        <span className="font-bold text-(--text-primary)">{m.monthLabel}</span>
-                                        <span className="text-purple-500">Repair Cost: &#8369;{m.repairCost.toLocaleString()}</span>
-                                        <span className="text-amber-500">Financial Loss: &#8369;{m.financialLoss.toLocaleString()}</span>
-                                        <span className="text-[9px] text-(--text-muted) italic mt-1">Click to filter table</span>
-                                      </div>
-
-                                      <div className="flex items-end justify-center gap-1 w-full max-w-20 h-32 px-1">
-                                        <div 
-                                          className="w-3.5 bg-purple-500 rounded-t-sm transition-all duration-300 hover:opacity-90" 
-                                          style={{ height: `${repairHeight}px` }}
-                                          title={`Repair Expense: ₱${m.repairCost.toLocaleString()}`}
-                                        ></div>
-                                        <div 
-                                          className="w-3.5 bg-amber-500 rounded-t-sm transition-all duration-300 hover:opacity-90" 
-                                          style={{ height: `${lossHeight}px` }}
-                                          title={`Incident Loss: ₱${m.financialLoss.toLocaleString()}`}
-                                        ></div>
-                                      </div>
-
-                                      <span className={`text-[10px] font-bold mt-2 truncate w-full text-center ${
-                                        isSelected ? 'text-purple-600 dark:text-purple-400 font-black underline' : 'text-(--text-muted)'
-                                      }`}>
-                                        {m.monthLabel}
-                                      </span>
-                                    </button>
-                                  );
-                                });
-                              })()}
-                            </div>
-                          </div>
-                        )}
+                        <MonthlyDualSeriesChart
+                          data={monthOnMonthBadActorMetrics.map((m) => ({
+                            monthKey: m.monthKey,
+                            monthLabel: m.monthLabel,
+                            s1: m.repairCost,
+                            s2: m.financialLoss
+                          }))}
+                          isLineChart={useLineGraphBadActor}
+                          selectedMonthKey={selectedBadActorMonthKey}
+                          onSelectMonth={(key) => {
+                            setSelectedBadActorMonthKey(key);
+                            setBadActorsPage(1);
+                          }}
+                          series={[
+                            {
+                              label: 'Repair Cost',
+                              barClass: 'bg-purple-500',
+                              textClass: 'text-purple-500',
+                              strokeHex: '#a855f7'
+                            },
+                            {
+                              label: 'Financial Loss',
+                              barClass: 'bg-amber-500',
+                              textClass: 'text-amber-500',
+                              strokeHex: '#f59e0b'
+                            }
+                          ]}
+                          tooltipActionHint="Click to filter table"
+                          isCurrency
+                          minMaxTick={1000}
+                          emptyMessage="No bad actor financial data available for the selected period."
+                        />
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

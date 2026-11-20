@@ -158,7 +158,7 @@ function CustomDropdown({
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen(prev => !prev)}
-        className={`w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) px-3 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+        className={`w-full bg-(--bg-elevated) border border-solid border-(--border-main) text-(--text-primary) px-3 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
           isOpen ? 'border-(--text-primary)' : ''
         }`}
       >
@@ -167,7 +167,7 @@ function CustomDropdown({
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-(--bg-elevated) border border-(--border-main) rounded-lg shadow-xl max-h-60 overflow-y-auto py-1 text-xs">
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-(--bg-elevated) border border-solid border-(--border-main) rounded-lg shadow-xl max-h-60 overflow-y-auto py-1 text-xs">
           {options.length === 0 ? (
             <div className="px-3 py-2 text-(--text-muted) italic text-center">No options available</div>
           ) : (
@@ -375,7 +375,7 @@ export function ComponentHistory() {
       );
     }
     return (
-      <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-(--accent-subtle) text-(--text-primary) border border-(--border-main)">
+      <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-(--accent-subtle) text-(--text-primary) border border-solid border-(--border-main)">
         {String(status)}
       </span>
     );
@@ -769,7 +769,7 @@ export function ComponentHistory() {
         </div>
         
         {selectedComponent ? (
-          <div className="bg-(--bg-elevated) border border-(--border-main) rounded-xl p-3 shadow-xs transition-all">
+          <div className="bg-(--bg-elevated) border border-solid border-(--border-main) rounded-xl p-3 shadow-xs transition-all">
             {/* Header Summary Row */}
             <div className="flex items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2 text-xs min-w-0">
@@ -855,33 +855,33 @@ export function ComponentHistory() {
           <button
             type="button"
             onClick={() => setShowPicker(true)}
-            className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) px-4 py-2.5 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer"
+            className="w-full bg-(--bg-elevated) border border-solid border-(--border-main) text-(--text-primary) px-4 py-2.5 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer"
           >
             <span className="flex items-center gap-2">
               <Search className="w-3.5 h-3.5 text-(--text-primary)" />
               {componentList.length > 0 ? `Click here to select an active component (${componentList.length} loaded)...` : 'Click here to search and select a component...'}
             </span>
-            <span className="bg-(--accent-subtle) text-(--text-primary) px-2 py-0.5 rounded text-xs font-semibold">Browse</span>
+            <span className="bg-(--accent-subtle) text-(--text-primary) border border-solid border-(--border-main) px-2 py-0.5 rounded text-xs font-semibold">Browse</span>
           </button>
         )}
       </div>
 
-      {/* Main Content Body Container */}
-      <div className="bg-(--bg-elevated) border border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3 flex flex-col flex-1 min-h-0">
+      {/* Main Content Body Container (matching VehiclePmViewer surface hierarchy) */}
+      <div className="bg-(--bg-elevated) border border-solid border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3 flex flex-col flex-1 min-h-0">
         
         {/* Action Controls Bar */}
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center border-b border-(--border-main) pb-3 gap-3 shrink-0">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center border-b border-(--border-main) pb-3 pt-1 gap-3 shrink-0">
           <div className="flex items-center gap-2 text-xs font-bold text-(--text-primary)">
             <Layers className="w-4 h-4 text-(--text-primary)" />
             <span>Installed Components & Telemetry Performance</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {!selectedComponent && (
               <button
                 type="button"
                 onClick={() => setShowPicker(true)}
-                className="bg-(--bg-surface) hover:bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                className="bg-(--bg-surface) hover:bg-(--accent-subtle) text-(--text-primary) border border-solid border-(--border-main) px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
               >
                 <Search className="w-3.5 h-3.5 text-(--text-primary)" />
                 <span>Select Component</span>
@@ -892,7 +892,7 @@ export function ComponentHistory() {
               onClick={handleOpenAdd}
               disabled={isInstallDisabled}
               title={isInstallDisabled ? 'Component is currently installed or not selected.' : 'Record a new installation'}
-              className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) border border-solid border-(--btn-primary-bg) px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Record Installation</span>
@@ -902,7 +902,7 @@ export function ComponentHistory() {
               onClick={handleOpenRemoval}
               disabled={isRemovalDisabled}
               title={isRemovalDisabled ? 'Component is not currently installed.' : 'Record component removal'}
-              className="bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-amber-600 hover:bg-amber-500 text-white border border-solid border-amber-600 px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <MinusCircle className="w-3.5 h-3.5" />
               <span>Record Removal</span>
@@ -910,9 +910,9 @@ export function ComponentHistory() {
           </div>
         </div>
 
-        {/* Sub-tab content panel & Scrollable Table Wrapper */}
+        {/* Content Panel & Scrollable Table Wrapper */}
         <div className="flex flex-col flex-1 min-h-0 space-y-2">
-          <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
+          <div className="flex-1 min-h-0 overflow-auto border border-solid border-(--border-main) rounded-lg bg-(--bg-surface)">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-(--border-main) bg-(--bg-elevated) text-(--text-muted) text-[11px] uppercase tracking-wider font-semibold sticky top-0 z-10 shadow-xs">
@@ -1022,7 +1022,7 @@ export function ComponentHistory() {
                   type="button"
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
-                  className="px-2.5 py-1 rounded-lg border border-(--border-main) bg-(--bg-elevated) text-(--text-secondary) hover:bg-(--accent-subtle) disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg border border-solid border-(--border-main) bg-(--bg-elevated) text-(--text-secondary) hover:bg-(--accent-subtle) disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
                   <span>Prev</span>
@@ -1036,7 +1036,7 @@ export function ComponentHistory() {
                   type="button"
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage >= totalPages}
-                  className="px-2.5 py-1 rounded-lg border border-(--border-main) bg-(--bg-elevated) text-(--text-secondary) hover:bg-(--accent-subtle) disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg border border-solid border-(--border-main) bg-(--bg-elevated) text-(--text-secondary) hover:bg-(--accent-subtle) disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <span>Next</span>
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -1050,7 +1050,7 @@ export function ComponentHistory() {
       {/* COMPONENT SEARCH PICKER MODAL */}
       {showPicker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-(--bg-surface) border border-(--border-main) rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+          <div className="bg-(--bg-surface) border border-solid border-(--border-main) rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
             <div className="flex justify-between items-center px-6 py-4 border-b border-(--border-main) bg-(--bg-elevated) shrink-0">
               <h3 className="text-lg font-bold text-(--text-primary) flex items-center gap-2">
                 <Cpu className="w-4 h-4 text-(--text-primary)" /> Search & Select Component
@@ -1120,13 +1120,13 @@ export function ComponentHistory() {
                     placeholder="Filter by Component Code or Serial No..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
+                    className="w-full bg-(--bg-elevated) border border-solid border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
                     autoFocus
                   />
                 </div>
                 <button
                   type="submit"
-                  className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+                  className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) border border-solid border-(--btn-primary-bg) px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs"
                 >
                   Search
                 </button>
@@ -1151,7 +1151,7 @@ export function ComponentHistory() {
                       setSelectedComponent(comp);
                       setShowPicker(false);
                     }}
-                    className="flex items-center justify-between bg-(--bg-elevated) hover:bg-(--accent-subtle) border border-(--border-main) p-3 rounded-lg transition-colors cursor-pointer group"
+                    className="flex items-center justify-between bg-(--bg-elevated) hover:bg-(--accent-subtle) border border-solid border-(--border-main) p-3 rounded-lg transition-colors cursor-pointer group"
                   >
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-(--bg-surface) rounded-lg text-(--text-primary) transition-colors">
@@ -1182,7 +1182,7 @@ export function ComponentHistory() {
       {/* RECORD INSTALLATION / REMOVAL MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-(--bg-surface) border border-(--border-main) rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+          <div className="bg-(--bg-surface) border border-solid border-(--border-main) rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
             <div className="flex justify-between items-center px-6 py-4 border-b border-(--border-main) bg-(--bg-elevated) shrink-0">
               <h3 className="text-lg font-bold text-(--text-primary)">
                 {editingId ? 'Record Component Removal' : 'Record Component Installation'}
@@ -1198,7 +1198,7 @@ export function ComponentHistory() {
 
             <form onSubmit={handleSubmitForm} className="flex flex-col flex-1 min-h-0 overflow-hidden">
               <div className="p-4 sm:p-6 space-y-4 text-xs overflow-y-auto flex-1 min-h-0">
-                <div className="bg-(--bg-elevated) p-3 rounded-lg border border-(--border-main) space-y-1">
+                <div className="bg-(--bg-elevated) p-3 rounded-lg border border-solid border-(--border-main) space-y-1">
                   <div className="text-(--text-muted) uppercase text-[10px] font-semibold">Active Component Target</div>
                   <div className="font-bold text-(--text-primary) text-xs">
                     {selectedComponent?.equipment_component_code}
@@ -1223,7 +1223,7 @@ export function ComponentHistory() {
                         placeholder="Type to filter equipment by plate, make, or model..."
                         value={vehicleSearchQuery}
                         onChange={(e) => setVehicleSearchQuery(e.target.value)}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-elevated) border border-solid border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
                       />
                     </div>
                   )}
@@ -1250,12 +1250,12 @@ export function ComponentHistory() {
                     type="text"
                     disabled
                     value={editingId ? 'Removed' : 'Installed'}
-                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-secondary) font-semibold rounded-lg px-3.5 py-2 text-xs cursor-not-allowed"
+                    className="w-full bg-(--bg-elevated) border border-solid border-(--border-main) text-(--text-secondary) font-semibold rounded-lg px-3.5 py-2 text-xs cursor-not-allowed"
                   />
                 </div>
 
                 {/* Installation Information Section */}
-                <div className="bg-(--bg-elevated) border border-(--border-main) p-4 rounded-xl space-y-3">
+                <div className="bg-(--bg-elevated) border border-solid border-(--border-main) p-4 rounded-xl space-y-3">
                   <h4 className="text-xs font-bold uppercase text-(--text-primary) tracking-wider flex items-center gap-1.5">
                     <Calendar className="w-4 h-4" /> Installation Information
                   </h4>
@@ -1267,7 +1267,7 @@ export function ComponentHistory() {
                         disabled={Boolean(editingId)}
                         value={historyForm.install_date}
                         onChange={(e) => setHistoryForm({ ...historyForm, install_date: e.target.value })}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-(--bg-elevated) border border-solid border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) font-mono disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
                     <div>
@@ -1279,7 +1279,7 @@ export function ComponentHistory() {
                         value={historyForm.install_srv_rdg}
                         onChange={(e) => setHistoryForm({ ...historyForm, install_srv_rdg: e.target.value })}
                         placeholder="0"
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) font-mono cursor-not-allowed opacity-75"
+                        className="w-full bg-(--bg-elevated) border border-solid border-(--border-main) text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) font-mono cursor-not-allowed opacity-75"
                       />
                     </div>
                   </div>
@@ -1291,13 +1291,13 @@ export function ComponentHistory() {
                       value={historyForm.install_remarks}
                       onChange={(e) => setHistoryForm({ ...historyForm, install_remarks: e.target.value })}
                       placeholder="Optional remarks on installation..."
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-(--bg-elevated) border border-solid border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
 
                 {/* Removal Information Section */}
-                <div className="bg-(--bg-elevated) border border-(--border-main) p-4 rounded-xl space-y-3">
+                <div className="bg-(--bg-elevated) border border-solid border-(--border-main) p-4 rounded-xl space-y-3">
                   <h4 className="text-xs font-bold uppercase text-(--text-primary) tracking-wider flex items-center gap-1.5">
                     <FileText className="w-4 h-4" /> Removal Information
                   </h4>
@@ -1309,7 +1309,7 @@ export function ComponentHistory() {
                         disabled={!editingId}
                         value={historyForm.remove_date}
                         onChange={(e) => setHistoryForm({ ...historyForm, remove_date: e.target.value })}
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-(--bg-elevated) border border-solid border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) font-mono disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
                     <div>
@@ -1321,7 +1321,7 @@ export function ComponentHistory() {
                         value={historyForm.remove_srv_rdg}
                         onChange={(e) => setHistoryForm({ ...historyForm, remove_srv_rdg: e.target.value })}
                         placeholder="0"
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) font-mono cursor-not-allowed opacity-75"
+                        className="w-full bg-(--bg-elevated) border border-solid border-(--border-main) text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) font-mono cursor-not-allowed opacity-75"
                       />
                     </div>
                   </div>
@@ -1333,7 +1333,7 @@ export function ComponentHistory() {
                       value={historyForm.remove_remarks}
                       onChange={(e) => setHistoryForm({ ...historyForm, remove_remarks: e.target.value })}
                       placeholder="Reason for removal or replacement..."
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-(--bg-elevated) border border-solid border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>

@@ -65,6 +65,12 @@ export function VehiclePmViewer() {
   const [logsCurrentPage, setLogsCurrentPage] = useState<number>(1);
   const [logsPageSize, setLogsPageSize] = useState<number>(10);
 
+  // Unified Tab Highlight Helper (matching IncidentReport)
+  const getTabClass = (isActive: boolean) =>
+    isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-solid border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-solid border-(--border-main)';
+
   const fetchEquipment = async (queryToRun?: string) => {
     try {
       setLoading(true);
@@ -476,7 +482,7 @@ export function VehiclePmViewer() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-4 sm:p-6 space-y-4 flex-1 min-h-0 flex flex-col overflow-y-auto">
+            <div className="p-4 sm:p-6 space-y-4 flex-1 min-h-0 flex flex-col overflow-hidden">
               
               {/* Summary Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-(--bg-elevated) p-4 rounded-xl border border-(--border-main) shrink-0 text-xs">
@@ -500,19 +506,15 @@ export function VehiclePmViewer() {
                 </div>
               </div>
 
-              {/* Modal Tabs Navigation */}
-              <div className="flex border-b border-(--border-main) gap-6 shrink-0">
+              {/* Primary Category Navigation Tab Bar (matching IncidentReport) */}
+              <div className="shrink-0 flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1 overflow-x-auto">
                 <button
                   type="button"
                   onClick={() => setActiveTab('pm')}
-                  className={`pb-2.5 text-xs font-semibold transition-colors border-b-2 cursor-pointer flex items-center gap-2 ${
-                    activeTab === 'pm'
-                      ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-                      : 'border-transparent text-(--text-secondary) hover:text-(--text-primary)'
-                  }`}
+                  className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'pm')}`}
                 >
-                  <Calendar className="w-3.5 h-3.5" />
-                  PM Schedule Breakdown
+                  <Calendar className="w-4 h-4" />
+                  <span>PM Schedule Breakdown</span>
                 </button>
                 <button
                   type="button"
@@ -520,78 +522,76 @@ export function VehiclePmViewer() {
                     setActiveTab('logs');
                     setLogsCurrentPage(1);
                   }}
-                  className={`pb-2.5 text-xs font-semibold transition-colors border-b-2 cursor-pointer flex items-center gap-2 ${
-                    activeTab === 'logs'
-                      ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-                      : 'border-transparent text-(--text-secondary) hover:text-(--text-primary)'
-                  }`}
+                  className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'logs')}`}
                 >
-                  <ClipboardList className="w-3.5 h-3.5" />
-                  Daily Inspection Log
+                  <ClipboardList className="w-4 h-4" />
+                  <span>Daily Inspection Log</span>
                 </button>
               </div>
 
-              {/* Tab 1: PM Schedule Breakdown */}
+              {/* Tab 1: PM Schedule Breakdown (Scrollable Table Wrapper) */}
               {activeTab === 'pm' && (
-                <div className="border border-(--border-main) rounded-lg overflow-hidden bg-(--bg-surface)">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="border-b border-(--border-main) bg-(--bg-elevated) text-(--text-muted) text-[11px] uppercase tracking-wider font-semibold sticky top-0 z-10">
-                        <th className="py-2 px-3">PM Level</th>
-                        <th className="py-2 px-3">Previous PM</th>
-                        <th className="py-2 px-3">PM Completed</th>
-                        <th className="py-2 px-3">Current PM</th>
-                        <th className="py-2 px-3">Next PM</th>
-                        <th className="py-2 px-3 text-right">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                      {[2, 3, 4, 5, 6, 7].map((pmNum) => {
-                        const prevVal = selectedEquipment[`pm${pmNum}_previous`] ?? selectedEquipment[`pm${pmNum}_prev`] ?? 'N/A';
-                        const completedVal = selectedEquipment[`pm${pmNum}_datecompleted`];
-                        const currVal = selectedEquipment[`pm${pmNum}_current`] ?? selectedEquipment[`pm${pmNum}_curr`] ?? 'N/A';
-                        const nextVal = selectedEquipment[`pm${pmNum}_next`] ?? 'N/A';
-                        
-                        const rawFlag = selectedEquipment[`pm${pmNum}_flag`];
-                        const isFlagged = rawFlag === true || String(rawFlag ?? '').toLowerCase() === 'true' || rawFlag === 1;
-                        const isThisLoading = actionLoading === pmNum;
+                <div className="flex flex-col flex-1 min-h-0">
+                  <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-(--border-main) bg-(--bg-elevated) text-(--text-muted) text-[11px] uppercase tracking-wider font-semibold sticky top-0 z-10 shadow-xs">
+                          <th className="py-2 px-3">PM Level</th>
+                          <th className="py-2 px-3">Previous PM</th>
+                          <th className="py-2 px-3">PM Completed</th>
+                          <th className="py-2 px-3">Current PM</th>
+                          <th className="py-2 px-3">Next PM</th>
+                          <th className="py-2 px-3 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                        {[2, 3, 4, 5, 6, 7].map((pmNum) => {
+                          const prevVal = selectedEquipment[`pm${pmNum}_previous`] ?? selectedEquipment[`pm${pmNum}_prev`] ?? 'N/A';
+                          const completedVal = selectedEquipment[`pm${pmNum}_datecompleted`];
+                          const currVal = selectedEquipment[`pm${pmNum}_current`] ?? selectedEquipment[`pm${pmNum}_curr`] ?? 'N/A';
+                          const nextVal = selectedEquipment[`pm${pmNum}_next`] ?? 'N/A';
+                          
+                          const rawFlag = selectedEquipment[`pm${pmNum}_flag`];
+                          const isFlagged = rawFlag === true || String(rawFlag ?? '').toLowerCase() === 'true' || rawFlag === 1;
+                          const isThisLoading = actionLoading === pmNum;
 
-                        return (
-                          <tr
-                            key={pmNum}
-                            className={`transition-colors ${
-                              isFlagged
-                                ? 'bg-red-50/80 dark:bg-red-950/30 text-red-700 dark:text-red-400 font-semibold'
-                                : 'hover:bg-(--accent-subtle)'
-                            }`}
-                          >
-                            <td className="py-2 px-3 font-semibold text-(--text-primary)">PM {pmNum}</td>
-                            <td className="py-2 px-3">{String(prevVal)}</td>
-                            <td className="py-2 px-3 font-mono text-xs">
-                              {formatDateTime(completedVal, selectedEquipment.timezone)}
-                            </td>
-                            <td className="py-2 px-3">{String(currVal)}</td>
-                            <td className="py-2 px-3">{String(nextVal)}</td>
-                            <td className="py-2 px-3 text-right">
-                              <button
-                                type="button"
-                                disabled={!isFlagged || isThisLoading}
-                                onClick={() => isFlagged && !isThisLoading && handleCompletePm(pmNum)}
-                                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 ml-auto ${
-                                  isFlagged
-                                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-xs'
-                                    : 'bg-(--bg-elevated) text-(--text-muted) cursor-not-allowed opacity-50'
-                                }`}
-                              >
-                                {isThisLoading && <Loader2 className="w-3 h-3 animate-spin" />}
-                                Completed
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                          return (
+                            <tr
+                              key={pmNum}
+                              className={`transition-colors ${
+                                isFlagged
+                                  ? 'bg-red-50/80 dark:bg-red-950/30 text-red-700 dark:text-red-400 font-semibold'
+                                  : 'hover:bg-(--accent-subtle)'
+                              }`}
+                            >
+                              <td className="py-2 px-3 font-semibold text-(--text-primary)">PM {pmNum}</td>
+                              <td className="py-2 px-3">{String(prevVal)}</td>
+                              <td className="py-2 px-3 font-mono text-xs">
+                                {formatDateTime(completedVal, selectedEquipment.timezone)}
+                              </td>
+                              <td className="py-2 px-3">{String(currVal)}</td>
+                              <td className="py-2 px-3">{String(nextVal)}</td>
+                              <td className="py-2 px-3 text-right">
+                                <button
+                                  type="button"
+                                  disabled={!isFlagged || isThisLoading}
+                                  onClick={() => isFlagged && !isThisLoading && handleCompletePm(pmNum)}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all inline-flex items-center justify-center gap-1.5 ml-auto ${
+                                    isFlagged
+                                      ? 'bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white border-emerald-700 cursor-pointer shadow-sm'
+                                      : 'bg-(--bg-elevated) text-(--text-muted) border-(--border-main) cursor-not-allowed opacity-60 shadow-2xs'
+                                  }`}
+                                >
+                                  {isThisLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                                  <span>Completed</span>
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
 
@@ -601,7 +601,7 @@ export function VehiclePmViewer() {
                   <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
-                        <tr className="border-b border-(--border-main) bg-(--bg-elevated) text-(--text-muted) text-[11px] uppercase tracking-wider font-semibold sticky top-0 z-10">
+                        <tr className="border-b border-(--border-main) bg-(--bg-elevated) text-(--text-muted) text-[11px] uppercase tracking-wider font-semibold sticky top-0 z-10 shadow-xs">
                           <th className="py-2 px-3">Log Date</th>
                           <th className="py-2 px-3">Previous Reading</th>
                           <th className="py-2 px-3">Daily Increment</th>

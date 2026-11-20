@@ -115,7 +115,7 @@ export function MaintenanceForecast() {
         <button
           onClick={handleRefresh}
           disabled={loading}
-          className="inline-flex items-center gap-2 px-3 py-1.5 bg-(--bg-surface) hover:bg-(--accent-subtle) text-(--text-primary) text-xs font-semibold rounded-lg transition-colors cursor-pointer border border-(--border-main) disabled:opacity-50 shadow-xs self-start sm:self-auto shrink-0"
+          className="inline-flex items-center gap-2 px-3.5 py-2 bg-(--bg-surface) hover:bg-(--accent-subtle) text-(--text-primary) text-xs font-bold rounded-lg transition-colors cursor-pointer border border-solid border-(--border-main) disabled:opacity-50 shadow-xs self-start sm:self-auto shrink-0"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           <span>Refresh Data</span>
@@ -138,11 +138,11 @@ export function MaintenanceForecast() {
         </div>
       )}
 
-      {/* Main Content Body Container */}
-      <div className="bg-(--bg-elevated) border border-(--border-main) rounded-xl p-4 shadow-xl overflow-visible space-y-3 flex flex-col flex-1 min-h-0">
+      {/* Main Content Body Container (matching VehiclePmViewer surface hierarchy) */}
+      <div className="bg-(--bg-elevated) border border-solid border-(--border-main) rounded-xl p-4 shadow-xl overflow-visible space-y-3 flex flex-col flex-1 min-h-0">
         
         {/* Table Header & Collapsible Controls Toolbar */}
-        <div className="border-b border-(--border-main) pb-3 space-y-3 shrink-0">
+        <div className="border-b border-(--border-main) pb-3 pt-1 space-y-3 shrink-0">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div>
               <h2 className="text-xs font-bold text-(--text-primary) uppercase tracking-wider">Schedule Matrix</h2>
@@ -158,7 +158,7 @@ export function MaintenanceForecast() {
                   placeholder="Search Equipment ID..."
                   value={vehicleSearchQuery}
                   onChange={(e) => setVehicleSearchQuery(e.target.value)}
-                  className="bg-(--bg-elevated) border border-(--border-main) rounded-lg pl-8 pr-7 py-1.5 text-xs text-(--text-primary) focus:outline-none focus:border-(--text-primary) placeholder:text-(--text-muted) w-40 sm:w-48"
+                  className="bg-(--bg-surface) border border-solid border-(--border-main) rounded-lg pl-8 pr-7 py-1.5 text-xs text-(--text-primary) focus:outline-none focus:border-(--text-primary) placeholder:text-(--text-muted) w-40 sm:w-48"
                 />
                 {vehicleSearchQuery && (
                   <button
@@ -192,11 +192,11 @@ export function MaintenanceForecast() {
               {/* Collapse / Expand Controls Toggle Button */}
               <button
                 onClick={() => setIsControlsCollapsed(!isControlsCollapsed)}
-                className="p-1.5 bg-(--bg-surface) hover:bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                className="px-3 py-1.5 bg-(--bg-surface) hover:bg-(--accent-subtle) text-(--text-primary) border border-solid border-(--border-main) rounded-lg text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap"
                 title={isControlsCollapsed ? "Expand Controls" : "Collapse Controls"}
               >
                 <Sliders className="w-3.5 h-3.5 text-(--text-primary)" />
-                <span className="hidden sm:inline font-semibold">{isControlsCollapsed ? 'Slider' : 'Hide'}</span>
+                <span className="hidden sm:inline">{isControlsCollapsed ? 'Slider' : 'Hide'}</span>
                 {isControlsCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
               </button>
             </div>
@@ -204,9 +204,9 @@ export function MaintenanceForecast() {
 
           {/* Collapsible Interactive Sliders Control Panel */}
           {!isControlsCollapsed && (
-            <div className="bg-(--bg-surface) border border-(--border-main) rounded-lg p-2.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 animate-in fade-in duration-200">
+            <div className="bg-(--bg-surface) border border-solid border-(--border-main) rounded-lg p-2.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 animate-in fade-in duration-200">
               <div className="flex items-center gap-2">
-                <div className="p-1 bg-(--accent-subtle) text-(--text-primary) rounded">
+                <div className="p-1 bg-(--accent-subtle) text-(--text-primary) rounded border border-solid border-(--border-main)">
                   <Sliders className="w-3.5 h-3.5" />
                 </div>
                 <div>
@@ -225,7 +225,7 @@ export function MaintenanceForecast() {
                   onChange={(e) => setForecastMonths(Number(e.target.value))}
                   className="w-full h-1 bg-(--border-main) rounded-lg appearance-none cursor-pointer accent-(--text-primary)"
                 />
-                <span className="text-[11px] font-semibold text-(--text-primary) bg-(--accent-subtle) border border-(--border-main) px-2 py-0.5 rounded whitespace-nowrap min-w-18 text-center">
+                <span className="text-[11px] font-bold text-(--text-primary) bg-(--accent-subtle) border border-solid border-(--border-main) px-2 py-0.5 rounded whitespace-nowrap min-w-18 text-center">
                   {forecastMonths} {forecastMonths === 1 ? 'Mo' : 'Mos'}
                 </span>
               </div>
@@ -233,15 +233,15 @@ export function MaintenanceForecast() {
           )}
         </div>
 
-        {/* Sub-tab content panel & Scrollable 2D Table Matrix */}
+        {/* Content Panel & Scrollable 2D Table Matrix */}
         <div className="flex flex-col flex-1 min-h-0 space-y-2">
           {loading ? (
-            <div className="flex-1 flex flex-col items-center justify-center py-12 gap-3 border border-(--border-main) rounded-lg bg-(--bg-surface)">
+            <div className="flex-1 flex flex-col items-center justify-center py-12 gap-3 border border-solid border-(--border-main) rounded-lg bg-(--bg-surface)">
               <Loader2 className="w-6 h-6 animate-spin text-(--text-primary)" />
               <span className="text-xs text-(--text-muted) font-medium">Loading maintenance forecast matrix...</span>
             </div>
           ) : (
-            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
+            <div className="flex-1 min-h-0 overflow-auto border border-solid border-(--border-main) rounded-lg bg-(--bg-surface)">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="border-b border-(--border-main) bg-(--bg-elevated) text-(--text-muted) text-[11px] font-semibold uppercase tracking-wider">
@@ -269,7 +269,7 @@ export function MaintenanceForecast() {
                       <tr key={idx} className="hover:bg-(--accent-subtle) transition-colors">
                         {/* Sticky left for first column in rows */}
                         <td className="py-2 px-3 sticky left-0 bg-(--bg-elevated) z-10 text-center font-bold text-(--text-primary) border-r border-(--border-main) shadow-xs">
-                          <span className="inline-block px-2 py-0.5 bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) rounded text-xs font-semibold">
+                          <span className="inline-block px-2 py-0.5 bg-(--accent-subtle) text-(--text-primary) border border-solid border-(--border-main) rounded text-xs font-semibold">
                             {row?.pm_level ?? '—'}
                           </span>
                         </td>
@@ -322,8 +322,8 @@ export function MaintenanceForecast() {
                                         key={i}
                                         className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-medium whitespace-nowrap ${
                                           isMatch
-                                            ? 'bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) font-semibold'
-                                            : 'bg-(--bg-elevated) text-(--text-secondary) border border-(--border-main)'
+                                            ? 'bg-(--accent-subtle) text-(--text-primary) border border-solid border-(--border-main) font-semibold'
+                                            : 'bg-(--bg-elevated) text-(--text-secondary) border border-solid border-(--border-main)'
                                         }`}
                                       >
                                         {item}

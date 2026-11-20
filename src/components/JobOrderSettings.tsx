@@ -68,6 +68,12 @@ export function JobOrderSettings() {
   const [priorityForm, setPriorityForm] = useState({ priority_desc: '' });
   const [statusForm, setStatusForm] = useState({ status_name: '' });
 
+  // Unified Tab Highlight Helper (matching RcaSettings)
+  const getTabClass = (isActive: boolean) =>
+    isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-solid border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-solid border-(--border-main)';
+
   const loadTabData = useCallback(async () => {
     try {
       setLoading(true);
@@ -223,7 +229,7 @@ export function JobOrderSettings() {
   const totalPages = Math.ceil(filteredList.length / pageSize) || 1;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 overflow-hidden">
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-3">
         <div className="flex items-center gap-3">
@@ -235,6 +241,7 @@ export function JobOrderSettings() {
             <p className="text-xs sm:text-sm text-(--text-muted)">Configure job order types, priority levels, and workflow statuses.</p>
           </div>
         </div>
+        {loading && <Loader2 className="w-5 h-5 text-(--text-primary) animate-spin" />}
       </div>
 
       {/* Messages */}
@@ -252,154 +259,153 @@ export function JobOrderSettings() {
         </div>
       )}
 
-      {/* Main Tab Navigation */}
-      <div className="shrink-0 flex border-b border-(--border-main) gap-2 overflow-x-auto">
-        <button
-          onClick={() => setActiveTab('types')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'types'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <Wrench className="w-3.5 h-3.5" />
-          <span>Job Order Types</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('priorities')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'priorities'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>Job Order Priorities</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('statuses')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'statuses'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <CheckSquare className="w-3.5 h-3.5" />
-          <span>Job Order Statuses</span>
-        </button>
-      </div>
-
-      {/* Main Container Body */}
-      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-4 overflow-hidden space-y-3">
-        <div className="shrink-0 flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
-            <input
-              type="text"
-              placeholder={`Filter ${activeTab === 'types' ? 'types' : activeTab === 'priorities' ? 'priorities' : 'statuses'}...`}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
-            />
-          </div>
+      {/* Main Content Body Container (matching RcaSettings) */}
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-solid border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
+        {/* Primary Category Navigation Tabs */}
+        <div className="shrink-0 flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1">
           <button
-            onClick={handleOpenAdd}
-            className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
+            type="button"
+            onClick={() => setActiveTab('types')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'types')}`}
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Record</span>
+            <Wrench className={`w-4 h-4 ${activeTab === 'types' ? '' : 'text-blue-500'}`} />
+            <span>Job Order Types</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('priorities')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'priorities')}`}
+          >
+            <Layers className={`w-4 h-4 ${activeTab === 'priorities' ? '' : 'text-amber-500'}`} />
+            <span>Job Order Priorities</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('statuses')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'statuses')}`}
+          >
+            <CheckSquare className={`w-4 h-4 ${activeTab === 'statuses' ? '' : 'text-emerald-500'}`} />
+            <span>Job Order Statuses</span>
           </button>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
-          {loading ? (
-            <div className="h-full flex items-center justify-center text-(--text-muted) gap-2 text-xs">
-              <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
-              <span>Loading records...</span>
+        {/* Tab Content Area */}
+        <div className="flex flex-col flex-1 min-h-0 space-y-2">
+          <div className="shrink-0 flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="w-3.5 h-3.5 text-(--text-muted) absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder={`Filter ${activeTab === 'types' ? 'types' : activeTab === 'priorities' ? 'priorities' : 'statuses'}...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
             </div>
-          ) : filteredList.length === 0 ? (
-            <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
-              No records found. Click &quot;Add Record&quot; above.
+            <button
+              type="button"
+              onClick={handleOpenAdd}
+              className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Record</span>
+            </button>
+          </div>
+
+          <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
+            {loading ? (
+              <div className="h-full flex items-center justify-center text-(--text-muted) gap-2 text-xs">
+                <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
+                <span>Loading records...</span>
+              </div>
+            ) : filteredList.length === 0 ? (
+              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                No records found. Click &quot;Add Record&quot; above.
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                    <th className="py-2 px-3">
+                      {activeTab === 'types' ? 'Type Description' : activeTab === 'priorities' ? 'Priority Description' : 'Status Name'}
+                    </th>
+                    <th className="py-2 px-3 text-right w-28">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                  {paginatedList.map((item) => {
+                    const recordId = activeTab === 'types' 
+                      ? (item as JobOrderTypeRecord).type_id 
+                      : activeTab === 'priorities' 
+                      ? (item as JobOrderPriorityRecord).priority_id 
+                      : (item as JobOrderStatusRecord).status_id;
+                    
+                    const displayText = activeTab === 'types' 
+                      ? (item as JobOrderTypeRecord).type_desc 
+                      : activeTab === 'priorities' 
+                      ? (item as JobOrderPriorityRecord).priority_desc 
+                      : (item as JobOrderStatusRecord).status_name;
+
+                    const tableName = activeTab === 'types' ? 'joborder_type' : activeTab === 'priorities' ? 'joborder_priority' : 'joborder_status';
+                    const pkField = activeTab === 'types' ? 'type_id' : activeTab === 'priorities' ? 'priority_id' : 'status_id';
+
+                    return (
+                      <tr key={recordId} className="hover:bg-(--accent-subtle) transition-colors">
+                        <td className="py-2 px-3 font-medium text-(--text-primary)">{displayText}</td>
+                        <td className="py-2 px-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEdit(item)}
+                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Edit2 className="w-3 h-3" /> Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(recordId, tableName, pkField)}
+                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Trash2 className="w-3 h-3" /> Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {!loading && filteredList.length > 0 && (
+            <div className="shrink-0 flex items-center justify-between pt-2 text-xs text-(--text-muted)">
+              <span>Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, filteredList.length)} of {filteredList.length} entries</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <span>Page {currentPage} of {totalPages}</span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage >= totalPages}
+                  className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
-          ) : (
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
-                  <th className="py-2 px-3">
-                    {activeTab === 'types' ? 'Type Description' : activeTab === 'priorities' ? 'Priority Description' : 'Status Name'}
-                  </th>
-                  <th className="py-2 px-3 text-right w-28">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                {paginatedList.map((item) => {
-                  const recordId = activeTab === 'types' 
-                    ? (item as JobOrderTypeRecord).type_id 
-                    : activeTab === 'priorities' 
-                    ? (item as JobOrderPriorityRecord).priority_id 
-                    : (item as JobOrderStatusRecord).status_id;
-                  
-                  const displayText = activeTab === 'types' 
-                    ? (item as JobOrderTypeRecord).type_desc 
-                    : activeTab === 'priorities' 
-                    ? (item as JobOrderPriorityRecord).priority_desc 
-                    : (item as JobOrderStatusRecord).status_name;
-
-                  const tableName = activeTab === 'types' ? 'joborder_type' : activeTab === 'priorities' ? 'joborder_priority' : 'joborder_status';
-                  const pkField = activeTab === 'types' ? 'type_id' : activeTab === 'priorities' ? 'priority_id' : 'status_id';
-
-                  return (
-                    <tr key={recordId} className="hover:bg-(--accent-subtle) transition-colors">
-                      <td className="py-2 px-3 font-medium text-(--text-primary)">{displayText}</td>
-                      <td className="py-2 px-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handleOpenEdit(item)}
-                            className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
-                          >
-                            <Edit2 className="w-3 h-3" /> Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(recordId, tableName, pkField)}
-                            className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                          >
-                            <Trash2 className="w-3 h-3" /> Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
           )}
         </div>
-
-        {/* Pagination */}
-        {!loading && filteredList.length > 0 && (
-          <div className="shrink-0 flex items-center justify-between pt-2 text-xs text-(--text-muted)">
-            <span>Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, filteredList.length)} of {filteredList.length} entries</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <span>Page {currentPage} of {totalPages}</span>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage >= totalPages}
-                className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* FORM MODAL */}
@@ -411,6 +417,7 @@ export function JobOrderSettings() {
                 {editingId ? 'Edit Record' : 'Add New Record'}
               </h3>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
                 className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer p-1"
               >
@@ -431,7 +438,7 @@ export function JobOrderSettings() {
                       placeholder="e.g. Corrective, Preventive"
                       value={typeForm.type_desc}
                       onChange={(e) => setTypeForm({ ...typeForm, type_desc: e.target.value })}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                 )}
@@ -447,7 +454,7 @@ export function JobOrderSettings() {
                       placeholder="e.g. High, Medium, Low"
                       value={priorityForm.priority_desc}
                       onChange={(e) => setPriorityForm({ ...priorityForm, priority_desc: e.target.value })}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                 )}
@@ -463,7 +470,7 @@ export function JobOrderSettings() {
                       placeholder="e.g. Open, In Progress, Closed"
                       value={statusForm.status_name}
                       onChange={(e) => setStatusForm({ ...statusForm, status_name: e.target.value })}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                 )}

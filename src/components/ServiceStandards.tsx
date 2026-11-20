@@ -93,7 +93,7 @@ function CustomDropdown<T extends string | number>({
 
       {isOpen && !disabled && (
         <div
-          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-(--border-main) bg-(--bg-elevated) shadow-xl py-1 ${
+          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-slate-300 dark:border-slate-600 bg-(--bg-elevated) shadow-xl py-1 ${
             openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
           } ${menuClassName}`}
         >
@@ -194,6 +194,12 @@ export function ServiceStandards() {
     pm_calendar_converter: '', 
     average_lookback: '' 
   });
+
+  // Unified Tab Highlight Helper (matching OperationsStandards)
+  const getTabClass = (isActive: boolean) =>
+    isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-solid border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-solid border-(--border-main)';
 
   const loadData = useCallback(async () => {
     try {
@@ -437,7 +443,7 @@ export function ServiceStandards() {
   const totalCurrentEntries = activeTab === 'standards' ? filteredStandards.length : activeTab === 'intervals' ? filteredIntervals.length : filteredThresholds.length;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 overflow-hidden">
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-3">
         <div className="flex items-center gap-3">
@@ -449,8 +455,10 @@ export function ServiceStandards() {
             <p className="text-xs sm:text-sm text-(--text-muted)">Configure preventive maintenance standards, intervals, and operational thresholds.</p>
           </div>
         </div>
+        {loading && <Loader2 className="w-5 h-5 text-(--text-primary) animate-spin" />}
       </div>
 
+      {/* Messages */}
       {successMsg && (
         <div className="shrink-0 bg-(--accent-subtle) border border-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg flex items-center gap-2.5 text-xs">
           <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -465,262 +473,264 @@ export function ServiceStandards() {
         </div>
       )}
 
-      {/* Clean Tab Navigation */}
-      <div className="shrink-0 flex border-b border-(--border-main) gap-2 overflow-x-auto">
-        <button
-          onClick={() => setActiveTab('standards')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'standards'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <ShieldAlert className="w-3.5 h-3.5" />
-          <span>Service Standards</span>
-        </button>
+      {/* Main Content Body Container (matching OperationsStandards) */}
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-solid border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
+        {/* Primary Category Navigation Tabs */}
+        <div className="shrink-0 flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('standards')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'standards')}`}
+          >
+            <ShieldAlert className={`w-4 h-4 ${activeTab === 'standards' ? '' : 'text-blue-500'}`} />
+            <span>Service Standards</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('intervals')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'intervals'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <Clock className="w-3.5 h-3.5" />
-          <span>Service Intervals</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('intervals')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'intervals')}`}
+          >
+            <Clock className={`w-4 h-4 ${activeTab === 'intervals' ? '' : 'text-amber-500'}`} />
+            <span>Service Intervals</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('thresholds')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'thresholds'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <Sliders className="w-3.5 h-3.5" />
-          <span>Service Thresholds</span>
-        </button>
-      </div>
-
-      {/* Tab Content Container */}
-      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-4 overflow-hidden space-y-3">
-        {/* Toolbar / Actions */}
-        <div className="shrink-0 flex flex-wrap items-center gap-2">
-          {activeTab === 'intervals' && (
-            <div className="flex items-center gap-2">
-              <Filter className="w-3.5 h-3.5 text-(--text-muted)" />
-              <CustomDropdown
-                value={selectedStandardFilter}
-                options={filterStandardOptions}
-                onChange={(val) => setSelectedStandardFilter(val)}
-                buttonClassName="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:border-(--text-primary)"
-              />
-            </div>
-          )}
-
-          {activeTab !== 'thresholds' ? (
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
-              <input
-                type="text"
-                placeholder={activeTab === 'standards' ? 'Filter standards...' : 'Search by PM Code or description...'}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
-              />
-            </div>
-          ) : (
-            <div className="flex-1"></div>
-          )}
-
-          {activeTab !== 'thresholds' && (
-            <button
-              onClick={handleOpenAdd}
-              className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Record</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setActiveTab('thresholds')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'thresholds')}`}
+          >
+            <Sliders className={`w-4 h-4 ${activeTab === 'thresholds' ? '' : 'text-emerald-500'}`} />
+            <span>Service Thresholds</span>
+          </button>
         </div>
 
-        {/* Scrollable Container with Sticky Table Headers */}
-        <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
-          {loading ? (
-            <div className="h-full flex items-center justify-center text-(--text-muted) gap-2 text-xs">
-              <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
-              <span>Loading records...</span>
-            </div>
-          ) : activeTab === 'standards' ? (
-            filteredStandards.length === 0 ? (
-              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
-                No service standards found. Click &quot;Add Record&quot; above.
+        {/* Tab Content Area */}
+        <div className="flex flex-col flex-1 min-h-0 space-y-2">
+          {/* Toolbar / Actions */}
+          <div className="shrink-0 flex flex-wrap items-center gap-2">
+            {activeTab === 'intervals' && (
+              <div className="flex items-center gap-2">
+                <Filter className="w-3.5 h-3.5 text-(--text-muted)" />
+                <CustomDropdown
+                  value={selectedStandardFilter}
+                  options={filterStandardOptions}
+                  onChange={(val) => setSelectedStandardFilter(val)}
+                  buttonClassName="bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-1.5 text-xs hover:border-slate-400 dark:hover:border-slate-500"
+                />
               </div>
-            ) : (
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
-                    <th className="py-2 px-3">Code</th>
-                    <th className="py-2 px-3">Description</th>
-                    <th className="py-2 px-3 text-right w-28">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                  {paginatedList.map((item) => {
-                    const std = item as StandardRecord;
-                    return (
-                      <tr key={std.service_standard_id} className="hover:bg-(--accent-subtle) transition-colors">
-                        <td className="py-2 px-3 font-semibold text-(--text-primary)">{std.code}</td>
-                        <td className="py-2 px-3 text-(--text-muted)">{std.description}</td>
-                        <td className="py-2 px-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleOpenEdit(std)}
-                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Edit2 className="w-3 h-3" /> Edit
-                            </button>
-                            <button
-                              onClick={() => handleDelete(std.service_standard_id, 'service_standards')}
-                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Trash2 className="w-3 h-3" /> Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )
-          ) : activeTab === 'intervals' ? (
-            filteredIntervals.length === 0 ? (
-              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
-                No service intervals found. Click &quot;Add Record&quot; above.
-              </div>
-            ) : (
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
-                    <th className="py-2 px-3">Standard Code</th>
-                    <th className="py-2 px-3">PM Code</th>
-                    <th className="py-2 px-3">Interval</th>
-                    <th className="py-2 px-3">Description</th>
-                    <th className="py-2 px-3">Status</th>
-                    <th className="py-2 px-3 text-right w-28">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                  {paginatedList.map((item) => {
-                    const intervalRec = item as IntervalRecord;
-                    const matchedStandard = standards.find(s => s.service_standard_id === intervalRec.service_standard_id);
-                    return (
-                      <tr key={intervalRec.service_interval_id} className="hover:bg-(--accent-subtle) transition-colors">
-                        <td className="py-2 px-3 font-semibold text-(--text-primary)">{matchedStandard ? matchedStandard.code : '—'}</td>
-                        <td className="py-2 px-3 font-semibold text-emerald-600 dark:text-emerald-400">{intervalRec.code}</td>
-                        <td className="py-2 px-3 font-semibold text-(--text-primary)">{intervalRec.interval ?? 'N/A'}</td>
-                        <td className="py-2 px-3 text-(--text-muted)">{intervalRec.description || '—'}</td>
-                        <td className="py-2 px-3">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${intervalRec.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main)'}`}>
-                            {intervalRec.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="py-2 px-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleOpenEdit(intervalRec)}
-                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Edit2 className="w-3 h-3" /> Edit
-                            </button>
-                            <button
-                              onClick={() => handleDelete(intervalRec.service_interval_id, 'service_intervals')}
-                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Trash2 className="w-3 h-3" /> Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )
-          ) : (
-            filteredThresholds.length === 0 ? (
-              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
-                No service thresholds found.
-              </div>
-            ) : (
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
-                    <th className="py-2 px-3">PM Threshold</th>
-                    <th className="py-2 px-3">PM Hrs Converter</th>
-                    <th className="py-2 px-3">PM Calendar Converter</th>
-                    <th className="py-2 px-3">Average Lookback</th>
-                    <th className="py-2 px-3">Updated At</th>
-                    <th className="py-2 px-3 text-right w-28">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                  {paginatedList.map((item) => {
-                    const thresholdRec = item as ThresholdRecord;
-                    return (
-                      <tr key={thresholdRec.thresholds_id} className="hover:bg-(--accent-subtle) transition-colors">
-                        <td className="py-2 px-3 font-semibold text-amber-600 dark:text-amber-400">{thresholdRec.pm_threshold ?? '0'}</td>
-                        <td className="py-2 px-3 text-(--text-secondary)">{thresholdRec.pm_hrs_converter ?? '—'}</td>
-                        <td className="py-2 px-3 text-(--text-secondary)">{thresholdRec.pm_calendar_converter ?? '—'}</td>
-                        <td className="py-2 px-3 text-(--text-secondary)">{thresholdRec.average_lookback ?? '—'}</td>
-                        <td className="py-2 px-3 font-mono text-[10px] text-(--text-muted)">
-                          {thresholdRec.updated_at ? new Date(thresholdRec.updated_at).toLocaleString() : '—'}
-                        </td>
-                        <td className="py-2 px-3 text-right">
-                          <button
-                            onClick={() => handleOpenEdit(thresholdRec)}
-                            className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
-                          >
-                            <Edit2 className="w-3 h-3" /> Edit
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )
-          )}
-        </div>
+            )}
 
-        {/* Pagination */}
-        {!loading && totalCurrentEntries > 0 && (
-          <div className="shrink-0 flex items-center justify-between pt-2 text-xs text-(--text-muted)">
-            <span>
-              Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalCurrentEntries)} of {totalCurrentEntries} entries
-            </span>
-            <div className="flex items-center gap-2">
+            {activeTab !== 'thresholds' ? (
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
+                <input
+                  type="text"
+                  placeholder={activeTab === 'standards' ? 'Filter standards...' : 'Search by PM Code or description...'}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            ) : (
+              <div className="flex-1"></div>
+            )}
+
+            {activeTab !== 'thresholds' && (
               <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
+                type="button"
+                onClick={handleOpenAdd}
+                className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
               >
-                <ChevronLeft className="w-3.5 h-3.5" />
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Record</span>
               </button>
-              <span>Page {currentPage} of {totalPages}</span>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage >= totalPages}
-                className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            )}
           </div>
-        )}
+
+          {/* Scrollable Container with Sticky Table Headers */}
+          <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
+            {loading ? (
+              <div className="h-full flex items-center justify-center text-(--text-muted) gap-2 text-xs">
+                <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
+                <span>Loading records...</span>
+              </div>
+            ) : activeTab === 'standards' ? (
+              filteredStandards.length === 0 ? (
+                <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                  No service standards found. Click &quot;Add Record&quot; above.
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                      <th className="py-2 px-3">Code</th>
+                      <th className="py-2 px-3">Description</th>
+                      <th className="py-2 px-3 text-right w-28">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                    {paginatedList.map((item) => {
+                      const std = item as StandardRecord;
+                      return (
+                        <tr key={std.service_standard_id} className="hover:bg-(--accent-subtle) transition-colors">
+                          <td className="py-2 px-3 font-semibold text-(--text-primary)">{std.code}</td>
+                          <td className="py-2 px-3 text-(--text-muted)">{std.description}</td>
+                          <td className="py-2 px-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEdit(std)}
+                                className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Edit2 className="w-3 h-3" /> Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(std.service_standard_id, 'service_standards')}
+                                className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" /> Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )
+            ) : activeTab === 'intervals' ? (
+              filteredIntervals.length === 0 ? (
+                <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                  No service intervals found. Click &quot;Add Record&quot; above.
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                      <th className="py-2 px-3">Standard Code</th>
+                      <th className="py-2 px-3">PM Code</th>
+                      <th className="py-2 px-3">Interval</th>
+                      <th className="py-2 px-3">Description</th>
+                      <th className="py-2 px-3">Status</th>
+                      <th className="py-2 px-3 text-right w-28">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                    {paginatedList.map((item) => {
+                      const intervalRec = item as IntervalRecord;
+                      const matchedStandard = standards.find(s => s.service_standard_id === intervalRec.service_standard_id);
+                      return (
+                        <tr key={intervalRec.service_interval_id} className="hover:bg-(--accent-subtle) transition-colors">
+                          <td className="py-2 px-3 font-semibold text-(--text-primary)">{matchedStandard ? matchedStandard.code : '—'}</td>
+                          <td className="py-2 px-3 font-semibold text-emerald-600 dark:text-emerald-400">{intervalRec.code}</td>
+                          <td className="py-2 px-3 font-semibold text-(--text-primary)">{intervalRec.interval ?? 'N/A'}</td>
+                          <td className="py-2 px-3 text-(--text-muted)">{intervalRec.description || '—'}</td>
+                          <td className="py-2 px-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${intervalRec.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main)'}`}>
+                              {intervalRec.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEdit(intervalRec)}
+                                className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Edit2 className="w-3 h-3" /> Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(intervalRec.service_interval_id, 'service_intervals')}
+                                className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" /> Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )
+            ) : (
+              filteredThresholds.length === 0 ? (
+                <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                  No service thresholds found.
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                      <th className="py-2 px-3">PM Threshold</th>
+                      <th className="py-2 px-3">PM Hrs Converter</th>
+                      <th className="py-2 px-3">PM Calendar Converter</th>
+                      <th className="py-2 px-3">Average Lookback</th>
+                      <th className="py-2 px-3">Updated At</th>
+                      <th className="py-2 px-3 text-right w-28">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                    {paginatedList.map((item) => {
+                      const thresholdRec = item as ThresholdRecord;
+                      return (
+                        <tr key={thresholdRec.thresholds_id} className="hover:bg-(--accent-subtle) transition-colors">
+                          <td className="py-2 px-3 font-semibold text-amber-600 dark:text-amber-400">{thresholdRec.pm_threshold ?? '0'}</td>
+                          <td className="py-2 px-3 text-(--text-secondary)">{thresholdRec.pm_hrs_converter ?? '—'}</td>
+                          <td className="py-2 px-3 text-(--text-secondary)">{thresholdRec.pm_calendar_converter ?? '—'}</td>
+                          <td className="py-2 px-3 text-(--text-secondary)">{thresholdRec.average_lookback ?? '—'}</td>
+                          <td className="py-2 px-3 font-mono text-[10px] text-(--text-muted)">
+                            {thresholdRec.updated_at ? new Date(thresholdRec.updated_at).toLocaleString() : '—'}
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEdit(thresholdRec)}
+                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Edit2 className="w-3 h-3" /> Edit
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )
+            )}
+          </div>
+
+          {/* Pagination */}
+          {!loading && totalCurrentEntries > 0 && (
+            <div className="shrink-0 flex items-center justify-between pt-2 text-xs text-(--text-muted)">
+              <span>
+                Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalCurrentEntries)} of {totalCurrentEntries} entries
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <span>Page {currentPage} of {totalPages}</span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage >= totalPages}
+                  className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* FORM MODAL */}
@@ -732,6 +742,7 @@ export function ServiceStandards() {
                 {editingId ? 'Edit Record' : 'Add New Record'}
               </h3>
               <button 
+                type="button"
                 onClick={() => setIsModalOpen(false)}
                 className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer p-1"
               >
@@ -753,7 +764,7 @@ export function ServiceStandards() {
                         value={standardForm.code}
                         onChange={(e) => setStandardForm({ ...standardForm, code: e.target.value })}
                         placeholder="e.g. PM_STD_01"
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                     <div>
@@ -766,7 +777,7 @@ export function ServiceStandards() {
                         value={standardForm.description}
                         onChange={(e) => setStandardForm({ ...standardForm, description: e.target.value })}
                         placeholder="Describe maintenance standard..."
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                   </>
@@ -782,7 +793,7 @@ export function ServiceStandards() {
                         value={intervalForm.service_standard_id}
                         options={modalStandardOptions}
                         onChange={(val) => setIntervalForm({ ...intervalForm, service_standard_id: val })}
-                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:border-(--text-primary)"
+                        buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs hover:border-slate-400 dark:hover:border-slate-500"
                       />
                     </div>
                     <div>
@@ -793,7 +804,7 @@ export function ServiceStandards() {
                         value={intervalForm.code}
                         options={pmCodeOptions}
                         onChange={(val) => setIntervalForm({ ...intervalForm, code: val })}
-                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:border-(--text-primary)"
+                        buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs hover:border-slate-400 dark:hover:border-slate-500"
                       />
                     </div>
                     <div>
@@ -804,7 +815,7 @@ export function ServiceStandards() {
                         value={intervalForm.interval}
                         onChange={(e) => setIntervalForm({ ...intervalForm, interval: e.target.value })}
                         placeholder="e.g. 5000"
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                     <div>
@@ -814,7 +825,7 @@ export function ServiceStandards() {
                         value={intervalForm.description || ''}
                         onChange={(e) => setIntervalForm({ ...intervalForm, description: e.target.value })}
                         placeholder="Optional details..."
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                     <div className="flex items-center gap-2 pt-1">
@@ -823,7 +834,7 @@ export function ServiceStandards() {
                         id="is_active_chk"
                         checked={intervalForm.is_active}
                         onChange={(e) => setIntervalForm({ ...intervalForm, is_active: e.target.checked })}
-                        className="rounded bg-(--bg-elevated) border border-(--border-main) text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
+                        className="rounded bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
                       />
                       <label htmlFor="is_active_chk" className="text-xs font-semibold text-(--text-primary) cursor-pointer">Is Active</label>
                     </div>
@@ -843,7 +854,7 @@ export function ServiceStandards() {
                         value={thresholdForm.pm_threshold}
                         onChange={(e) => setThresholdForm({ ...thresholdForm, pm_threshold: e.target.value })}
                         placeholder="e.g. 1000"
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                     <div>
@@ -854,7 +865,7 @@ export function ServiceStandards() {
                         value={thresholdForm.pm_hrs_converter}
                         onChange={(e) => setThresholdForm({ ...thresholdForm, pm_hrs_converter: e.target.value })}
                         placeholder="e.g. 1.0"
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                     <div>
@@ -865,7 +876,7 @@ export function ServiceStandards() {
                         value={thresholdForm.pm_calendar_converter}
                         onChange={(e) => setThresholdForm({ ...thresholdForm, pm_calendar_converter: e.target.value })}
                         placeholder="e.g. 30"
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                     <div>
@@ -876,7 +887,7 @@ export function ServiceStandards() {
                         value={thresholdForm.average_lookback}
                         onChange={(e) => setThresholdForm({ ...thresholdForm, average_lookback: e.target.value })}
                         placeholder="e.g. 30"
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                   </>

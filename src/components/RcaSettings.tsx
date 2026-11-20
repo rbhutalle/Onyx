@@ -5,10 +5,10 @@ import {
   Plus, 
   Trash2, 
   Edit2, 
-  AlertTriangle, 
+  AlertOctagon, 
   UserCheck, 
   Briefcase, 
-  ShieldAlert, 
+  UserX, 
   Search, 
   X, 
   CheckCircle, 
@@ -95,7 +95,7 @@ function CustomDropdown<T extends string | number>({
 
       {isOpen && !disabled && (
         <div
-          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-(--border-main) bg-(--bg-elevated) shadow-xl py-1 ${
+          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-slate-300 dark:border-slate-600 bg-(--bg-elevated) shadow-xl py-1 ${
             openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
           } ${menuClassName}`}
         >
@@ -109,10 +109,10 @@ function CustomDropdown<T extends string | number>({
                   onChange(opt.value);
                   setIsOpen(false);
                 }}
-                className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-left text-xs transition-colors cursor-pointer ${
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs transition-colors cursor-pointer ${
                   isSelected
-                    ? 'bg-(--accent-subtle) text-(--text-primary) font-bold'
-                    : 'text-(--text-primary) hover:bg-(--accent-subtle)'
+                    ? 'bg-(--accent-subtle) text-(--text-primary) font-semibold'
+                    : 'text-(--text-secondary) hover:bg-(--accent-subtle) hover:text-(--text-primary)'
                 }`}
               >
                 <span className="truncate">{opt.label}</span>
@@ -231,6 +231,12 @@ export function RcaSettings() {
   const [detailForm, setDetailForm] = useState({ code: '', description: '' });
 
   const currentConfig = TAB_CONFIGS[activeTab];
+
+  // Unified Tab & Sub-Tab Highlight Helper (matching FmeaSettings)
+  const getTabClass = (isActive: boolean) =>
+    isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-solid border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-solid border-(--border-main)';
 
   // Fetch Master List
   const fetchMasterList = useCallback(async () => {
@@ -488,7 +494,7 @@ export function RcaSettings() {
       { value: '', label: 'All Categories (Filter)' },
       ...masterList.map((m) => ({
         value: m.id,
-        label: `${m.code}\n${m.description}`
+        label: `${m.code} - ${m.description}`
       }))
     ],
     [masterList]
@@ -499,7 +505,7 @@ export function RcaSettings() {
       { value: '', label: 'Select Parent Category...' },
       ...masterList.map((m) => ({
         value: m.id,
-        label: `${m.code}\n${m.description}`
+        label: `${m.code} - ${m.description}`
       }))
     ],
     [masterList]
@@ -537,8 +543,10 @@ export function RcaSettings() {
 
   const totalDetailPages = Math.ceil(filteredDetailList.length / detailPageSize) || 1;
 
+  const isLoading = loadingMaster || loadingDetail;
+
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 overflow-hidden">
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-3">
         <div className="flex items-center gap-3">
@@ -550,6 +558,7 @@ export function RcaSettings() {
             <p className="text-xs sm:text-sm text-(--text-muted)">Configure master categories and detail breakdowns for incident classification.</p>
           </div>
         </div>
+        {isLoading && <Loader2 className="w-5 h-5 text-(--text-primary) animate-spin" />}
       </div>
 
       {/* Messages */}
@@ -567,81 +576,66 @@ export function RcaSettings() {
         </div>
       )}
 
-      {/* Main Category Navigation Tabs */}
-      <div className="shrink-0 flex border-b border-(--border-main) gap-2 overflow-x-auto">
-        <button
-          onClick={() => { setActiveTab('conditions'); setActiveSubTab('categories'); }}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'conditions' 
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' 
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <AlertTriangle className="w-3.5 h-3.5" />
-          <span>Unsafe Conditions</span>
-        </button>
+      {/* Main Content Body Container (matching FmeaSettings) */}
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-solid border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
+        {/* Primary Category Navigation Tabs */}
+        <div className="shrink-0 flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1">
+          <button
+            type="button"
+            onClick={() => { setActiveTab('conditions'); setActiveSubTab('categories'); }}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'conditions')}`}
+          >
+            <AlertOctagon className={`w-4 h-4 ${activeTab === 'conditions' ? '' : 'text-red-500'}`} />
+            <span>Unsafe Conditions</span>
+          </button>
 
-        <button
-          onClick={() => { setActiveTab('acts'); setActiveSubTab('categories'); }}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'acts' 
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' 
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <ShieldAlert className="w-3.5 h-3.5" />
-          <span>Unsafe Acts</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => { setActiveTab('acts'); setActiveSubTab('categories'); }}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'acts')}`}
+          >
+            <UserX className={`w-4 h-4 ${activeTab === 'acts' ? '' : 'text-amber-500'}`} />
+            <span>Unsafe Acts</span>
+          </button>
 
-        <button
-          onClick={() => { setActiveTab('factors'); setActiveSubTab('categories'); }}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'factors' 
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' 
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <UserCheck className="w-3.5 h-3.5" />
-          <span>Personal Factors</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => { setActiveTab('factors'); setActiveSubTab('categories'); }}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'factors')}`}
+          >
+            <UserCheck className={`w-4 h-4 ${activeTab === 'factors' ? '' : 'text-indigo-500'}`} />
+            <span>Personal Factors</span>
+          </button>
 
-        <button
-          onClick={() => { setActiveTab('causes'); setActiveSubTab('categories'); }}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'causes' 
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' 
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <Briefcase className="w-3.5 h-3.5" />
-          <span>Work Related Causes</span>
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => { setActiveTab('causes'); setActiveSubTab('categories'); }}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'causes')}`}
+          >
+            <Briefcase className={`w-4 h-4 ${activeTab === 'causes' ? '' : 'text-blue-500'}`} />
+            <span>Work Related Causes</span>
+          </button>
+        </div>
 
-      {/* Main Container Body with Sub-Tabs */}
-      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-4 overflow-hidden space-y-3">
         {/* Sub-Tab Navigation Bar */}
-        <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-2">
-          <div className="flex bg-(--bg-elevated) p-1 rounded-lg border border-(--border-main) gap-1">
-            <button
-              onClick={() => setActiveSubTab('categories')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-                activeSubTab === 'categories' ? 'bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) shadow' : 'text-(--text-muted) hover:text-(--text-primary)'
-              }`}
-            >
-              <Database className="w-3.5 h-3.5" />
-              <span>Categories ({currentConfig.label})</span>
-            </button>
-            <button
-              onClick={() => setActiveSubTab('details')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-                activeSubTab === 'details' ? 'bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) shadow' : 'text-(--text-muted) hover:text-(--text-primary)'
-              }`}
-            >
-              <ListTree className="w-3.5 h-3.5" />
-              <span>Detail Breakdowns ({detailList.length})</span>
-            </button>
-          </div>
+        <div className="shrink-0 flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1">
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('categories')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeSubTab === 'categories')}`}
+          >
+            <Database className={`w-4 h-4 ${activeSubTab === 'categories' ? '' : 'text-blue-500'}`} />
+            <span>Categories ({masterList.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('details')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeSubTab === 'details')}`}
+          >
+            <ListTree className={`w-4 h-4 ${activeSubTab === 'details' ? '' : 'text-emerald-500'}`} />
+            <span>Detail Breakdowns ({detailList.length})</span>
+          </button>
         </div>
 
         {/* SUB-TAB 1: CATEGORIES (MASTER TABLE) */}
@@ -649,16 +643,17 @@ export function RcaSettings() {
           <div className="flex flex-col flex-1 min-h-0 space-y-2">
             <div className="shrink-0 flex items-center gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
+                <Search className="w-3.5 h-3.5 text-(--text-muted) absolute left-3 top-2.5" />
                 <input
                   type="text"
                   placeholder="Filter categories..."
                   value={masterSearch}
                   onChange={(e) => setMasterSearch(e.target.value)}
-                  className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
+                  className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
               </div>
               <button
+                type="button"
                 onClick={() => {
                   setMasterEditingId(null);
                   setMasterForm({ code: '', description: '' });
@@ -671,7 +666,7 @@ export function RcaSettings() {
               </button>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
               {loadingMaster ? (
                 <div className="h-full flex items-center justify-center text-(--text-muted) gap-2 text-xs">
                   <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
@@ -698,6 +693,7 @@ export function RcaSettings() {
                         <td className="py-2 px-3 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button
+                              type="button"
                               onClick={() => {
                                 setMasterEditingId(item.id);
                                 setMasterForm({ code: item.code, description: item.description });
@@ -708,6 +704,7 @@ export function RcaSettings() {
                               <Edit2 className="w-3 h-3" /> Edit
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleDeleteMaster(item.id)}
                               className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                             >
@@ -728,6 +725,7 @@ export function RcaSettings() {
                 <span>Showing {(masterPage - 1) * masterPageSize + 1} to {Math.min(masterPage * masterPageSize, filteredMasterList.length)} of {filteredMasterList.length} entries</span>
                 <div className="flex items-center gap-2">
                   <button
+                    type="button"
                     onClick={() => setMasterPage(prev => Math.max(prev - 1, 1))}
                     disabled={masterPage === 1}
                     className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
@@ -736,6 +734,7 @@ export function RcaSettings() {
                   </button>
                   <span>Page {masterPage} of {totalMasterPages}</span>
                   <button
+                    type="button"
                     onClick={() => setMasterPage(prev => Math.min(prev + 1, totalMasterPages))}
                     disabled={masterPage >= totalMasterPages}
                     className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
@@ -753,13 +752,13 @@ export function RcaSettings() {
           <div className="flex flex-col flex-1 min-h-0 space-y-2">
             <div className="shrink-0 flex gap-2 flex-wrap sm:flex-nowrap items-center">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
+                <Search className="w-3.5 h-3.5 text-(--text-muted) absolute left-3 top-2.5" />
                 <input
                   type="text"
                   placeholder="Filter detail items..."
                   value={detailSearch}
                   onChange={(e) => setDetailSearch(e.target.value)}
-                  className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
+                  className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
               </div>
               <div className="w-full sm:w-64">
@@ -767,10 +766,11 @@ export function RcaSettings() {
                   value={detailFilterParentId}
                   options={detailFilterParentOptions}
                   onChange={(val) => setDetailFilterParentId(val)}
-                  buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:border-(--text-primary)"
+                  buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-1.5 text-xs hover:border-slate-400 dark:hover:border-slate-500"
                 />
               </div>
               <button
+                type="button"
                 onClick={handleOpenAddDetail}
                 className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
               >
@@ -779,7 +779,7 @@ export function RcaSettings() {
               </button>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
               {loadingDetail ? (
                 <div className="h-full flex items-center justify-center text-(--text-muted) gap-2 text-xs">
                   <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
@@ -806,18 +806,20 @@ export function RcaSettings() {
                         <tr key={item.id} className="hover:bg-(--accent-subtle) transition-colors">
                           <td className="py-2 px-3 font-mono font-bold text-(--text-primary)">{item.code}</td>
                           <td className="py-2 px-3 text-(--text-muted) font-medium">
-                            {parentCat ? `${parentCat.code}\n${parentCat.description}` : '—'}
+                            {parentCat ? `${parentCat.code} - ${parentCat.description}` : '—'}
                           </td>
                           <td className="py-2 px-3 text-(--text-primary)">{item.description}</td>
                           <td className="py-2 px-3 text-right">
                             <div className="flex items-center justify-end gap-2">
                               <button
+                                type="button"
                                 onClick={() => handleOpenEditDetail(item)}
                                 className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
                               >
                                 <Edit2 className="w-3 h-3" /> Edit
                               </button>
                               <button
+                                type="button"
                                 onClick={() => handleDeleteDetail(item.id)}
                                 className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                               >
@@ -839,6 +841,7 @@ export function RcaSettings() {
                 <span>Showing {(detailPage - 1) * detailPageSize + 1} to {Math.min(detailPage * detailPageSize, filteredDetailList.length)} of {filteredDetailList.length} entries</span>
                 <div className="flex items-center gap-2">
                   <button
+                    type="button"
                     onClick={() => setDetailPage(prev => Math.max(prev - 1, 1))}
                     disabled={detailPage === 1}
                     className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
@@ -847,6 +850,7 @@ export function RcaSettings() {
                   </button>
                   <span>Page {detailPage} of {totalDetailPages}</span>
                   <button
+                    type="button"
                     onClick={() => setDetailPage(prev => Math.min(prev + 1, totalDetailPages))}
                     disabled={detailPage >= totalDetailPages}
                     className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
@@ -869,6 +873,7 @@ export function RcaSettings() {
                 {masterEditingId ? 'Edit Category' : 'Add Category'} ({currentConfig.label})
               </h3>
               <button
+                type="button"
                 onClick={() => setIsMasterModalOpen(false)}
                 className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer p-1"
               >
@@ -888,7 +893,7 @@ export function RcaSettings() {
                     placeholder="e.g. A1 or COND-01"
                     value={masterForm.code}
                     onChange={(e) => setMasterForm({ ...masterForm, code: e.target.value })}
-                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-(--text-primary)"
+                    className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
 
@@ -902,7 +907,7 @@ export function RcaSettings() {
                     placeholder="Enter category description..."
                     value={masterForm.description}
                     onChange={(e) => setMasterForm({ ...masterForm, description: e.target.value })}
-                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                    className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -936,6 +941,7 @@ export function RcaSettings() {
                 {detailEditingId ? 'Edit Detail Item' : 'Add Detail Item'}
               </h3>
               <button
+                type="button"
                 onClick={() => setIsDetailModalOpen(false)}
                 className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer p-1"
               >
@@ -958,7 +964,7 @@ export function RcaSettings() {
                       const prefix = parentRec ? `${parentRec.code}-` : '';
                       setDetailForm(prev => ({ ...prev, code: prefix }));
                     }}
-                    buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:border-(--text-primary)"
+                    buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs hover:border-slate-400 dark:hover:border-slate-500"
                   />
                 </div>
 
@@ -972,7 +978,7 @@ export function RcaSettings() {
                     placeholder="e.g. A1-001"
                     value={detailForm.code}
                     onChange={handleDetailCodeChange}
-                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-(--text-primary)"
+                    className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
 
@@ -986,7 +992,7 @@ export function RcaSettings() {
                     placeholder="Enter specific breakdown description..."
                     value={detailForm.description}
                     onChange={(e) => setDetailForm({ ...detailForm, description: e.target.value })}
-                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                    className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
               </div>

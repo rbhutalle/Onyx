@@ -166,6 +166,8 @@ export function DailyTripAssignment() {
   const [tripDate, setTripDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [details, setDetails] = useState<TripDetailInput[]>([]);
 
+  const todayDateStr = new Date().toISOString().split('T')[0];
+
   // Fetch Available Drivers & Vehicles for the selected Trip Date
   const loadAvailableResources = useCallback(async (dateStr: string, currentEditingDriverId?: string, currentEditingVehicleId?: string, currentEditingTripId?: string) => {
     try {
@@ -300,6 +302,8 @@ export function DailyTripAssignment() {
   };
 
   const handleOpenEdit = (trip: TripAssignmentRecord) => {
+    if (trip.trip_date !== todayDateStr) return;
+
     setEditingId(trip.trip_id);
     setDriverId(trip.driver_id);
     setVehicleId(trip.vehicle_id || '');
@@ -585,6 +589,7 @@ export function DailyTripAssignment() {
                     const driverName = item.employees?.employee_name || 'Unassigned Driver';
                     const driverCode = item.employees?.employee_code;
                     const vehiclePlate = item.vehicles?.plate_no || 'No Vehicle Assigned';
+                    const isCurrentDate = item.trip_date === todayDateStr;
 
                     return (
                       <tr key={item.trip_id} className="hover:bg-(--accent-subtle) transition-colors">
@@ -604,12 +609,20 @@ export function DailyTripAssignment() {
                         <td className="py-2 px-3 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button
+                              type="button"
+                              disabled={!isCurrentDate}
                               onClick={() => handleOpenEdit(item)}
-                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              className={`inline-flex items-center gap-1 ${
+                                isCurrentDate
+                                  ? 'text-(--text-primary) hover:underline cursor-pointer'
+                                  : 'text-(--text-muted) opacity-40 cursor-not-allowed'
+                              }`}
+                              title={isCurrentDate ? 'Edit trip assignment' : 'Cannot edit records from non-current dates'}
                             >
                               <Edit2 className="w-3 h-3" /> Edit
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleDelete(item.trip_id)}
                               className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                             >

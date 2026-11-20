@@ -93,7 +93,7 @@ function CustomDropdown<T extends string | number>({
 
       {isOpen && !disabled && (
         <div
-          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-(--border-main) bg-(--bg-elevated) shadow-xl py-1 ${
+          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-slate-300 dark:border-slate-600 bg-(--bg-elevated) shadow-xl py-1 ${
             openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
           } ${menuClassName}`}
         >
@@ -189,6 +189,12 @@ export function VehicleModels() {
     name: '', 
     is_active: true 
   });
+
+  // Unified Tab Highlight Helper (matching SystemComponents)
+  const getTabClass = (isActive: boolean) =>
+    isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-solid border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-solid border-(--border-main)';
 
   const loadData = useCallback(async () => {
     try {
@@ -432,7 +438,7 @@ export function VehicleModels() {
   const totalCurrentEntries = activeTab === 'makes' ? filteredMakes.length : activeTab === 'models' ? filteredModels.length : filteredTypes.length;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 overflow-hidden">
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-3">
         <div className="flex items-center gap-3">
@@ -444,8 +450,10 @@ export function VehicleModels() {
             <p className="text-xs sm:text-sm text-(--text-muted)">Manage manufacturers (makes), equipment models, and equipment classifications (types).</p>
           </div>
         </div>
+        {loading && <Loader2 className="w-5 h-5 text-(--text-primary) animate-spin" />}
       </div>
 
+      {/* Messages */}
       {successMsg && (
         <div className="shrink-0 bg-(--accent-subtle) border border-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg flex items-center gap-2.5 text-xs">
           <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -460,266 +468,269 @@ export function VehicleModels() {
         </div>
       )}
 
-      {/* Clean Tab Navigation */}
-      <div className="shrink-0 flex border-b border-(--border-main) gap-2 overflow-x-auto">
-        <button
-          onClick={() => setActiveTab('makes')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'makes'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <Tag className="w-3.5 h-3.5" />
-          <span>Equipment Makes</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('models')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'models'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <Car className="w-3.5 h-3.5" />
-          <span>Equipment Models</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('types')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'types'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>Equipment Types</span>
-        </button>
-      </div>
-
-      {/* Tab Content Container */}
-      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-4 overflow-hidden space-y-3">
-        <div className="shrink-0 flex flex-wrap items-center gap-2">
-          {activeTab === 'models' && (
-            <div className="flex items-center gap-2">
-              <Filter className="w-3.5 h-3.5 text-(--text-muted)" />
-              <CustomDropdown
-                value={selectedMakeFilter}
-                options={filterMakeOptions}
-                onChange={(val) => setSelectedMakeFilter(val)}
-                buttonClassName="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:border-(--text-primary)"
-              />
-            </div>
-          )}
-
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
-            <input
-              type="text"
-              placeholder={activeTab === 'makes' ? 'Filter makes...' : activeTab === 'models' ? 'Filter models...' : 'Filter types...'}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
-            />
-          </div>
+      {/* Main Content Body Container (matching SystemComponents) */}
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-solid border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
+        {/* Primary Category Navigation Tabs */}
+        <div className="shrink-0 flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('makes')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'makes')}`}
+          >
+            <Tag className={`w-4 h-4 ${activeTab === 'makes' ? '' : 'text-blue-500'}`} />
+            <span>Equipment Makes</span>
+          </button>
 
           <button
-            onClick={handleOpenAdd}
-            className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
+            type="button"
+            onClick={() => setActiveTab('models')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'models')}`}
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Record</span>
+            <Car className={`w-4 h-4 ${activeTab === 'models' ? '' : 'text-amber-500'}`} />
+            <span>Equipment Models</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('types')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'types')}`}
+          >
+            <Layers className={`w-4 h-4 ${activeTab === 'types' ? '' : 'text-emerald-500'}`} />
+            <span>Equipment Types</span>
           </button>
         </div>
 
-        {/* Scrollable Container with Sticky Table Headers */}
-        <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
-          {loading ? (
-            <div className="h-full flex items-center justify-center text-(--text-muted) gap-2 text-xs">
-              <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
-              <span>Loading records...</span>
+        {/* Tab Content Area */}
+        <div className="flex flex-col flex-1 min-h-0 space-y-2">
+          <div className="shrink-0 flex flex-wrap items-center gap-2">
+            {activeTab === 'models' && (
+              <div className="flex items-center gap-2">
+                <Filter className="w-3.5 h-3.5 text-(--text-muted)" />
+                <CustomDropdown
+                  value={selectedMakeFilter}
+                  options={filterMakeOptions}
+                  onChange={(val) => setSelectedMakeFilter(val)}
+                  buttonClassName="bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-1.5 text-xs hover:border-slate-400 dark:hover:border-slate-500"
+                />
+              </div>
+            )}
+
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
+              <input
+                type="text"
+                placeholder={activeTab === 'makes' ? 'Filter makes...' : activeTab === 'models' ? 'Filter models...' : 'Filter types...'}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
             </div>
-          ) : activeTab === 'makes' ? (
-            filteredMakes.length === 0 ? (
-              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
-                No Equipment makes found. Click &quot;Add Record&quot; above.
+
+            <button
+              type="button"
+              onClick={handleOpenAdd}
+              className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Record</span>
+            </button>
+          </div>
+
+          {/* Scrollable Container with Sticky Table Headers */}
+          <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
+            {loading ? (
+              <div className="h-full flex items-center justify-center text-(--text-muted) gap-2 text-xs">
+                <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
+                <span>Loading records...</span>
               </div>
+            ) : activeTab === 'makes' ? (
+              filteredMakes.length === 0 ? (
+                <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                  No Equipment makes found. Click &quot;Add Record&quot; above.
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                      <th className="py-2 px-3">Make Name</th>
+                      <th className="py-2 px-3">Status</th>
+                      <th className="py-2 px-3 text-right w-28">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                    {paginatedList.map((item) => {
+                      const make = item as VehicleMakeRecord;
+                      return (
+                        <tr key={make.make_id} className="hover:bg-(--accent-subtle) transition-colors">
+                          <td className="py-2 px-3 font-semibold text-(--text-primary)">{make.name}</td>
+                          <td className="py-2 px-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${make.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main)'}`}>
+                              {make.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEdit(make)}
+                                className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Edit2 className="w-3 h-3" /> Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(make.make_id, 'vehicle_makes', 'make_id')}
+                                className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" /> Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )
+            ) : activeTab === 'models' ? (
+              filteredModels.length === 0 ? (
+                <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                  No equipment models found. Click &quot;Add Record&quot; above.
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                      <th className="py-2 px-3">Model Name</th>
+                      <th className="py-2 px-3">Make</th>
+                      <th className="py-2 px-3">Type</th>
+                      <th className="py-2 px-3">Status</th>
+                      <th className="py-2 px-3 text-right w-28">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                    {paginatedList.map((item) => {
+                      const model = item as VehicleModelRecord;
+                      const matchedMake = makes.find((m) => m.make_id === model.make_id);
+                      const matchedType = types.find((t) => t.type_id === model.type_id);
+                      return (
+                        <tr key={model.model_id} className="hover:bg-(--accent-subtle) transition-colors">
+                          <td className="py-2 px-3 font-semibold text-(--text-primary)">{model.name}</td>
+                          <td className="py-2 px-3 text-(--text-primary) font-medium">{matchedMake ? matchedMake.name : '—'}</td>
+                          <td className="py-2 px-3 text-(--text-secondary) font-medium">
+                            {matchedType ? `${matchedType.code}\n${matchedType.description}` : '—'}
+                          </td>
+                          <td className="py-2 px-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${model.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main)'}`}>
+                              {model.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEdit(model)}
+                                className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Edit2 className="w-3 h-3" /> Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(model.model_id, 'vehicle_models', 'model_id')}
+                                className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" /> Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )
             ) : (
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
-                    <th className="py-2 px-3">Make Name</th>
-                    <th className="py-2 px-3">Status</th>
-                    <th className="py-2 px-3 text-right w-28">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                  {paginatedList.map((item) => {
-                    const make = item as VehicleMakeRecord;
-                    return (
-                      <tr key={make.make_id} className="hover:bg-(--accent-subtle) transition-colors">
-                        <td className="py-2 px-3 font-semibold text-(--text-primary)">{make.name}</td>
-                        <td className="py-2 px-3">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${make.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main)'}`}>
-                            {make.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="py-2 px-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleOpenEdit(make)}
-                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Edit2 className="w-3 h-3" /> Edit
-                            </button>
-                            <button
-                              onClick={() => handleDelete(make.make_id, 'vehicle_makes', 'make_id')}
-                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Trash2 className="w-3 h-3" /> Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )
-          ) : activeTab === 'models' ? (
-            filteredModels.length === 0 ? (
-              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
-                No equipment models found. Click &quot;Add Record&quot; above.
+              filteredTypes.length === 0 ? (
+                <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                  No Equipment types found. Click &quot;Add Record&quot; above.
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                      <th className="py-2 px-3">Type Code</th>
+                      <th className="py-2 px-3">Description</th>
+                      <th className="py-2 px-3">Status</th>
+                      <th className="py-2 px-3 text-right w-28">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                    {paginatedList.map((item) => {
+                      const typeRec = item as VehicleTypeRecord;
+                      return (
+                        <tr key={typeRec.type_id} className="hover:bg-(--accent-subtle) transition-colors">
+                          <td className="py-2 px-3 font-semibold text-(--text-primary)">{typeRec.code}</td>
+                          <td className="py-2 px-3 text-(--text-muted)">{typeRec.description}</td>
+                          <td className="py-2 px-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${typeRec.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main)'}`}>
+                              {typeRec.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEdit(typeRec)}
+                                className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Edit2 className="w-3 h-3" /> Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(typeRec.type_id, 'vehicle_types', 'type_id')}
+                                className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" /> Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )
+            )}
+          </div>
+
+          {/* Pagination */}
+          {!loading && totalCurrentEntries > 0 && (
+            <div className="shrink-0 flex items-center justify-between pt-2 text-xs text-(--text-muted)">
+              <span>
+                Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalCurrentEntries)} of {totalCurrentEntries} entries
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <span>Page {currentPage} of {totalPages}</span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage >= totalPages}
+                  className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
               </div>
-            ) : (
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
-                    <th className="py-2 px-3">Model Name</th>
-                    <th className="py-2 px-3">Make</th>
-                    <th className="py-2 px-3">Type</th>
-                    <th className="py-2 px-3">Status</th>
-                    <th className="py-2 px-3 text-right w-28">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                  {paginatedList.map((item) => {
-                    const model = item as VehicleModelRecord;
-                    const matchedMake = makes.find((m) => m.make_id === model.make_id);
-                    const matchedType = types.find((t) => t.type_id === model.type_id);
-                    return (
-                      <tr key={model.model_id} className="hover:bg-(--accent-subtle) transition-colors">
-                        <td className="py-2 px-3 font-semibold text-(--text-primary)">{model.name}</td>
-                        <td className="py-2 px-3 text-(--text-primary) font-medium">{matchedMake ? matchedMake.name : '—'}</td>
-                        <td className="py-2 px-3 text-(--text-secondary) font-medium">
-                          {matchedType ? `${matchedType.code}\n${matchedType.description}` : '—'}
-                        </td>
-                        <td className="py-2 px-3">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${model.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main)'}`}>
-                            {model.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="py-2 px-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleOpenEdit(model)}
-                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Edit2 className="w-3 h-3" /> Edit
-                            </button>
-                            <button
-                              onClick={() => handleDelete(model.model_id, 'vehicle_models', 'model_id')}
-                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Trash2 className="w-3 h-3" /> Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )
-          ) : (
-            filteredTypes.length === 0 ? (
-              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
-                No Equipment types found. Click &quot;Add Record&quot; above.
-              </div>
-            ) : (
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
-                    <th className="py-2 px-3">Type Code</th>
-                    <th className="py-2 px-3">Description</th>
-                    <th className="py-2 px-3">Status</th>
-                    <th className="py-2 px-3 text-right w-28">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                  {paginatedList.map((item) => {
-                    const typeRec = item as VehicleTypeRecord;
-                    return (
-                      <tr key={typeRec.type_id} className="hover:bg-(--accent-subtle) transition-colors">
-                        <td className="py-2 px-3 font-semibold text-(--text-primary)">{typeRec.code}</td>
-                        <td className="py-2 px-3 text-(--text-muted)">{typeRec.description}</td>
-                        <td className="py-2 px-3">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${typeRec.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main)'}`}>
-                            {typeRec.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="py-2 px-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleOpenEdit(typeRec)}
-                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Edit2 className="w-3 h-3" /> Edit
-                            </button>
-                            <button
-                              onClick={() => handleDelete(typeRec.type_id, 'vehicle_types', 'type_id')}
-                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Trash2 className="w-3 h-3" /> Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )
+            </div>
           )}
         </div>
-
-        {/* Pagination */}
-        {!loading && totalCurrentEntries > 0 && (
-          <div className="shrink-0 flex items-center justify-between pt-2 text-xs text-(--text-muted)">
-            <span>
-              Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalCurrentEntries)} of {totalCurrentEntries} entries
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <span>Page {currentPage} of {totalPages}</span>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage >= totalPages}
-                className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* FORM MODAL */}
@@ -731,6 +742,7 @@ export function VehicleModels() {
                 {editingId ? 'Edit Record' : 'Add New Record'}
               </h3>
               <button 
+                type="button"
                 onClick={() => setIsModalOpen(false)}
                 className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer p-1"
               >
@@ -752,7 +764,7 @@ export function VehicleModels() {
                         value={makeForm.name}
                         onChange={(e) => setMakeForm({ ...makeForm, name: e.target.value })}
                         placeholder="e.g. Toyota, Ford"
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                     <div className="flex items-center gap-2 pt-1">
@@ -761,7 +773,7 @@ export function VehicleModels() {
                         id="make_active_chk"
                         checked={makeForm.is_active}
                         onChange={(e) => setMakeForm({ ...makeForm, is_active: e.target.checked })}
-                        className="rounded bg-(--bg-elevated) border border-(--border-main) text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
+                        className="rounded bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
                       />
                       <label htmlFor="make_active_chk" className="text-xs font-semibold text-(--text-primary) cursor-pointer">Is Active</label>
                     </div>
@@ -778,7 +790,7 @@ export function VehicleModels() {
                         value={modelForm.make_id}
                         options={modalMakeOptions}
                         onChange={(val) => setModelForm({ ...modelForm, make_id: val })}
-                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:border-(--text-primary)"
+                        buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs hover:border-slate-400 dark:hover:border-slate-500"
                       />
                     </div>
                     <div>
@@ -787,7 +799,7 @@ export function VehicleModels() {
                         value={modelForm.type_id}
                         options={modalTypeOptions}
                         onChange={(val) => setModelForm({ ...modelForm, type_id: val })}
-                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:border-(--text-primary)"
+                        buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs hover:border-slate-400 dark:hover:border-slate-500"
                       />
                     </div>
                     <div>
@@ -800,7 +812,7 @@ export function VehicleModels() {
                         value={modelForm.name}
                         onChange={(e) => setModelForm({ ...modelForm, name: e.target.value })}
                         placeholder="e.g. Hilux, Ranger"
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                     <div className="flex items-center gap-2 pt-1">
@@ -809,7 +821,7 @@ export function VehicleModels() {
                         id="model_active_chk"
                         checked={modelForm.is_active}
                         onChange={(e) => setModelForm({ ...modelForm, is_active: e.target.checked })}
-                        className="rounded bg-(--bg-elevated) border border-(--border-main) text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
+                        className="rounded bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
                       />
                       <label htmlFor="model_active_chk" className="text-xs font-semibold text-(--text-primary) cursor-pointer">Is Active</label>
                     </div>
@@ -828,7 +840,7 @@ export function VehicleModels() {
                         value={typeForm.code}
                         onChange={(e) => setTypeForm({ ...typeForm, code: e.target.value })}
                         placeholder="e.g. SUV, Pickup"
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                     <div>
@@ -841,7 +853,7 @@ export function VehicleModels() {
                         value={typeForm.description}
                         onChange={(e) => setTypeForm({ ...typeForm, description: e.target.value })}
                         placeholder="Describe Equipment classification..."
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                     <div className="flex items-center gap-2 pt-1">
@@ -850,7 +862,7 @@ export function VehicleModels() {
                         id="type_active_chk"
                         checked={typeForm.is_active}
                         onChange={(e) => setTypeForm({ ...typeForm, is_active: e.target.checked })}
-                        className="rounded bg-(--bg-elevated) border border-(--border-main) text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
+                        className="rounded bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
                       />
                       <label htmlFor="type_active_chk" className="text-xs font-semibold text-(--text-primary) cursor-pointer">Is Active</label>
                     </div>

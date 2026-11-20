@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { 
   LayoutDashboard, 
@@ -6,94 +6,24 @@ import {
   Car,
   Loader2,
   AlertCircle,
-  AlertTriangle,
-  BarChart3,
   Printer,
   RefreshCw,
   Calendar,
   ClipboardList,
   AlertOctagon,
   Wrench,
-  XCircle,
   PauseCircle,
   Activity,
   PlayCircle,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
-  Check
+  Sparkles,
+  Columns3,
+  X,
+  User,
+  DollarSign
 } from 'lucide-react';
-
-/* --- Custom Dropdown Component --- */
-interface Option {
-  value: string;
-  label: string;
-}
-
-interface CustomDropdownProps {
-  options: Option[];
-  value: string;
-  onChange: (value: string) => void;
-  id?: string;
-}
-
-function CustomDropdown({ options, value, onChange, id }: CustomDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const selectedOption = options.find((opt) => opt.value === value) || options[0];
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  return (
-    <div className="relative inline-block text-left" ref={dropdownRef}>
-      <button
-        id={id}
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between gap-2 bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) text-xs rounded-lg px-3 py-1.5 focus:outline-none cursor-pointer hover:bg-(--accent-subtle) transition-colors min-w-32.5"
-      >
-        <span className="truncate font-medium">{selectedOption.label}</span>
-        <ChevronDown className={`w-3.5 h-3.5 text-(--text-muted) transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-
-      {isOpen && (
-        <div className="absolute right-0 mt-1.5 w-full min-w-37.5 bg-(--bg-elevated) border border-(--border-main) rounded-lg shadow-xl z-50 overflow-hidden py-1">
-          {options.map((option) => {
-            const isSelected = option.value === value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => {
-                  onChange(option.value);
-                  setIsOpen(false);
-                }}
-                className={`w-full flex items-center justify-between px-3 py-2 text-xs text-left transition-colors cursor-pointer ${
-                  isSelected 
-                    ? 'bg-(--accent-subtle) font-bold text-(--text-primary)' 
-                    : 'text-(--text-secondary) hover:bg-(--accent-subtle) hover:text-(--text-primary)'
-                }`}
-              >
-                <span>{option.label}</span>
-                {isSelected && <Check className="w-3.5 h-3.5 text-blue-500" />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* --- Interfaces --- */
 interface OverviewSummary {
@@ -102,14 +32,6 @@ interface OverviewSummary {
   due_to_threshold_count: number;
   grand_total_pms: number;
   total_vehicles_affected: number;
-}
-
-interface PmCodeSummary {
-  pm_code: string;
-  past_due_count: number;
-  currently_due_count: number;
-  due_to_threshold_count: number;
-  total_pm_count: number;
 }
 
 interface FlaggedVehiclePm {
@@ -145,6 +67,15 @@ interface UninspectedVehicle {
   service_rdg: number;
 }
 
+interface FleetComplianceInspectRecord {
+  vehicle_id: string;
+  plate_no: string;
+  service_rdg: number;
+  is_inspected: boolean;
+  has_valid_status: boolean;
+  status_name: string;
+}
+
 interface JobOrderVolumeSummary {
   job_order_date: string;
   total_job_orders_created: number;
@@ -155,6 +86,7 @@ interface JobOrderVolumeSummary {
 }
 
 interface WorkOrderRegisterRecord {
+  job_order_id: string;
   job_order_date: string;
   job_order_no: string;
   plate_no: string;
@@ -165,6 +97,14 @@ interface WorkOrderRegisterRecord {
   expected_completion: string | null;
   date_completed: string | null;
   assigned_supervisor: string;
+  requestor: string;
+  approver: string;
+  odo_rdg: number;
+  labor_cost: number;
+  materials_cost: number;
+  contract_cost: number;
+  total_cost: number;
+  days_delayed: number;
 }
 
 interface DelayedSummaryMetrics {
@@ -187,25 +127,51 @@ interface OverdueJobOrderRecord {
   assigned_supervisor: string;
 }
 
-export function Dashboard() {
-  const [activeTab, setActiveTab] = useState<
-    | 'todays-priorities'
-    | 'inspection-compliance'
-    | 'job-order-priorities'
-  >('todays-priorities');
+type MainTab = 'todays-priorities' | 'inspection-compliance' | 'job-order-priorities';
+type JoSubTab = 'volume' | 'delays' | 'kanban';
+type KanbanLane = 'queued' | 'on-hold' | 'in-progress' | 'delayed';
 
-  const [joSubTab, setJoSubTab] = useState<
-    'volume' | 'delays'
-  >('volume');
+type PmKpiKey = 'total' | 'vehicles' | 'past-due' | 'currently-due' | 'threshold';
+type ComplianceKpiKey =
+  | 'total-fleet'
+  | 'inspected'
+  | 'uninspected'
+  | 'compliance-rate'
+  | 'operational'
+  | 'standby'
+  | 'breakdown'
+  | 'status-compliance';
+type JoVolumeKpiKey = 'total-created' | 'unique-vehicles' | 'completed' | 'not-started' | 'completion-rate';
+type JoDelayKpiKey = 'total-delayed' | 'max-delay' | 'avg-delay';
+
+export function Dashboard() {
+  const [activeTab, setActiveTab] = useState<MainTab>('todays-priorities');
+  const [joSubTab, setJoSubTab] = useState<JoSubTab>('volume');
 
   const [loading, setLoading] = useState<boolean>(true);
   const [dateLoading, setDateLoading] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Pagination states for each table
-  const [itemizedPmPage, setItemizedPmPage] = useState<number>(1);
-  const [uninspectedPage, setUninspectedPage] = useState<number>(1);
+  // Active KPI Card Inspector States
+  const [selectedPmKpi, setSelectedPmKpi] = useState<PmKpiKey | null>(null);
+  const [selectedComplianceKpi, setSelectedComplianceKpi] = useState<ComplianceKpiKey | null>(null);
+  const [selectedJoVolumeKpi, setSelectedJoVolumeKpi] = useState<JoVolumeKpiKey | null>(null);
+  const [selectedJoDelayKpi, setSelectedJoDelayKpi] = useState<JoDelayKpiKey | null>(null);
+
+  // Kanban Selected Job Order Detail Modal State
+  const [selectedKanbanJo, setSelectedKanbanJo] = useState<{
+    record: WorkOrderRegisterRecord;
+    lane: KanbanLane;
+  } | null>(null);
+
+  // Pagination states for KPI Inspector tables
+  const [pmKpiInspectPage, setPmKpiInspectPage] = useState<number>(1);
+  const [complianceKpiInspectPage, setComplianceKpiInspectPage] = useState<number>(1);
+  const [joVolumeKpiInspectPage, setJoVolumeKpiInspectPage] = useState<number>(1);
+  const [joDelayKpiInspectPage, setJoDelayKpiInspectPage] = useState<number>(1);
+
+  // Pagination states for main tables
   const [ongoingJoPage, setOngoingJoPage] = useState<number>(1);
   const [notStartedJoPage, setNotStartedJoPage] = useState<number>(1);
   const [overdueJoPage, setOverdueJoPage] = useState<number>(1);
@@ -228,9 +194,7 @@ export function Dashboard() {
     grand_total_pms: 0,
     total_vehicles_affected: 0,
   });
-  const [pmCodeSummaries, setPmCodeSummaries] = useState<PmCodeSummary[]>([]);
   const [flaggedVehicles, setFlaggedVehicles] = useState<FlaggedVehiclePm[]>([]);
-  const [selectedPmFilter, setSelectedPmFilter] = useState<string>('ALL');
 
   // Inspection Compliance State
   const [complianceSummary, setComplianceSummary] = useState<InspectionComplianceSummary>({
@@ -247,6 +211,7 @@ export function Dashboard() {
     inspection_compliance_percentage: 0,
   });
   const [uninspectedVehicles, setUninspectedVehicles] = useState<UninspectedVehicle[]>([]);
+  const [fleetComplianceRecords, setFleetComplianceRecords] = useState<FleetComplianceInspectRecord[]>([]);
 
   // Job Order Priorities State
   const [volumeSummary, setVolumeSummary] = useState<JobOrderVolumeSummary>({
@@ -257,6 +222,9 @@ export function Dashboard() {
     not_yet_started_count: 0,
     completion_rate_percentage: 0
   });
+  const [allActiveWorkOrders, setAllActiveWorkOrders] = useState<WorkOrderRegisterRecord[]>([]);
+  const [createdWorkOrderRegister, setCreatedWorkOrderRegister] = useState<WorkOrderRegisterRecord[]>([]);
+  const [completedWorkOrderRegister, setCompletedWorkOrderRegister] = useState<WorkOrderRegisterRecord[]>([]);
   const [ongoingWorkOrderRegister, setOngoingWorkOrderRegister] = useState<WorkOrderRegisterRecord[]>([]);
   const [notYetStartedRegister, setNotYetStartedRegister] = useState<WorkOrderRegisterRecord[]>([]);
 
@@ -272,9 +240,8 @@ export function Dashboard() {
     try {
       setErrorMsg(null);
 
-      const [summaryRes, codeSummaryRes, itemizedRes] = await Promise.all([
+      const [summaryRes, itemizedRes] = await Promise.all([
         supabase.from('vw_pm_fleet_summary_metrics').select('*').single(),
-        supabase.from('vw_pm_code_breakdown_summary').select('*'),
         supabase.from('vw_pm_fleet_itemized_queue').select('*')
       ]);
 
@@ -286,16 +253,6 @@ export function Dashboard() {
           grand_total_pms: Number(summaryRes.data.grand_total_pms || 0),
           total_vehicles_affected: Number(summaryRes.data.total_vehicles_affected || 0)
         });
-      }
-
-      if (codeSummaryRes.data) {
-        setPmCodeSummaries(codeSummaryRes.data.map(c => ({
-          pm_code: String(c.pm_code),
-          past_due_count: Number(c.past_due_count || 0),
-          currently_due_count: Number(c.currently_due_count || 0),
-          due_to_threshold_count: Number(c.due_to_threshold_count || 0),
-          total_pm_count: Number(c.total_pm_count || 0)
-        })));
       }
 
       if (itemizedRes.data) {
@@ -375,18 +332,25 @@ export function Dashboard() {
       let breakdownCount = 0;
 
       const uninspectedList: UninspectedVehicle[] = [];
+      const allFleetList: FleetComplianceInspectRecord[] = [];
       const statusTotalsMap: Record<string, number> = {};
 
       (activeVehiclesData || []).forEach(v => {
         const vehId = String(v.vehicle_id);
+        const plateNo = String(v.plate_no || 'N/A');
+        const serviceRdg = Number(v.service_rdg || 0);
         const logEntry = logByVehicleMap.get(vehId);
 
         let statusName = 'Uninspected';
+        let isInspected = false;
+        let hasValidStatus = false;
 
         if (logEntry) {
           inspectedCount++;
+          isInspected = true;
           if (logEntry.operations_id && logEntry.matched_operations_id) {
             statusCompliantCount++;
+            hasValidStatus = true;
             statusName = logEntry.status_name;
           } else {
             statusName = 'No Status Assigned';
@@ -395,10 +359,19 @@ export function Dashboard() {
           uninspectedCount++;
           uninspectedList.push({
             vehicle_id: vehId,
-            plate_no: String(v.plate_no || 'N/A'),
-            service_rdg: Number(v.service_rdg || 0)
+            plate_no: plateNo,
+            service_rdg: serviceRdg
           });
         }
+
+        allFleetList.push({
+          vehicle_id: vehId,
+          plate_no: plateNo,
+          service_rdg: serviceRdg,
+          is_inspected: isInspected,
+          has_valid_status: hasValidStatus,
+          status_name: statusName
+        });
 
         const lowerStatus = statusName.toLowerCase();
         if (lowerStatus.includes('operation')) {
@@ -435,6 +408,7 @@ export function Dashboard() {
       });
 
       setUninspectedVehicles(uninspectedList);
+      setFleetComplianceRecords(allFleetList.sort((a, b) => a.plate_no.localeCompare(b.plate_no)));
     } catch (err: unknown) {
       console.error('Error fetching inspection compliance data for date:', err);
     } finally {
@@ -445,6 +419,53 @@ export function Dashboard() {
   const fetchJobOrderPrioritiesData = useCallback(async (requestedDate: string) => {
     try {
       setDateLoading(true);
+      const requestedDateObj = new Date(`${requestedDate}T00:00:00`);
+
+      const mapToRegisterRecord = (j: Record<string, unknown>, fallbackStatus: string): WorkOrderRegisterRecord => {
+        const rawPrio = j.joborder_priority as Record<string, unknown> | Record<string, unknown>[] | null;
+        const prio = Array.isArray(rawPrio) ? rawPrio[0] : rawPrio;
+
+        const rawStat = j.joborder_status as Record<string, unknown> | Record<string, unknown>[] | null;
+        const stat = Array.isArray(rawStat) ? rawStat[0] : rawStat;
+
+        const rawEmp = j.employees as Record<string, unknown> | Record<string, unknown>[] | null;
+        const emp = Array.isArray(rawEmp) ? rawEmp[0] : rawEmp;
+
+        const rawVeh = j.vehicles as Record<string, unknown> | Record<string, unknown>[] | null;
+        const veh = Array.isArray(rawVeh) ? rawVeh[0] : rawVeh;
+
+        const expCompStr = j.expected_completion ? String(j.expected_completion).substring(0, 10) : null;
+        const dateCompStr = j.date_completed ? String(j.date_completed).substring(0, 10) : null;
+
+        let daysDelayed = 0;
+        if (expCompStr && expCompStr < requestedDate && (!dateCompStr || dateCompStr > requestedDate)) {
+          const expCompDate = new Date(`${expCompStr}T00:00:00`);
+          const diffTime = requestedDateObj.getTime() - expCompDate.getTime();
+          daysDelayed = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+        }
+
+        return {
+          job_order_id: String(j.job_order_id || ''),
+          job_order_date: requestedDate,
+          job_order_no: String(j.job_order_no || `JO-${j.job_order_id}`),
+          plate_no: String(veh?.plate_no || 'N/A'),
+          priority_level: String(prio?.priority_desc || 'Unassigned'),
+          current_status: String(stat?.status_name || fallbackStatus),
+          date_requested: j.created_at ? String(j.created_at).substring(0, 10) : '—',
+          date_started: j.date_started ? String(j.date_started).substring(0, 10) : null,
+          expected_completion: expCompStr,
+          date_completed: dateCompStr,
+          assigned_supervisor: String(emp?.employee_name || 'Unassigned'),
+          requestor: String(j.requestor || '—'),
+          approver: String(j.approver || '—'),
+          odo_rdg: Number(j.odo_rdg || 0),
+          labor_cost: Number(j.labor_cost || 0),
+          materials_cost: Number(j.materials_cost || 0),
+          contract_cost: Number(j.contract_cost || 0),
+          total_cost: Number(j.total_cost || 0),
+          days_delayed: daysDelayed
+        };
+      };
 
       const startOfDay = `${requestedDate}T00:00:00.000Z`;
 
@@ -459,6 +480,13 @@ export function Dashboard() {
           expected_completion,
           date_completed,
           assigned_supervisor,
+          requestor,
+          approver,
+          odo_rdg,
+          labor_cost,
+          materials_cost,
+          contract_cost,
+          total_cost,
           joborder_priority ( priority_id, priority_desc ),
           joborder_status ( status_id, status_name ),
           employees ( employee_name ),
@@ -477,6 +505,10 @@ export function Dashboard() {
       const totalCreated = filteredCreatedRecords.length;
       const uniqueVehicles = new Set(filteredCreatedRecords.map(j => j.vehicle_id)).size;
 
+      setCreatedWorkOrderRegister(
+        filteredCreatedRecords.map(j => mapToRegisterRecord(j as Record<string, unknown>, 'Created'))
+      );
+
       const { data: allMasterRaw, error: masterErr } = await supabase
         .from('joborder_master')
         .select(`
@@ -488,6 +520,13 @@ export function Dashboard() {
           expected_completion,
           date_completed,
           assigned_supervisor,
+          requestor,
+          approver,
+          odo_rdg,
+          labor_cost,
+          materials_cost,
+          contract_cost,
+          total_cost,
           joborder_priority ( priority_id, priority_desc ),
           joborder_status ( status_id, status_name ),
           employees ( employee_name ),
@@ -502,10 +541,34 @@ export function Dashboard() {
         return veh === null || veh.is_active === true || veh.is_active === undefined || veh.is_active === null;
       });
 
-      const completedCount = masterList.filter(j => {
+      // Active / open work orders created on or before target date for Kanban board
+      const activeAsOfTargetDate = masterList
+        .filter(j => {
+          if (!j.created_at) return false;
+          const createdDate = String(j.created_at).substring(0, 10);
+          const isCreatedBeforeOrOn = createdDate <= requestedDate;
+          const isNotCompleted = j.date_completed === null || String(j.date_completed).substring(0, 10) > requestedDate;
+
+          const rawStat = j.joborder_status as Record<string, unknown> | Record<string, unknown>[] | null;
+          const stat = Array.isArray(rawStat) ? rawStat[0] : rawStat;
+          const statusLower = String(stat?.status_name || '').toLowerCase();
+          const isClosedStatus = statusLower === 'completed' || statusLower === 'cancelled';
+
+          return isCreatedBeforeOrOn && isNotCompleted && !isClosedStatus;
+        })
+        .map(j => mapToRegisterRecord(j as Record<string, unknown>, 'Queued'));
+
+      setAllActiveWorkOrders(activeAsOfTargetDate);
+
+      const completedRecords = masterList.filter(j => {
         if (!j.date_completed) return false;
         return String(j.date_completed).substring(0, 10) === requestedDate;
-      }).length;
+      });
+      const completedCount = completedRecords.length;
+
+      setCompletedWorkOrderRegister(
+        completedRecords.map(j => mapToRegisterRecord(j as Record<string, unknown>, 'Completed'))
+      );
 
       // Filtering logic for Not Yet Started Job Orders
       const notYetStartedRecords = masterList.filter(j => {
@@ -538,8 +601,6 @@ export function Dashboard() {
         const isCreatedBeforeOrOn = createdDate <= requestedDate;
         const isStarted = j.date_started !== null;
         const isNotCompleted = j.date_completed === null || String(j.date_completed).substring(0, 10) > requestedDate;
-        
-        // Exclude if already delayed (expected completion is strictly less than requested date)
         const isNotDelayed = expCompDate >= requestedDate;
 
         const rawStat = j.joborder_status as Record<string, unknown> | Record<string, unknown>[] | null;
@@ -550,65 +611,13 @@ export function Dashboard() {
         return isCreatedBeforeOrOn && isStarted && isNotCompleted && isNotDelayed && isInProgressStatus;
       });
 
-      const ongoingList: WorkOrderRegisterRecord[] = ongoingRecords.map(j => {
-        const rawPrio = j.joborder_priority as Record<string, unknown> | Record<string, unknown>[] | null;
-        const prio = Array.isArray(rawPrio) ? rawPrio[0] : rawPrio;
+      setOngoingWorkOrderRegister(
+        ongoingRecords.map(j => mapToRegisterRecord(j as Record<string, unknown>, 'Ongoing'))
+      );
 
-        const rawStat = j.joborder_status as Record<string, unknown> | Record<string, unknown>[] | null;
-        const stat = Array.isArray(rawStat) ? rawStat[0] : rawStat;
-
-        const rawEmp = j.employees as Record<string, unknown> | Record<string, unknown>[] | null;
-        const emp = Array.isArray(rawEmp) ? rawEmp[0] : rawEmp;
-
-        const rawVeh = j.vehicles as Record<string, unknown> | Record<string, unknown>[] | null;
-        const veh = Array.isArray(rawVeh) ? rawVeh[0] : rawVeh;
-
-        return {
-          job_order_date: requestedDate,
-          job_order_no: String(j.job_order_no || `JO-${j.job_order_id}`),
-          plate_no: String(veh?.plate_no || 'N/A'),
-          priority_level: String(prio?.priority_desc || 'Unassigned'),
-          current_status: String(stat?.status_name || 'Ongoing'),
-          date_requested: j.created_at ? String(j.created_at).substring(0, 10) : '—',
-          date_started: j.date_started ? String(j.date_started).substring(0, 10) : null,
-          expected_completion: j.expected_completion ? String(j.expected_completion).substring(0, 10) : null,
-          date_completed: j.date_completed ? String(j.date_completed).substring(0, 10) : null,
-          assigned_supervisor: String(emp?.employee_name || 'Unassigned')
-        };
-      });
-
-      setOngoingWorkOrderRegister(ongoingList);
-
-      const notYetStartedList: WorkOrderRegisterRecord[] = notYetStartedRecords.map(j => {
-        const rawPrio = j.joborder_priority as Record<string, unknown> | Record<string, unknown>[] | null;
-        const prio = Array.isArray(rawPrio) ? rawPrio[0] : rawPrio;
-
-        const rawStat = j.joborder_status as Record<string, unknown> | Record<string, unknown>[] | null;
-        const stat = Array.isArray(rawStat) ? rawStat[0] : rawStat;
-
-        const rawEmp = j.employees as Record<string, unknown> | Record<string, unknown>[] | null;
-        const emp = Array.isArray(rawEmp) ? rawEmp[0] : rawEmp;
-
-        const rawVeh = j.vehicles as Record<string, unknown> | Record<string, unknown>[] | null;
-        const veh = Array.isArray(rawVeh) ? rawVeh[0] : rawVeh;
-
-        return {
-          job_order_date: requestedDate,
-          job_order_no: String(j.job_order_no || `JO-${j.job_order_id}`),
-          plate_no: String(veh?.plate_no || 'N/A'),
-          priority_level: String(prio?.priority_desc || 'Unassigned'),
-          current_status: String(stat?.status_name || 'Pending'),
-          date_requested: j.created_at ? String(j.created_at).substring(0, 10) : '—',
-          date_started: j.date_started ? String(j.date_started).substring(0, 10) : null,
-          expected_completion: j.expected_completion ? String(j.expected_completion).substring(0, 10) : null,
-          date_completed: j.date_completed ? String(j.date_completed).substring(0, 10) : null,
-          assigned_supervisor: String(emp?.employee_name || 'Unassigned')
-        };
-      });
-
-      setNotYetStartedRegister(notYetStartedList);
-
-      const requestedDateObj = new Date(requestedDate);
+      setNotYetStartedRegister(
+        notYetStartedRecords.map(j => mapToRegisterRecord(j as Record<string, unknown>, 'Pending'))
+      );
 
       const overdueList: OverdueJobOrderRecord[] = masterList
         .filter(j => {
@@ -623,7 +632,7 @@ export function Dashboard() {
         })
         .map(j => {
           const expCompDateStr = String(j.expected_completion).substring(0, 10);
-          const expCompDate = new Date(expCompDateStr);
+          const expCompDate = new Date(`${expCompDateStr}T00:00:00`);
           const diffTime = Math.abs(requestedDateObj.getTime() - expCompDate.getTime());
           const daysDelayed = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -702,11 +711,12 @@ export function Dashboard() {
 
   const handleDateChange = (newDate: string) => {
     setSelectedInspectionDate(newDate);
-    setItemizedPmPage(1);
-    setUninspectedPage(1);
     setOngoingJoPage(1);
     setNotStartedJoPage(1);
     setOverdueJoPage(1);
+    setComplianceKpiInspectPage(1);
+    setJoVolumeKpiInspectPage(1);
+    setJoDelayKpiInspectPage(1);
   };
 
   const handleManualRefresh = async () => {
@@ -719,22 +729,170 @@ export function Dashboard() {
     setRefreshing(false);
   };
 
-  const filteredItemizedPms = flaggedVehicles.filter(item => {
-    if (selectedPmFilter === 'ALL') return true;
-    return item.pm_code === selectedPmFilter;
-  });
+  /* --- Kanban Board Grouped Lanes --- */
+  const kanbanColumns = useMemo(() => {
+    const queued: WorkOrderRegisterRecord[] = [];
+    const onHold: WorkOrderRegisterRecord[] = [];
+    const inProgress: WorkOrderRegisterRecord[] = [];
+    const delayed: WorkOrderRegisterRecord[] = [];
 
-  // Paginated slices
-  const paginatedItemizedPms = useMemo(() => {
-    const start = (itemizedPmPage - 1) * pageSize;
-    return filteredItemizedPms.slice(start, start + pageSize);
-  }, [filteredItemizedPms, itemizedPmPage]);
+    allActiveWorkOrders.forEach((wo) => {
+      const statusLower = wo.current_status.toLowerCase();
+      const isOverdue = Boolean(wo.expected_completion && wo.expected_completion < selectedInspectionDate);
 
-  const paginatedUninspected = useMemo(() => {
-    const start = (uninspectedPage - 1) * pageSize;
-    return uninspectedVehicles.slice(start, start + pageSize);
-  }, [uninspectedVehicles, uninspectedPage]);
+      if (isOverdue || statusLower.includes('delay') || statusLower.includes('overdue')) {
+        delayed.push(wo);
+      } else if (statusLower.includes('hold') || statusLower.includes('pause') || statusLower.includes('suspend')) {
+        onHold.push(wo);
+      } else if (
+        statusLower.includes('progress') ||
+        statusLower.includes('ongoing') ||
+        statusLower.includes('active') ||
+        wo.date_started !== null
+      ) {
+        inProgress.push(wo);
+      } else {
+        queued.push(wo);
+      }
+    });
 
+    delayed.sort((a, b) => b.days_delayed - a.days_delayed);
+
+    return {
+      queued,
+      onHold,
+      inProgress,
+      delayed
+    };
+  }, [allActiveWorkOrders, selectedInspectionDate]);
+
+  /* --- KPI Inspector Derived Datasets --- */
+
+  // 1. PM Priorities KPI Inspector Data
+  const pmAffectedVehiclesList = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        vehicle_id: string;
+        plate_no: string;
+        current_rdg: number;
+        pm_codes: string[];
+        past_due: number;
+        currently_due: number;
+        threshold: number;
+        total: number;
+      }
+    >();
+
+    flaggedVehicles.forEach((item) => {
+      const existing = map.get(item.vehicle_id) || {
+        vehicle_id: item.vehicle_id,
+        plate_no: item.plate_no,
+        current_rdg: item.current_rdg,
+        pm_codes: [],
+        past_due: 0,
+        currently_due: 0,
+        threshold: 0,
+        total: 0,
+      };
+      existing.pm_codes.push(item.pm_code);
+      if (item.pm_status === 'PAST DUE') existing.past_due += 1;
+      else if (item.pm_status === 'CURRENTLY DUE') existing.currently_due += 1;
+      else existing.threshold += 1;
+      existing.total += 1;
+      map.set(item.vehicle_id, existing);
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.past_due - a.past_due || b.total - a.total);
+  }, [flaggedVehicles]);
+
+  const pmKpiInspectItems = useMemo(() => {
+    if (!selectedPmKpi || selectedPmKpi === 'vehicles') return [];
+    if (selectedPmKpi === 'total') return flaggedVehicles;
+    if (selectedPmKpi === 'past-due') return flaggedVehicles.filter((i) => i.pm_status === 'PAST DUE');
+    if (selectedPmKpi === 'currently-due') return flaggedVehicles.filter((i) => i.pm_status === 'CURRENTLY DUE');
+    return flaggedVehicles.filter((i) => i.pm_status === 'DUE TO THRESHOLD');
+  }, [selectedPmKpi, flaggedVehicles]);
+
+  const paginatedPmKpiItems = useMemo(() => {
+    const start = (pmKpiInspectPage - 1) * pageSize;
+    return pmKpiInspectItems.slice(start, start + pageSize);
+  }, [pmKpiInspectItems, pmKpiInspectPage]);
+
+  const paginatedPmAffectedVehicles = useMemo(() => {
+    const start = (pmKpiInspectPage - 1) * pageSize;
+    return pmAffectedVehiclesList.slice(start, start + pageSize);
+  }, [pmAffectedVehiclesList, pmKpiInspectPage]);
+
+  // 2. Inspection Compliance KPI Inspector Data
+  const complianceKpiInspectItems = useMemo(() => {
+    if (!selectedComplianceKpi) return [];
+    switch (selectedComplianceKpi) {
+      case 'total-fleet':
+      case 'compliance-rate':
+        return fleetComplianceRecords;
+      case 'inspected':
+      case 'status-compliance':
+        return fleetComplianceRecords.filter((r) => r.is_inspected);
+      case 'uninspected':
+        return fleetComplianceRecords.filter((r) => !r.is_inspected);
+      case 'operational':
+        return fleetComplianceRecords.filter((r) => r.status_name.toLowerCase().includes('operation'));
+      case 'standby':
+        return fleetComplianceRecords.filter((r) => r.status_name.toLowerCase().includes('stand'));
+      case 'breakdown':
+        return fleetComplianceRecords.filter(
+          (r) =>
+            r.status_name.toLowerCase().includes('breakdown') ||
+            r.status_name.toLowerCase().includes('maintenance')
+        );
+      default:
+        return [];
+    }
+  }, [selectedComplianceKpi, fleetComplianceRecords]);
+
+  const paginatedComplianceKpiItems = useMemo(() => {
+    const start = (complianceKpiInspectPage - 1) * pageSize;
+    return complianceKpiInspectItems.slice(start, start + pageSize);
+  }, [complianceKpiInspectItems, complianceKpiInspectPage]);
+
+  // 3. Job Order Volume KPI Inspector Data
+  const joVolumeKpiInspectItems = useMemo(() => {
+    if (!selectedJoVolumeKpi) return [];
+    switch (selectedJoVolumeKpi) {
+      case 'total-created':
+      case 'unique-vehicles':
+      case 'completion-rate':
+        return createdWorkOrderRegister;
+      case 'completed':
+        return completedWorkOrderRegister;
+      case 'not-started':
+        return notYetStartedRegister;
+      default:
+        return [];
+    }
+  }, [selectedJoVolumeKpi, createdWorkOrderRegister, completedWorkOrderRegister, notYetStartedRegister]);
+
+  const paginatedJoVolumeKpiItems = useMemo(() => {
+    const start = (joVolumeKpiInspectPage - 1) * pageSize;
+    return joVolumeKpiInspectItems.slice(start, start + pageSize);
+  }, [joVolumeKpiInspectItems, joVolumeKpiInspectPage]);
+
+  // 4. Job Order Delays KPI Inspector Data
+  const joDelayKpiInspectItems = useMemo(() => {
+    if (!selectedJoDelayKpi) return [];
+    if (selectedJoDelayKpi === 'max-delay') {
+      return overdueQueue.filter((o) => o.days_delayed === delayedSummary.max_days_delayed);
+    }
+    return overdueQueue;
+  }, [selectedJoDelayKpi, overdueQueue, delayedSummary.max_days_delayed]);
+
+  const paginatedJoDelayKpiItems = useMemo(() => {
+    const start = (joDelayKpiInspectPage - 1) * pageSize;
+    return joDelayKpiInspectItems.slice(start, start + pageSize);
+  }, [joDelayKpiInspectItems, joDelayKpiInspectPage]);
+
+  // Paginated slices for main tables
   const paginatedOngoingJo = useMemo(() => {
     const start = (ongoingJoPage - 1) * pageSize;
     return ongoingWorkOrderRegister.slice(start, start + pageSize);
@@ -750,8 +908,6 @@ export function Dashboard() {
     return overdueQueue.slice(start, start + pageSize);
   }, [overdueQueue, overdueJoPage]);
 
-  const maxPmCount = Math.max(...pmCodeSummaries.map(p => p.total_pm_count), 1);
-
   // Pagination Controls component helper
   const renderPagination = (currentPage: number, totalItems: number, onPageChange: (p: number) => void) => {
     const totalPages = Math.ceil(totalItems / pageSize) || 1;
@@ -764,9 +920,10 @@ export function Dashboard() {
         </div>
         <div className="flex items-center gap-1.5">
           <button
+            type="button"
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="p-1 rounded-lg border border-(--border-main) bg-(--bg-elevated) hover:bg-(--accent-subtle) disabled:opacity-40 cursor-pointer"
+            className="p-1 rounded-lg border border-solid border-(--border-main) bg-(--bg-elevated) hover:bg-(--accent-subtle) disabled:opacity-40 cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -774,110 +931,16 @@ export function Dashboard() {
             Page {currentPage} of {totalPages}
           </span>
           <button
+            type="button"
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className="p-1 rounded-lg border border-(--border-main) bg-(--bg-elevated) hover:bg-(--accent-subtle) disabled:opacity-40 cursor-pointer"
+            className="p-1 rounded-lg border border-solid border-(--border-main) bg-(--bg-elevated) hover:bg-(--accent-subtle) disabled:opacity-40 cursor-pointer"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
     );
-  };
-
-  const handleExportHtml = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const dateStr = new Date().toLocaleString();
-    const pastDueCount = filteredItemizedPms.filter(i => i.pm_status === 'PAST DUE').length;
-    const currentlyDueCount = filteredItemizedPms.filter(i => i.pm_status === 'CURRENTLY DUE').length;
-    const dueToThreshCount = filteredItemizedPms.filter(i => i.pm_status === 'DUE TO THRESHOLD').length;
-
-    const rowsHtml = filteredItemizedPms.map((item, idx) => `
-      <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
-        <td style="padding: 10px 12px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #e2e8f0;">${item.plate_no}</td>
-        <td style="padding: 10px 12px; font-family: monospace; font-weight: 600; color: #1e293b; border-bottom: 1px solid #e2e8f0;">${item.pm_code}</td>
-        <td style="padding: 10px 12px; font-family: monospace; text-align: right; color: #334155; border-bottom: 1px solid #e2e8f0;">${item.current_rdg.toLocaleString()}</td>
-        <td style="padding: 10px 12px; font-family: monospace; text-align: right; color: #2563eb; border-bottom: 1px solid #e2e8f0;">${item.trigger_rdg.toLocaleString()}</td>
-        <td style="padding: 10px 12px; font-family: monospace; text-align: right; font-weight: 600; color: #0f172a; border-bottom: 1px solid #e2e8f0;">${item.pm_current.toLocaleString()}</td>
-        <td style="padding: 10px 12px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-          <span style="
-            padding: 4px 8px; 
-            border-radius: 4px; 
-            font-size: 10px; 
-            font-weight: 700; 
-            letter-spacing: 0.05em;
-            display: inline-block;
-            ${item.pm_status === 'PAST DUE' ? 'background-color: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5;' : ''}
-            ${item.pm_status === 'CURRENTLY DUE' ? 'background-color: #fffbeb; color: #b45309; border: 1px solid #fde68a;' : ''}
-            ${item.pm_status === 'DUE TO THRESHOLD' ? 'background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;' : ''}
-          ">
-            ${item.pm_status}
-          </span>
-        </td>
-      </tr>
-    `).join('');
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <title>RC-MRO - Flagged PM Queue Report</title>
-        <style>
-          @page { size: A4 portrait; margin: 15mm; }
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #0f172a; margin: 0; padding: 24px; background-color: #ffffff; }
-          .header-container { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 16px; margin-bottom: 20px; }
-          .brand-title { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0; }
-          .brand-subtitle { font-size: 12px; color: #64748b; margin: 0; text-transform: uppercase; font-weight: 600; }
-          .meta-box { text-align: right; font-size: 11px; color: #475569; }
-          .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
-          .summary-card { padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; background-color: #f8fafc; }
-          .summary-card-title { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 4px; }
-          .summary-card-value { font-size: 20px; font-weight: 800; color: #0f172a; }
-          table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
-          th { background-color: #0f172a; color: #ffffff; text-transform: uppercase; font-size: 10px; font-weight: 700; padding: 10px 12px; text-align: left; }
-          th.text-right { text-align: right; }
-          th.text-center { text-align: center; }
-        </style>
-      </head>
-      <body>
-        <div class="header-container">
-          <div>
-            <h1 class="brand-title">Reliability-Centered MRO</h1>
-            <p class="brand-subtitle">Itemized Flagged PM Queue Report</p>
-          </div>
-          <div class="meta-box">
-            <div><strong>Generated:</strong> ${dateStr}</div>
-            <div><strong>Filter:</strong> ${selectedPmFilter === 'ALL' ? 'All PM Codes' : selectedPmFilter}</div>
-          </div>
-        </div>
-        <div class="summary-grid">
-          <div class="summary-card"><div class="summary-card-title">Total Items</div><div class="summary-card-value">${filteredItemizedPms.length}</div></div>
-          <div class="summary-card" style="border-color: #fca5a5; background-color: #fef2f2;"><div class="summary-card-title" style="color: #b91c1c;">Past Due</div><div class="summary-card-value" style="color: #b91c1c;">${pastDueCount}</div></div>
-          <div class="summary-card" style="border-color: #fde68a; background-color: #fffbeb;"><div class="summary-card-title" style="color: #b45309;">Currently Due</div><div class="summary-card-value" style="color: #b45309;">${currentlyDueCount}</div></div>
-          <div class="summary-card" style="border-color: #bfdbfe; background-color: #eff6ff;"><div class="summary-card-title" style="color: #1d4ed8;">Due To Threshold</div><div class="summary-card-value" style="color: #1d4ed8;">${dueToThreshCount}</div></div>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Plate No</th>
-              <th>PM Code</th>
-              <th class="text-right">Current Rdg</th>
-              <th class="text-right">Trigger Rdg</th>
-              <th class="text-right">Target Rdg</th>
-              <th class="text-center">Status</th>
-            </tr>
-          </thead>
-          <tbody>${rowsHtml}</tbody>
-        </table>
-      </body>
-      </html>
-    `;
-
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
   };
 
   const handleExportComplianceHtml = () => {
@@ -1031,7 +1094,7 @@ export function Dashboard() {
         </table>
       `;
 
-    } else {
+    } else if (joSubTab === 'delays') {
       title = 'Overdue Job Orders & Delay Duration Queue Report';
       summaryCardsHtml = `
         <div class="summary-card" style="border-color: #fca5a5; background-color: #fef2f2;"><div class="summary-card-title" style="color: #b91c1c;">Total Overdue Orders</div><div class="summary-card-value" style="color: #b91c1c;">${delayedSummary.total_delayed_job_orders}</div></div>
@@ -1063,6 +1126,46 @@ export function Dashboard() {
             </tr>
           </thead>
           <tbody>${overdueRows}</tbody>
+        </table>
+      `;
+    } else {
+      title = 'Job Order Kanban Board Status Snapshot';
+      summaryCardsHtml = `
+        <div class="summary-card"><div class="summary-card-title">Queued</div><div class="summary-card-value">${kanbanColumns.queued.length}</div></div>
+        <div class="summary-card" style="border-color: #fde68a; background-color: #fffbeb;"><div class="summary-card-title" style="color: #b45309;">On-Hold</div><div class="summary-card-value" style="color: #b45309;">${kanbanColumns.onHold.length}</div></div>
+        <div class="summary-card" style="border-color: #bfdbfe; background-color: #eff6ff;"><div class="summary-card-title" style="color: #1d4ed8;">In-Progress</div><div class="summary-card-value" style="color: #1d4ed8;">${kanbanColumns.inProgress.length}</div></div>
+        <div class="summary-card" style="border-color: #fca5a5; background-color: #fef2f2;"><div class="summary-card-title" style="color: #b91c1c;">Delayed</div><div class="summary-card-value" style="color: #b91c1c;">${kanbanColumns.delayed.length}</div></div>
+      `;
+
+      const laneRows = [
+        ...kanbanColumns.delayed.map(r => ({ lane: `Delayed (+${r.days_delayed}d)`, r })),
+        ...kanbanColumns.inProgress.map(r => ({ lane: 'In-Progress', r })),
+        ...kanbanColumns.onHold.map(r => ({ lane: 'On-Hold', r })),
+        ...kanbanColumns.queued.map(r => ({ lane: 'Queued', r })),
+      ];
+
+      const rowsHtml = laneRows.length === 0
+        ? `<tr><td colspan="7" style="text-align: center; padding: 12px; color: #64748b;">No active job orders on the board.</td></tr>`
+        : laneRows.map(({ lane, r }, idx) => `
+          <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+            <td style="padding: 8px 10px; font-weight: 700; border-bottom: 1px solid #e2e8f0;">${lane}</td>
+            <td style="padding: 8px 10px; font-weight: 700; font-family: monospace; color: #0f172a; border-bottom: 1px solid #e2e8f0;">${r.job_order_no}</td>
+            <td style="padding: 8px 10px; font-weight: 600; border-bottom: 1px solid #e2e8f0;">${r.plate_no}</td>
+            <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0;">${r.priority_level}</td>
+            <td style="padding: 8px 10px; font-family: monospace; border-bottom: 1px solid #e2e8f0;">${r.date_requested}</td>
+            <td style="padding: 8px 10px; font-family: monospace; border-bottom: 1px solid #e2e8f0;">${r.expected_completion || '—'}</td>
+            <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0;">${r.assigned_supervisor}</td>
+          </tr>
+        `).join('');
+
+      contentTablesHtml = `
+        <table>
+          <thead>
+            <tr>
+              <th>Board Column</th><th>JO Number</th><th>Plate No</th><th>Priority</th><th>Date Requested</th><th>Target Completion</th><th>Supervisor</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
         </table>
       `;
     }
@@ -1111,6 +1214,165 @@ export function Dashboard() {
     printWindow.document.close();
   };
 
+  const getMainTabClass = (tabKey: MainTab) => {
+    const isActive = activeTab === tabKey;
+    return isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-solid border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-solid border-(--border-main)';
+  };
+
+  const getSubTabClass = (subTabKey: JoSubTab) => {
+    const isActive = joSubTab === subTabKey;
+    return isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-solid border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-solid border-(--border-main)';
+  };
+
+  const renderPmStatusBadge = (status: FlaggedVehiclePm['pm_status']) => {
+    if (status === 'PAST DUE') {
+      return (
+        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 border border-solid border-red-300 dark:border-red-800">
+          PAST DUE
+        </span>
+      );
+    }
+    if (status === 'CURRENTLY DUE') {
+      return (
+        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-solid border-amber-300 dark:border-amber-800">
+          CURRENTLY DUE
+        </span>
+      );
+    }
+    return (
+      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-solid border-blue-300 dark:border-blue-800">
+        DUE TO THRESHOLD
+      </span>
+    );
+  };
+
+  const renderPriorityBadge = (priority: string) => {
+    const pLower = priority.toLowerCase();
+    if (pLower.includes('urgent') || pLower.includes('high') || pLower.includes('critical')) {
+      return (
+        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/15 text-red-600 dark:text-red-400 border border-solid border-red-500/30">
+          {priority}
+        </span>
+      );
+    }
+    if (pLower.includes('medium') || pLower.includes('normal')) {
+      return (
+        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-solid border-blue-500/30">
+          {priority}
+        </span>
+      );
+    }
+    return (
+      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-500/15 text-(--text-secondary) border border-solid border-(--border-main)">
+        {priority}
+      </span>
+    );
+  };
+
+  const renderKanbanCard = (jo: WorkOrderRegisterRecord, lane: KanbanLane) => {
+    const isDelayed = lane === 'delayed';
+    return (
+      <button
+        key={jo.job_order_id || jo.job_order_no}
+        type="button"
+        onClick={() => setSelectedKanbanJo({ record: jo, lane })}
+        className={`w-full text-left p-3 rounded-xl border border-solid bg-(--bg-elevated) hover:bg-(--accent-subtle) transition-all cursor-pointer shadow-xs space-y-2 ${
+          isDelayed
+            ? 'border-red-500/40 hover:border-red-500'
+            : lane === 'on-hold'
+            ? 'border-amber-500/30 hover:border-amber-500'
+            : lane === 'in-progress'
+            ? 'border-blue-500/30 hover:border-blue-500'
+            : 'border-(--border-main) hover:border-(--text-muted)'
+        }`}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-mono text-xs font-extrabold text-(--text-primary)">
+            {jo.job_order_no}
+          </span>
+          {renderPriorityBadge(jo.priority_level)}
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-(--text-primary)">
+            <Car className="w-3.5 h-3.5 text-(--text-muted)" />
+            <span>{jo.plate_no}</span>
+          </div>
+          {isDelayed && (
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold font-mono bg-red-600 text-white shadow-xs">
+              +{jo.days_delayed} {jo.days_delayed === 1 ? 'Day' : 'Days'} Delayed
+            </span>
+          )}
+        </div>
+
+        <div className="text-[11px] text-(--text-muted) flex items-center justify-between pt-1 border-t border-(--border-main)">
+          <span className="truncate max-w-36" title={jo.assigned_supervisor}>
+            Sup: <strong className="text-(--text-secondary)">{jo.assigned_supervisor}</strong>
+          </span>
+          <span className="font-mono text-[10px]">
+            Due: {jo.expected_completion || '—'}
+          </span>
+        </div>
+      </button>
+    );
+  };
+
+  const pmKpiLabels: Record<PmKpiKey, string> = {
+    total: 'Total Flagged PMs',
+    vehicles: 'Vehicles Affected',
+    'past-due': 'Past Due PMs',
+    'currently-due': 'Currently Due PMs',
+    threshold: 'Due To Threshold PMs',
+  };
+
+  const complianceKpiLabels: Record<ComplianceKpiKey, string> = {
+    'total-fleet': 'Total Active Fleet',
+    inspected: 'Inspected Units',
+    uninspected: 'Uninspected Units',
+    'compliance-rate': 'Compliance Rate Breakdown',
+    operational: 'Operational Fleet Units',
+    standby: 'Standby Fleet Units',
+    breakdown: 'Breakdown Fleet Units',
+    'status-compliance': 'Status Compliance Breakdown',
+  };
+
+  const joVolumeKpiLabels: Record<JoVolumeKpiKey, string> = {
+    'total-created': 'Total Created Job Orders',
+    'unique-vehicles': 'Unique Vehicles Serviced',
+    completed: 'Completed Job Orders',
+    'not-started': 'Not Yet Started Job Orders',
+    'completion-rate': 'Completion Rate Breakdown',
+  };
+
+  const joDelayKpiLabels: Record<JoDelayKpiKey, string> = {
+    'total-delayed': 'Total Delayed Job Orders',
+    'max-delay': 'Max Delay Duration Job Orders',
+    'avg-delay': 'Average Delay Breakdown',
+  };
+
+  const kanbanLaneLabels: Record<KanbanLane, { title: string; badgeClass: string }> = {
+    queued: {
+      title: 'Queued',
+      badgeClass: 'bg-slate-500/15 text-(--text-primary) border-(--border-main)',
+    },
+    'on-hold': {
+      title: 'On-Hold',
+      badgeClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
+    },
+    'in-progress': {
+      title: 'In-Progress',
+      badgeClass: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
+    },
+    delayed: {
+      title: 'Delayed',
+      badgeClass: 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30',
+    },
+  };
+
   return (
     <div className="h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 flex flex-col overflow-hidden">
       {/* Header */}
@@ -1130,9 +1392,10 @@ export function Dashboard() {
         </div>
 
         <button
+          type="button"
           onClick={handleManualRefresh}
           disabled={loading || refreshing || dateLoading}
-          className="bg-(--bg-surface) hover:bg-(--accent-subtle) border border-(--border-main) text-(--text-primary) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+          className="bg-(--bg-surface) hover:bg-(--accent-subtle) border border-solid border-(--border-main) text-(--text-primary) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
           title="Refresh dashboard metrics"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-blue-500' : ''}`} />
@@ -1141,49 +1404,40 @@ export function Dashboard() {
       </div>
 
       {errorMsg && (
-        <div className="bg-red-50 dark:bg-red-950/50 border border-red-300 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-2.5 rounded-lg flex items-center gap-3 text-xs shrink-0">
+        <div className="bg-red-50 dark:bg-red-950/50 border border-solid border-red-300 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-2.5 rounded-lg flex items-center gap-3 text-xs shrink-0">
           <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* Main Content Body Container */}
-      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
-        {/* Tab Navigation Header */}
-        <div className="flex border-b border-(--border-main) gap-2 shrink-0 overflow-x-auto">
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-solid border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
+        {/* Primary Navigation Tabs */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1 shrink-0">
           <button
+            type="button"
             onClick={() => setActiveTab('todays-priorities')}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors cursor-pointer border-b-2 whitespace-nowrap ${
-              activeTab === 'todays-priorities'
-                ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-                : 'border-transparent text-(--text-secondary) hover:text-(--text-primary)'
-            }`}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getMainTabClass('todays-priorities')}`}
           >
-            <Clock className="w-3.5 h-3.5 text-amber-500" />
+            <Clock className={`w-4 h-4 ${activeTab === 'todays-priorities' ? '' : 'text-amber-500'}`} />
             <span>Today's PM Priorities</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('inspection-compliance')}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors cursor-pointer border-b-2 whitespace-nowrap ${
-              activeTab === 'inspection-compliance'
-                ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-                : 'border-transparent text-(--text-secondary) hover:text-(--text-primary)'
-            }`}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getMainTabClass('inspection-compliance')}`}
           >
-            <Car className="w-3.5 h-3.5 text-blue-500" />
+            <Car className={`w-4 h-4 ${activeTab === 'inspection-compliance' ? '' : 'text-blue-500'}`} />
             <span>Inspection Compliance</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('job-order-priorities')}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors cursor-pointer border-b-2 whitespace-nowrap ${
-              activeTab === 'job-order-priorities'
-                ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-                : 'border-transparent text-(--text-secondary) hover:text-(--text-primary)'
-            }`}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getMainTabClass('job-order-priorities')}`}
           >
-            <ClipboardList className="w-3.5 h-3.5 text-emerald-500" />
+            <ClipboardList className={`w-4 h-4 ${activeTab === 'job-order-priorities' ? '' : 'text-emerald-500'}`} />
             <span>Job Order Priorities</span>
           </button>
         </div>
@@ -1201,174 +1455,205 @@ export function Dashboard() {
               {activeTab === 'todays-priorities' && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                    <div className="p-3 bg-(--bg-surface) border border-(--border-main) rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPmKpi(selectedPmKpi === 'total' ? null : 'total');
+                        setPmKpiInspectPage(1);
+                      }}
+                      className={`w-full p-3 bg-(--bg-surface) border border-solid rounded-xl space-y-1 shadow-xs text-left transition-all cursor-pointer ${
+                        selectedPmKpi === 'total'
+                          ? 'border-blue-500 ring-2 ring-blue-500/40 bg-blue-500/5'
+                          : 'border-(--border-main) hover:border-(--text-muted)'
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-(--text-muted)">Total Flagged PMs</div>
                       <div className="text-xl font-extrabold text-(--text-primary)">{overviewSummary.grand_total_pms}</div>
-                      <div className="text-[10px] text-(--text-muted)">Across active fleet</div>
-                    </div>
+                      <div className="text-[10px] text-(--text-muted)">Click to inspect</div>
+                    </button>
 
-                    <div className="p-3 bg-(--bg-surface) border border-(--border-main) rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPmKpi(selectedPmKpi === 'vehicles' ? null : 'vehicles');
+                        setPmKpiInspectPage(1);
+                      }}
+                      className={`w-full p-3 bg-(--bg-surface) border border-solid rounded-xl space-y-1 shadow-xs text-left transition-all cursor-pointer ${
+                        selectedPmKpi === 'vehicles'
+                          ? 'border-indigo-500 ring-2 ring-indigo-500/40 bg-indigo-500/5'
+                          : 'border-(--border-main) hover:border-indigo-500/50'
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-(--text-muted)">Vehicles Affected</div>
                       <div className="text-xl font-extrabold text-indigo-600 dark:text-indigo-400">{overviewSummary.total_vehicles_affected}</div>
-                      <div className="text-[10px] text-(--text-muted)">Require service attention</div>
-                    </div>
+                      <div className="text-[10px] text-(--text-muted)">Click to inspect</div>
+                    </button>
 
-                    <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPmKpi(selectedPmKpi === 'past-due' ? null : 'past-due');
+                        setPmKpiInspectPage(1);
+                      }}
+                      className={`w-full p-3 bg-red-500/10 border border-solid rounded-xl space-y-1 shadow-xs text-left transition-all cursor-pointer ${
+                        selectedPmKpi === 'past-due'
+                          ? 'border-red-500 ring-2 ring-red-500/40'
+                          : 'border-red-500/30 hover:border-red-500'
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-red-600 dark:text-red-400">Past Due</div>
                       <div className="text-xl font-extrabold text-red-600 dark:text-red-400">{overviewSummary.past_due_count}</div>
-                      <div className="text-[10px] text-red-600/80 dark:text-red-400/80">Immediate action needed</div>
-                    </div>
+                      <div className="text-[10px] text-red-600/80 dark:text-red-400/80">Click to inspect</div>
+                    </button>
 
-                    <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPmKpi(selectedPmKpi === 'currently-due' ? null : 'currently-due');
+                        setPmKpiInspectPage(1);
+                      }}
+                      className={`w-full p-3 bg-amber-500/10 border border-solid rounded-xl space-y-1 shadow-xs text-left transition-all cursor-pointer ${
+                        selectedPmKpi === 'currently-due'
+                          ? 'border-amber-500 ring-2 ring-amber-500/40'
+                          : 'border-amber-500/30 hover:border-amber-500'
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">Currently Due</div>
                       <div className="text-xl font-extrabold text-amber-600 dark:text-amber-400">{overviewSummary.currently_due_count}</div>
-                      <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">At exact service target</div>
-                    </div>
+                      <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">Click to inspect</div>
+                    </button>
 
-                    <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl space-y-1 shadow-xs col-span-2 md:col-span-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPmKpi(selectedPmKpi === 'threshold' ? null : 'threshold');
+                        setPmKpiInspectPage(1);
+                      }}
+                      className={`w-full p-3 bg-blue-500/10 border border-solid rounded-xl space-y-1 shadow-xs col-span-2 md:col-span-1 text-left transition-all cursor-pointer ${
+                        selectedPmKpi === 'threshold'
+                          ? 'border-blue-500 ring-2 ring-blue-500/40'
+                          : 'border-blue-500/30 hover:border-blue-500'
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400">Due To Threshold</div>
                       <div className="text-xl font-extrabold text-blue-600 dark:text-blue-400">{overviewSummary.due_to_threshold_count}</div>
-                      <div className="text-[10px] text-blue-600/80 dark:text-blue-400/80">Approaching limit window</div>
-                    </div>
+                      <div className="text-[10px] text-blue-600/80 dark:text-blue-400/80">Click to inspect</div>
+                    </button>
                   </div>
 
-                  {/* Breakdown Chart */}
-                  <div className="p-4 bg-(--bg-surface) border border-(--border-main) rounded-xl space-y-3 shadow-xs">
-                    <div className="flex items-center justify-between border-b border-(--border-main) pb-2">
-                      <div className="flex items-center gap-2">
-                        <BarChart3 className="w-4 h-4 text-indigo-500" />
-                        <h3 className="text-xs font-bold uppercase text-(--text-primary)">
-                          Flagged PM Breakdown by Code (PM2 – PM7)
-                        </h3>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2.5 pt-1">
-                      {pmCodeSummaries.map((p) => {
-                        const pastPct = p.total_pm_count > 0 ? (p.past_due_count / maxPmCount) * 100 : 0;
-                        const currPct = p.total_pm_count > 0 ? (p.currently_due_count / maxPmCount) * 100 : 0;
-                        const threshPct = p.total_pm_count > 0 ? (p.due_to_threshold_count / maxPmCount) * 100 : 0;
-
-                        return (
-                          <div key={p.pm_code} className="space-y-1">
-                            <div className="flex justify-between text-[11px]">
-                              <span className="font-bold text-(--text-primary)">{p.pm_code}</span>
-                              <span className="font-mono text-(--text-muted)">
-                                {p.total_pm_count} Flagged
-                              </span>
-                            </div>
-                            <div className="w-full bg-(--bg-elevated) h-3.5 rounded-md overflow-hidden flex border border-(--border-main)">
-                              {pastPct > 0 && <div style={{ width: `${pastPct}%` }} className="bg-red-500 h-full" title={`Past Due: ${p.past_due_count}`} />}
-                              {currPct > 0 && <div style={{ width: `${currPct}%` }} className="bg-amber-500 h-full" title={`Currently Due: ${p.currently_due_count}`} />}
-                              {threshPct > 0 && <div style={{ width: `${threshPct}%` }} className="bg-blue-500 h-full" title={`Due to Threshold: ${p.due_to_threshold_count}`} />}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Itemized Table */}
-                  <div className="border border-(--border-main) rounded-xl p-4 bg-(--bg-surface) space-y-3 shadow-xs">
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-(--border-main) pb-3">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 text-amber-500" />
-                        <h3 className="text-xs font-bold uppercase text-(--text-primary)">
-                          Itemized Flagged PM Queue ({filteredItemizedPms.length} Items)
-                        </h3>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1.5">
-                          <label htmlFor="pm-code-filter-select" className="text-xs text-(--text-secondary) font-medium">Filter PM Code:</label>
-                          <CustomDropdown
-                            id="pm-code-filter-select"
-                            value={selectedPmFilter}
-                            onChange={(val) => {
-                              setSelectedPmFilter(val);
-                              setItemizedPmPage(1);
-                            }}
-                            options={[
-                              { value: 'ALL', label: 'All PM Codes' },
-                              { value: 'PM2', label: 'PM2 Only' },
-                              { value: 'PM3', label: 'PM3 Only' },
-                              { value: 'PM4', label: 'PM4 Only' },
-                              { value: 'PM5', label: 'PM5 Only' },
-                              { value: 'PM6', label: 'PM6 Only' },
-                              { value: 'PM7', label: 'PM7 Only' }
-                            ]}
-                          />
+                  {/* Clicked PM KPI Inspector */}
+                  {selectedPmKpi && (
+                    <div className="p-3.5 bg-(--bg-surface) border-2 border-solid border-blue-500/40 rounded-xl space-y-3 shadow-xs animate-fadeIn">
+                      <div className="flex items-center justify-between border-b border-(--border-main) pb-2">
+                        <div className="flex items-center gap-2 text-xs font-bold uppercase text-blue-600 dark:text-blue-400">
+                          <Sparkles className="w-4 h-4" />
+                          <span>
+                            Inspecting KPI: {pmKpiLabels[selectedPmKpi]} (
+                            {selectedPmKpi === 'vehicles'
+                              ? `${pmAffectedVehiclesList.length} Vehicles`
+                              : `${pmKpiInspectItems.length} Records`}
+                            )
+                          </span>
                         </div>
-
                         <button
-                          onClick={handleExportHtml}
-                          className="flex items-center gap-1.5 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) text-xs px-3 py-1 rounded-lg font-semibold transition-colors cursor-pointer shadow-xs"
+                          type="button"
+                          onClick={() => setSelectedPmKpi(null)}
+                          className="text-xs font-semibold text-(--text-muted) hover:text-(--text-primary) cursor-pointer"
                         >
-                          <Printer className="w-3.5 h-3.5" />
-                          <span>Export / Print</span>
+                          Close Inspector
                         </button>
                       </div>
-                    </div>
 
-                    <div className="overflow-x-auto border border-(--border-main) rounded-lg">
-                      <table className="w-full text-left text-xs border-collapse">
-                        <thead>
-                          <tr className="border-b border-(--border-main) text-(--text-muted) text-[10px] uppercase bg-(--bg-elevated) sticky top-0 z-10 shadow-xs">
-                            <th className="p-2.5">Plate No</th>
-                            <th className="p-2.5">PM Code</th>
-                            <th className="p-2.5 text-right">Current Rdg</th>
-                            <th className="p-2.5 text-right">Trigger Rdg</th>
-                            <th className="p-2.5 text-right">Target Rdg</th>
-                            <th className="p-2.5 text-center">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-(--border-main)">
-                          {paginatedItemizedPms.length === 0 ? (
-                            <tr>
-                              <td colSpan={6} className="p-6 text-center text-(--text-muted) italic">
-                                No flagged PM items found.
-                              </td>
-                            </tr>
-                          ) : (
-                            paginatedItemizedPms.map((item, idx) => (
-                              <tr key={idx} className="hover:bg-(--accent-subtle) transition-colors">
-                                <td className="p-2.5 font-bold text-(--text-primary)">{item.plate_no}</td>
-                                <td className="p-2.5 font-mono font-semibold">{item.pm_code}</td>
-                                <td className="p-2.5 text-right font-mono text-(--text-primary)">{item.current_rdg.toLocaleString()}</td>
-                                <td className="p-2.5 text-right font-mono text-blue-600 dark:text-blue-400">{item.trigger_rdg.toLocaleString()}</td>
-                                <td className="p-2.5 text-right font-mono font-semibold">{item.pm_current.toLocaleString()}</td>
-                                <td className="p-2.5 text-center">
-                                  {item.pm_status === 'PAST DUE' && (
-                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800">
-                                      PAST DUE
-                                    </span>
-                                  )}
-                                  {item.pm_status === 'CURRENTLY DUE' && (
-                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-                                      CURRENTLY DUE
-                                    </span>
-                                  )}
-                                  {item.pm_status === 'DUE TO THRESHOLD' && (
-                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800">
-                                      DUE TO THRESHOLD
-                                    </span>
-                                  )}
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
+                      {selectedPmKpi === 'vehicles' ? (
+                        <>
+                          <div className="overflow-x-auto border border-solid border-(--border-main) rounded-lg bg-(--bg-elevated)">
+                            <table className="w-full text-left text-xs border-collapse">
+                              <thead className="bg-(--bg-surface) text-[10px] text-(--text-muted) uppercase border-b border-(--border-main)">
+                                <tr>
+                                  <th className="p-2.5">Plate No</th>
+                                  <th className="p-2.5 text-right">Current Rdg</th>
+                                  <th className="p-2.5">Flagged PM Codes</th>
+                                  <th className="p-2.5 text-center">Past Due</th>
+                                  <th className="p-2.5 text-center">Currently Due</th>
+                                  <th className="p-2.5 text-center">Threshold</th>
+                                  <th className="p-2.5 text-center">Total PMs</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-(--border-main)">
+                                {paginatedPmAffectedVehicles.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={7} className="p-4 text-center text-(--text-muted) italic">
+                                      No affected vehicles found.
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  paginatedPmAffectedVehicles.map((v) => (
+                                    <tr key={v.vehicle_id} className="hover:bg-(--accent-subtle)">
+                                      <td className="p-2.5 font-bold text-(--text-primary)">{v.plate_no}</td>
+                                      <td className="p-2.5 text-right font-mono text-(--text-primary)">{v.current_rdg.toLocaleString()}</td>
+                                      <td className="p-2.5 font-mono text-xs text-blue-600 dark:text-blue-400 font-semibold">
+                                        {v.pm_codes.join(', ')}
+                                      </td>
+                                      <td className="p-2.5 text-center font-mono font-bold text-red-600 dark:text-red-400">{v.past_due}</td>
+                                      <td className="p-2.5 text-center font-mono font-bold text-amber-600 dark:text-amber-400">{v.currently_due}</td>
+                                      <td className="p-2.5 text-center font-mono font-bold text-blue-600 dark:text-blue-400">{v.threshold}</td>
+                                      <td className="p-2.5 text-center font-mono font-extrabold text-(--text-primary)">{v.total}</td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                          {renderPagination(pmKpiInspectPage, pmAffectedVehiclesList.length, setPmKpiInspectPage)}
+                        </>
+                      ) : (
+                        <>
+                          <div className="overflow-x-auto border border-solid border-(--border-main) rounded-lg bg-(--bg-elevated)">
+                            <table className="w-full text-left text-xs border-collapse">
+                              <thead className="bg-(--bg-surface) text-[10px] text-(--text-muted) uppercase border-b border-(--border-main)">
+                                <tr>
+                                  <th className="p-2.5">Plate No</th>
+                                  <th className="p-2.5">PM Code</th>
+                                  <th className="p-2.5 text-right">Current Rdg</th>
+                                  <th className="p-2.5 text-right">Trigger Rdg</th>
+                                  <th className="p-2.5 text-right">Target Rdg</th>
+                                  <th className="p-2.5 text-center">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-(--border-main)">
+                                {paginatedPmKpiItems.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={6} className="p-4 text-center text-(--text-muted) italic">
+                                      No PM records found for this metric.
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  paginatedPmKpiItems.map((item, idx) => (
+                                    <tr key={idx} className="hover:bg-(--accent-subtle)">
+                                      <td className="p-2.5 font-bold text-(--text-primary)">{item.plate_no}</td>
+                                      <td className="p-2.5 font-mono font-semibold">{item.pm_code}</td>
+                                      <td className="p-2.5 text-right font-mono text-(--text-primary)">{item.current_rdg.toLocaleString()}</td>
+                                      <td className="p-2.5 text-right font-mono text-blue-600 dark:text-blue-400">{item.trigger_rdg.toLocaleString()}</td>
+                                      <td className="p-2.5 text-right font-mono font-semibold">{item.pm_current.toLocaleString()}</td>
+                                      <td className="p-2.5 text-center">{renderPmStatusBadge(item.pm_status)}</td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                          {renderPagination(pmKpiInspectPage, pmKpiInspectItems.length, setPmKpiInspectPage)}
+                        </>
+                      )}
                     </div>
-                    {renderPagination(itemizedPmPage, filteredItemizedPms.length, setItemizedPmPage)}
-                  </div>
+                  )}
                 </div>
               )}
 
               {/* TAB 2: INSPECTION COMPLIANCE */}
               {activeTab === 'inspection-compliance' && (
                 <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-(--bg-surface) border border-(--border-main) rounded-xl shadow-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-(--bg-surface) border border-solid border-(--border-main) rounded-xl shadow-xs">
                     <div>
                       <h2 className="text-xs font-bold uppercase tracking-wider text-(--text-primary)">
                         Daily Fleet Inspection Compliance
@@ -1379,7 +1664,7 @@ export function Dashboard() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-2 bg-(--bg-elevated) border border-(--border-main) px-3 py-1.5 rounded-lg shadow-xs">
+                      <div className="flex items-center gap-2 bg-(--bg-elevated) border border-solid border-(--border-main) px-3 py-1.5 rounded-lg shadow-xs">
                         {dateLoading ? (
                           <Loader2 className="w-4 h-4 text-blue-500 animate-spin shrink-0" />
                         ) : (
@@ -1396,6 +1681,7 @@ export function Dashboard() {
                       </div>
 
                       <button
+                        type="button"
                         onClick={handleExportComplianceHtml}
                         className="flex items-center gap-1.5 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer shadow-xs"
                       >
@@ -1405,121 +1691,231 @@ export function Dashboard() {
                     </div>
                   </div>
 
+                  {/* Top Row KPI Cards */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="p-3 bg-(--bg-surface) border border-(--border-main) rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedComplianceKpi(selectedComplianceKpi === 'total-fleet' ? null : 'total-fleet');
+                        setComplianceKpiInspectPage(1);
+                      }}
+                      className={`w-full p-3 bg-(--bg-surface) border border-solid rounded-xl space-y-1 shadow-xs text-left transition-all cursor-pointer ${
+                        selectedComplianceKpi === 'total-fleet'
+                          ? 'border-blue-500 ring-2 ring-blue-500/40 bg-blue-500/5'
+                          : 'border-(--border-main) hover:border-(--text-muted)'
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-(--text-muted)">Total Active Fleet</div>
                       <div className="text-xl font-extrabold text-(--text-primary)">{complianceSummary.total_active_vehicles}</div>
-                      <div className="text-[10px] text-(--text-muted)">Active fleet units</div>
-                    </div>
+                      <div className="text-[10px] text-(--text-muted)">Click to inspect</div>
+                    </button>
 
-                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedComplianceKpi(selectedComplianceKpi === 'inspected' ? null : 'inspected');
+                        setComplianceKpiInspectPage(1);
+                      }}
+                      className={`w-full p-3 bg-emerald-500/10 border border-solid rounded-xl space-y-1 shadow-xs text-left transition-all cursor-pointer ${
+                        selectedComplianceKpi === 'inspected'
+                          ? 'border-emerald-500 ring-2 ring-emerald-500/40'
+                          : 'border-emerald-500/30 hover:border-emerald-500'
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">Inspected Units</div>
                       <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">{complianceSummary.inspected_count}</div>
-                      <div className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">Logs recorded on {selectedInspectionDate}</div>
-                    </div>
+                      <div className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">Click to inspect</div>
+                    </button>
 
-                    <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedComplianceKpi(selectedComplianceKpi === 'uninspected' ? null : 'uninspected');
+                        setComplianceKpiInspectPage(1);
+                      }}
+                      className={`w-full p-3 bg-red-500/10 border border-solid rounded-xl space-y-1 shadow-xs text-left transition-all cursor-pointer ${
+                        selectedComplianceKpi === 'uninspected'
+                          ? 'border-red-500 ring-2 ring-red-500/40'
+                          : 'border-red-500/30 hover:border-red-500'
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-red-600 dark:text-red-400">Uninspected Units</div>
                       <div className="text-xl font-extrabold text-red-600 dark:text-red-400">{complianceSummary.uninspected_count}</div>
-                      <div className="text-[10px] text-red-600/80 dark:text-red-400/80">Missing log entry</div>
-                    </div>
+                      <div className="text-[10px] text-red-600/80 dark:text-red-400/80">Click to inspect</div>
+                    </button>
 
-                    <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedComplianceKpi(selectedComplianceKpi === 'compliance-rate' ? null : 'compliance-rate');
+                        setComplianceKpiInspectPage(1);
+                      }}
+                      className={`w-full p-3 bg-blue-500/10 border border-solid rounded-xl space-y-1 shadow-xs text-left transition-all cursor-pointer ${
+                        selectedComplianceKpi === 'compliance-rate'
+                          ? 'border-blue-500 ring-2 ring-blue-500/40'
+                          : 'border-blue-500/30 hover:border-blue-500'
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400">Compliance Rate</div>
                       <div className="text-xl font-extrabold text-blue-600 dark:text-blue-400">{complianceSummary.inspection_compliance_percentage}%</div>
-                      <div className="text-[10px] text-blue-600/80 dark:text-blue-400/80">Fleet inspection ratio</div>
-                    </div>
+                      <div className="text-[10px] text-blue-600/80 dark:text-blue-400/80">Click to inspect</div>
+                    </button>
                   </div>
 
+                  {/* Second Row KPI Cards */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl flex items-center justify-between shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedComplianceKpi(selectedComplianceKpi === 'operational' ? null : 'operational');
+                        setComplianceKpiInspectPage(1);
+                      }}
+                      className={`w-full p-3 bg-emerald-500/5 border border-solid rounded-xl flex items-center justify-between shadow-xs text-left transition-all cursor-pointer ${
+                        selectedComplianceKpi === 'operational'
+                          ? 'border-emerald-500 ring-2 ring-emerald-500/40 bg-emerald-500/10'
+                          : 'border-emerald-500/20 hover:border-emerald-500'
+                      }`}
+                    >
                       <div>
                         <div className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">Operational</div>
                         <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">{complianceSummary.operational_count}</div>
-                        <div className="text-[9px] text-emerald-600/70 dark:text-emerald-400/70 mt-0.5">Subset of inspected vehicles</div>
+                        <div className="text-[9px] text-emerald-600/70 dark:text-emerald-400/70 mt-0.5">Click to inspect</div>
                       </div>
                       <Activity className="w-5 h-5 text-emerald-500" />
-                    </div>
+                    </button>
 
-                    <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl flex items-center justify-between shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedComplianceKpi(selectedComplianceKpi === 'standby' ? null : 'standby');
+                        setComplianceKpiInspectPage(1);
+                      }}
+                      className={`w-full p-3 bg-amber-500/5 border border-solid rounded-xl flex items-center justify-between shadow-xs text-left transition-all cursor-pointer ${
+                        selectedComplianceKpi === 'standby'
+                          ? 'border-amber-500 ring-2 ring-amber-500/40 bg-amber-500/10'
+                          : 'border-amber-500/20 hover:border-amber-500'
+                      }`}
+                    >
                       <div>
                         <div className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">Standby</div>
                         <div className="text-lg font-extrabold text-amber-600 dark:text-amber-400">{complianceSummary.standby_count}</div>
-                        <div className="text-[9px] text-amber-600/70 dark:text-amber-400/70 mt-0.5">Subset of inspected vehicles</div>
+                        <div className="text-[9px] text-amber-600/70 dark:text-amber-400/70 mt-0.5">Click to inspect</div>
                       </div>
                       <PauseCircle className="w-5 h-5 text-amber-500" />
-                    </div>
+                    </button>
 
-                    <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-xl flex items-center justify-between shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedComplianceKpi(selectedComplianceKpi === 'breakdown' ? null : 'breakdown');
+                        setComplianceKpiInspectPage(1);
+                      }}
+                      className={`w-full p-3 bg-red-500/5 border border-solid rounded-xl flex items-center justify-between shadow-xs text-left transition-all cursor-pointer ${
+                        selectedComplianceKpi === 'breakdown'
+                          ? 'border-red-500 ring-2 ring-red-500/40 bg-red-500/10'
+                          : 'border-red-500/20 hover:border-red-500'
+                      }`}
+                    >
                       <div>
                         <div className="text-[10px] font-bold uppercase text-red-600 dark:text-red-400">Breakdown</div>
                         <div className="text-lg font-extrabold text-red-600 dark:text-red-400">{complianceSummary.breakdown_count}</div>
-                        <div className="text-[9px] text-red-600/70 dark:text-red-400/70 mt-0.5">Subset of inspected vehicles</div>
+                        <div className="text-[9px] text-red-600/70 dark:text-red-400/70 mt-0.5">Click to inspect</div>
                       </div>
                       <Wrench className="w-5 h-5 text-red-500" />
-                    </div>
+                    </button>
 
-                    <div className="p-3 bg-indigo-500/5 border border-indigo-500/20 rounded-xl flex items-center justify-between shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedComplianceKpi(selectedComplianceKpi === 'status-compliance' ? null : 'status-compliance');
+                        setComplianceKpiInspectPage(1);
+                      }}
+                      className={`w-full p-3 bg-indigo-500/5 border border-solid rounded-xl flex items-center justify-between shadow-xs text-left transition-all cursor-pointer ${
+                        selectedComplianceKpi === 'status-compliance'
+                          ? 'border-indigo-500 ring-2 ring-indigo-500/40 bg-indigo-500/10'
+                          : 'border-indigo-500/20 hover:border-indigo-500'
+                      }`}
+                    >
                       <div>
                         <div className="text-[10px] font-bold uppercase text-indigo-600 dark:text-indigo-400">Status Compliance</div>
                         <div className="text-lg font-extrabold text-indigo-600 dark:text-indigo-400">{complianceSummary.status_compliance_percentage}%</div>
-                        <div className="text-[9px] text-indigo-600/70 dark:text-indigo-400/70 mt-0.5">Subset of inspected vehicles</div>
+                        <div className="text-[9px] text-indigo-600/70 dark:text-indigo-400/70 mt-0.5">Click to inspect</div>
                       </div>
                       <CheckCircle2 className="w-5 h-5 text-indigo-500" />
-                    </div>
+                    </button>
                   </div>
 
-                  <div className="border border-(--border-main) rounded-xl p-4 bg-(--bg-surface) space-y-3 shadow-xs">
-                    <div className="flex items-center justify-between border-b border-(--border-main) pb-3">
-                      <div className="flex items-center gap-2">
-                        <XCircle className="w-4 h-4 text-red-500" />
-                        <h3 className="text-xs font-bold uppercase text-(--text-primary)">
-                          Uninspected Active Fleet Queue ({uninspectedVehicles.length} Vehicles)
-                        </h3>
+                  {/* Clicked Compliance KPI Inspector */}
+                  {selectedComplianceKpi && (
+                    <div className="p-3.5 bg-(--bg-surface) border-2 border-solid border-blue-500/40 rounded-xl space-y-3 shadow-xs animate-fadeIn">
+                      <div className="flex items-center justify-between border-b border-(--border-main) pb-2">
+                        <div className="flex items-center gap-2 text-xs font-bold uppercase text-blue-600 dark:text-blue-400">
+                          <Sparkles className="w-4 h-4" />
+                          <span>
+                            Inspecting KPI: {complianceKpiLabels[selectedComplianceKpi]} ({complianceKpiInspectItems.length} Vehicles on {selectedInspectionDate})
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedComplianceKpi(null)}
+                          className="text-xs font-semibold text-(--text-muted) hover:text-(--text-primary) cursor-pointer"
+                        >
+                          Close Inspector
+                        </button>
                       </div>
-                    </div>
 
-                    <div className="overflow-x-auto border border-(--border-main) rounded-lg">
-                      <table className="w-full text-left text-xs border-collapse">
-                        <thead>
-                          <tr className="border-b border-(--border-main) text-(--text-muted) text-[10px] uppercase bg-(--bg-elevated) sticky top-0 z-10 shadow-xs">
-                            <th className="p-2.5">Plate No</th>
-                            <th className="p-2.5 text-right">Service Rdg</th>
-                            <th className="p-2.5 text-center">Inspection Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-(--border-main)">
-                          {paginatedUninspected.length === 0 ? (
+                      <div className="overflow-x-auto border border-solid border-(--border-main) rounded-lg bg-(--bg-elevated)">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead className="bg-(--bg-surface) text-[10px] text-(--text-muted) uppercase border-b border-(--border-main)">
                             <tr>
-                              <td colSpan={3} className="p-6 text-center text-emerald-600 dark:text-emerald-400 font-semibold italic">
-                                100% Compliance! All active fleet units have been inspected for {selectedInspectionDate}.
-                              </td>
+                              <th className="p-2.5">Plate No</th>
+                              <th className="p-2.5 text-right">Service Rdg</th>
+                              <th className="p-2.5 text-center">Inspection Log</th>
+                              <th className="p-2.5 text-center">Operational Status</th>
                             </tr>
-                          ) : (
-                            paginatedUninspected.map((u, idx) => (
-                              <tr key={idx} className="hover:bg-red-500/5 transition-colors">
-                                <td className="p-2.5 font-bold text-(--text-primary)">{u.plate_no}</td>
-                                <td className="p-2.5 text-right font-mono text-(--text-primary)">{u.service_rdg.toLocaleString()}</td>
-                                <td className="p-2.5 text-center">
-                                  <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800">
-                                    UNINSPECTED
-                                  </span>
+                          </thead>
+                          <tbody className="divide-y divide-(--border-main)">
+                            {paginatedComplianceKpiItems.length === 0 ? (
+                              <tr>
+                                <td colSpan={4} className="p-4 text-center text-(--text-muted) italic">
+                                  No vehicles found for this metric on {selectedInspectionDate}.
                                 </td>
                               </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
+                            ) : (
+                              paginatedComplianceKpiItems.map((rec) => (
+                                <tr key={rec.vehicle_id} className="hover:bg-(--accent-subtle)">
+                                  <td className="p-2.5 font-bold text-(--text-primary)">{rec.plate_no}</td>
+                                  <td className="p-2.5 text-right font-mono text-(--text-primary)">{rec.service_rdg.toLocaleString()}</td>
+                                  <td className="p-2.5 text-center">
+                                    {rec.is_inspected ? (
+                                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-solid border-emerald-300 dark:border-emerald-800">
+                                        INSPECTED
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 border border-solid border-red-300 dark:border-red-800">
+                                        UNINSPECTED
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="p-2.5 text-center font-semibold text-(--text-secondary)">
+                                    {rec.status_name}
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                      {renderPagination(complianceKpiInspectPage, complianceKpiInspectItems.length, setComplianceKpiInspectPage)}
                     </div>
-                    {renderPagination(uninspectedPage, uninspectedVehicles.length, setUninspectedPage)}
-                  </div>
+                  )}
                 </div>
               )}
 
               {/* TAB 3: JOB ORDER PRIORITIES */}
               {activeTab === 'job-order-priorities' && (
                 <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-(--bg-surface) border border-(--border-main) rounded-xl shadow-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-(--bg-surface) border border-solid border-(--border-main) rounded-xl shadow-xs">
                     <div>
                       <h2 className="text-xs font-bold uppercase tracking-wider text-(--text-primary)">
                         Job Order Analytics & Priority Control Center
@@ -1530,7 +1926,7 @@ export function Dashboard() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-2 bg-(--bg-elevated) border border-(--border-main) px-3 py-1.5 rounded-lg shadow-xs">
+                      <div className="flex items-center gap-2 bg-(--bg-elevated) border border-solid border-(--border-main) px-3 py-1.5 rounded-lg shadow-xs">
                         {dateLoading ? (
                           <Loader2 className="w-4 h-4 text-emerald-500 animate-spin shrink-0" />
                         ) : (
@@ -1549,6 +1945,7 @@ export function Dashboard() {
                       </div>
 
                       <button
+                        type="button"
                         onClick={handleExportJobOrdersHtml}
                         className="flex items-center gap-1.5 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer shadow-xs"
                       >
@@ -1558,29 +1955,33 @@ export function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 border-b border-(--border-main) pb-2 text-xs font-bold overflow-x-auto">
+                  {/* Sub-Tab Navigation */}
+                  <div className="flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1 shrink-0">
                     <button
+                      type="button"
                       onClick={() => setJoSubTab('volume')}
-                      className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                        joSubTab === 'volume'
-                          ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                          : 'text-(--text-muted) hover:text-(--text-primary)'
-                      }`}
+                      className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getSubTabClass('volume')}`}
                     >
-                      <ClipboardList className="w-3.5 h-3.5" />
+                      <ClipboardList className={`w-4 h-4 ${joSubTab === 'volume' ? '' : 'text-emerald-500'}`} />
                       <span>1. Daily Volume & Register</span>
                     </button>
 
                     <button
+                      type="button"
                       onClick={() => setJoSubTab('delays')}
-                      className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                        joSubTab === 'delays'
-                          ? 'bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30'
-                          : 'text-(--text-muted) hover:text-(--text-primary)'
-                      }`}
+                      className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getSubTabClass('delays')}`}
                     >
-                      <AlertOctagon className="w-3.5 h-3.5" />
+                      <AlertOctagon className={`w-4 h-4 ${joSubTab === 'delays' ? '' : 'text-red-500'}`} />
                       <span>2. Delays & Overdue</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setJoSubTab('kanban')}
+                      className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getSubTabClass('kanban')}`}
+                    >
+                      <Columns3 className={`w-4 h-4 ${joSubTab === 'kanban' ? '' : 'text-blue-500'}`} />
+                      <span>3. Kanban Board</span>
                     </button>
                   </div>
 
@@ -1588,39 +1989,157 @@ export function Dashboard() {
                   {joSubTab === 'volume' && (
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                        <div className="p-3 bg-(--bg-surface) border border-(--border-main) rounded-xl space-y-1 shadow-xs">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedJoVolumeKpi(selectedJoVolumeKpi === 'total-created' ? null : 'total-created');
+                            setJoVolumeKpiInspectPage(1);
+                          }}
+                          className={`w-full p-3 bg-(--bg-surface) border border-solid rounded-xl space-y-1 shadow-xs text-left transition-all cursor-pointer ${
+                            selectedJoVolumeKpi === 'total-created'
+                              ? 'border-blue-500 ring-2 ring-blue-500/40 bg-blue-500/5'
+                              : 'border-(--border-main) hover:border-(--text-muted)'
+                          }`}
+                        >
                           <div className="text-[10px] font-bold uppercase text-(--text-muted)">Total Created</div>
                           <div className="text-xl font-extrabold text-(--text-primary)">{volumeSummary.total_job_orders_created}</div>
-                          <div className="text-[10px] text-(--text-muted)">Created &ge; {volumeSummary.job_order_date}</div>
-                        </div>
+                          <div className="text-[10px] text-(--text-muted)">Click to inspect</div>
+                        </button>
 
-                        <div className="p-3 bg-(--bg-surface) border border-(--border-main) rounded-xl space-y-1 shadow-xs">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedJoVolumeKpi(selectedJoVolumeKpi === 'unique-vehicles' ? null : 'unique-vehicles');
+                            setJoVolumeKpiInspectPage(1);
+                          }}
+                          className={`w-full p-3 bg-(--bg-surface) border border-solid rounded-xl space-y-1 shadow-xs text-left transition-all cursor-pointer ${
+                            selectedJoVolumeKpi === 'unique-vehicles'
+                              ? 'border-indigo-500 ring-2 ring-indigo-500/40 bg-indigo-500/5'
+                              : 'border-(--border-main) hover:border-indigo-500/50'
+                          }`}
+                        >
                           <div className="text-[10px] font-bold uppercase text-(--text-muted)">Unique Vehicles</div>
                           <div className="text-xl font-extrabold text-indigo-600 dark:text-indigo-400">{volumeSummary.unique_vehicles_serviced}</div>
-                          <div className="text-[10px] text-(--text-muted)">Serviced in batch</div>
-                        </div>
+                          <div className="text-[10px] text-(--text-muted)">Click to inspect</div>
+                        </button>
 
-                        <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-1 shadow-xs">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedJoVolumeKpi(selectedJoVolumeKpi === 'completed' ? null : 'completed');
+                            setJoVolumeKpiInspectPage(1);
+                          }}
+                          className={`w-full p-3 bg-emerald-500/10 border border-solid rounded-xl space-y-1 shadow-xs text-left transition-all cursor-pointer ${
+                            selectedJoVolumeKpi === 'completed'
+                              ? 'border-emerald-500 ring-2 ring-emerald-500/40'
+                              : 'border-emerald-500/30 hover:border-emerald-500'
+                          }`}
+                        >
                           <div className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">Completed</div>
                           <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">{volumeSummary.completed_count}</div>
-                          <div className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">Completed on target date</div>
-                        </div>
+                          <div className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">Click to inspect</div>
+                        </button>
 
-                        <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-1 shadow-xs">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedJoVolumeKpi(selectedJoVolumeKpi === 'not-started' ? null : 'not-started');
+                            setJoVolumeKpiInspectPage(1);
+                          }}
+                          className={`w-full p-3 bg-amber-500/10 border border-solid rounded-xl space-y-1 shadow-xs text-left transition-all cursor-pointer ${
+                            selectedJoVolumeKpi === 'not-started'
+                              ? 'border-amber-500 ring-2 ring-amber-500/40'
+                              : 'border-amber-500/30 hover:border-amber-500'
+                          }`}
+                        >
                           <div className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">Not Yet Started</div>
                           <div className="text-xl font-extrabold text-amber-600 dark:text-amber-400">{volumeSummary.not_yet_started_count}</div>
-                          <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">date_started is null</div>
-                        </div>
+                          <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">Click to inspect</div>
+                        </button>
 
-                        <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl space-y-1 shadow-xs col-span-2 md:col-span-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedJoVolumeKpi(selectedJoVolumeKpi === 'completion-rate' ? null : 'completion-rate');
+                            setJoVolumeKpiInspectPage(1);
+                          }}
+                          className={`w-full p-3 bg-blue-500/10 border border-solid rounded-xl space-y-1 shadow-xs col-span-2 md:col-span-1 text-left transition-all cursor-pointer ${
+                            selectedJoVolumeKpi === 'completion-rate'
+                              ? 'border-blue-500 ring-2 ring-blue-500/40'
+                              : 'border-blue-500/30 hover:border-blue-500'
+                          }`}
+                        >
                           <div className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400">Completion Rate</div>
                           <div className="text-xl font-extrabold text-blue-600 dark:text-blue-400">{volumeSummary.completion_rate_percentage}%</div>
-                          <div className="text-[10px] text-blue-600/80 dark:text-blue-400/80">Throughput ratio</div>
-                        </div>
+                          <div className="text-[10px] text-blue-600/80 dark:text-blue-400/80">Click to inspect</div>
+                        </button>
                       </div>
 
+                      {/* Clicked JO Volume KPI Inspector */}
+                      {selectedJoVolumeKpi && (
+                        <div className="p-3.5 bg-(--bg-surface) border-2 border-solid border-emerald-500/40 rounded-xl space-y-3 shadow-xs animate-fadeIn">
+                          <div className="flex items-center justify-between border-b border-(--border-main) pb-2">
+                            <div className="flex items-center gap-2 text-xs font-bold uppercase text-emerald-600 dark:text-emerald-400">
+                              <Sparkles className="w-4 h-4" />
+                              <span>
+                                Inspecting KPI: {joVolumeKpiLabels[selectedJoVolumeKpi]} ({joVolumeKpiInspectItems.length} Job Orders)
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedJoVolumeKpi(null)}
+                              className="text-xs font-semibold text-(--text-muted) hover:text-(--text-primary) cursor-pointer"
+                            >
+                              Close Inspector
+                            </button>
+                          </div>
+
+                          <div className="overflow-x-auto border border-solid border-(--border-main) rounded-lg bg-(--bg-elevated)">
+                            <table className="w-full text-left text-xs border-collapse">
+                              <thead className="bg-(--bg-surface) text-[10px] text-(--text-muted) uppercase border-b border-(--border-main)">
+                                <tr>
+                                  <th className="p-2.5">Job Order No</th>
+                                  <th className="p-2.5">Plate No</th>
+                                  <th className="p-2.5">Priority</th>
+                                  <th className="p-2.5">Status</th>
+                                  <th className="p-2.5">Date Requested</th>
+                                  <th className="p-2.5">Date Started</th>
+                                  <th className="p-2.5">Expected Comp.</th>
+                                  <th className="p-2.5">Date Completed</th>
+                                  <th className="p-2.5">Supervisor</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-(--border-main)">
+                                {paginatedJoVolumeKpiItems.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={9} className="p-4 text-center text-(--text-muted) italic">
+                                      No job order records found for this metric.
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  paginatedJoVolumeKpiItems.map((r, idx) => (
+                                    <tr key={idx} className="hover:bg-(--accent-subtle)">
+                                      <td className="p-2.5 font-mono font-bold text-(--text-primary)">{r.job_order_no}</td>
+                                      <td className="p-2.5 font-semibold text-(--text-primary)">{r.plate_no}</td>
+                                      <td className="p-2.5">{r.priority_level}</td>
+                                      <td className="p-2.5">{r.current_status}</td>
+                                      <td className="p-2.5 font-mono text-(--text-secondary)">{r.date_requested}</td>
+                                      <td className="p-2.5 font-mono text-(--text-secondary)">{r.date_started || '—'}</td>
+                                      <td className="p-2.5 font-mono text-(--text-secondary)">{r.expected_completion || '—'}</td>
+                                      <td className="p-2.5 font-mono text-emerald-600 dark:text-emerald-400 font-semibold">{r.date_completed || '—'}</td>
+                                      <td className="p-2.5 text-(--text-secondary)">{r.assigned_supervisor}</td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                          {renderPagination(joVolumeKpiInspectPage, joVolumeKpiInspectItems.length, setJoVolumeKpiInspectPage)}
+                        </div>
+                      )}
+
                       {/* Table 1: Ongoing Job Order Register */}
-                      <div className="border border-(--border-main) rounded-xl p-4 bg-(--bg-surface) space-y-3 shadow-xs">
+                      <div className="border border-solid border-(--border-main) rounded-xl p-4 bg-(--bg-surface) space-y-3 shadow-xs">
                         <div className="flex items-center justify-between border-b border-(--border-main) pb-3">
                           <div className="flex items-center gap-2">
                             <Activity className="w-4 h-4 text-emerald-500" />
@@ -1630,7 +2149,7 @@ export function Dashboard() {
                           </div>
                         </div>
 
-                        <div className="overflow-x-auto border border-(--border-main) rounded-lg">
+                        <div className="overflow-x-auto border border-solid border-(--border-main) rounded-lg">
                           <table className="w-full text-left text-xs border-collapse">
                             <thead>
                               <tr className="border-b border-(--border-main) text-(--text-muted) text-[10px] uppercase bg-(--bg-elevated) sticky top-0 z-10">
@@ -1674,7 +2193,7 @@ export function Dashboard() {
                       </div>
 
                       {/* Table 2: Not yet Started Job Orders */}
-                      <div className="border border-(--border-main) rounded-xl p-4 bg-(--bg-surface) space-y-3 shadow-xs">
+                      <div className="border border-solid border-(--border-main) rounded-xl p-4 bg-(--bg-surface) space-y-3 shadow-xs">
                         <div className="flex items-center justify-between border-b border-(--border-main) pb-3">
                           <div className="flex items-center gap-2">
                             <PlayCircle className="w-4 h-4 text-amber-500" />
@@ -1684,7 +2203,7 @@ export function Dashboard() {
                           </div>
                         </div>
 
-                        <div className="overflow-x-auto border border-(--border-main) rounded-lg">
+                        <div className="overflow-x-auto border border-solid border-(--border-main) rounded-lg">
                           <table className="w-full text-left text-xs border-collapse">
                             <thead>
                               <tr className="border-b border-(--border-main) text-(--text-muted) text-[10px] uppercase bg-(--bg-elevated) sticky top-0 z-10">
@@ -1733,26 +2252,120 @@ export function Dashboard() {
                   {joSubTab === 'delays' && (
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl space-y-1 shadow-xs">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedJoDelayKpi(selectedJoDelayKpi === 'total-delayed' ? null : 'total-delayed');
+                            setJoDelayKpiInspectPage(1);
+                          }}
+                          className={`w-full p-4 bg-red-500/10 border border-solid rounded-xl space-y-1 shadow-xs text-left transition-all cursor-pointer ${
+                            selectedJoDelayKpi === 'total-delayed'
+                              ? 'border-red-500 ring-2 ring-red-500/40'
+                              : 'border-red-500/30 hover:border-red-500'
+                          }`}
+                        >
                           <div className="text-[10px] font-bold uppercase text-red-600 dark:text-red-400">Total Delayed Job Orders</div>
                           <div className="text-2xl font-extrabold text-red-600 dark:text-red-400">{delayedSummary.total_delayed_job_orders}</div>
-                          <div className="text-[10px] text-red-600/80 dark:text-red-400/80">Exceeding expected completion</div>
-                        </div>
+                          <div className="text-[10px] text-red-600/80 dark:text-red-400/80">Click to inspect</div>
+                        </button>
 
-                        <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl space-y-1 shadow-xs">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedJoDelayKpi(selectedJoDelayKpi === 'max-delay' ? null : 'max-delay');
+                            setJoDelayKpiInspectPage(1);
+                          }}
+                          className={`w-full p-4 bg-red-500/10 border border-solid rounded-xl space-y-1 shadow-xs text-left transition-all cursor-pointer ${
+                            selectedJoDelayKpi === 'max-delay'
+                              ? 'border-red-500 ring-2 ring-red-500/40'
+                              : 'border-red-500/30 hover:border-red-500'
+                          }`}
+                        >
                           <div className="text-[10px] font-bold uppercase text-red-600 dark:text-red-400">Max Delay Duration</div>
                           <div className="text-2xl font-extrabold text-red-600 dark:text-red-400">{delayedSummary.max_days_delayed} Days</div>
-                          <div className="text-[10px] text-red-600/80 dark:text-red-400/80">Longest overdue job</div>
-                        </div>
+                          <div className="text-[10px] text-red-600/80 dark:text-red-400/80">Click to inspect</div>
+                        </button>
 
-                        <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-1 shadow-xs">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedJoDelayKpi(selectedJoDelayKpi === 'avg-delay' ? null : 'avg-delay');
+                            setJoDelayKpiInspectPage(1);
+                          }}
+                          className={`w-full p-4 bg-amber-500/10 border border-solid rounded-xl space-y-1 shadow-xs text-left transition-all cursor-pointer ${
+                            selectedJoDelayKpi === 'avg-delay'
+                              ? 'border-amber-500 ring-2 ring-amber-500/40'
+                              : 'border-amber-500/30 hover:border-amber-500'
+                          }`}
+                        >
                           <div className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">Average Delay</div>
                           <div className="text-2xl font-extrabold text-amber-600 dark:text-amber-400">{delayedSummary.avg_days_delayed} Days</div>
-                          <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">Mean schedule variance</div>
-                        </div>
+                          <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">Click to inspect</div>
+                        </button>
                       </div>
 
-                      <div className="border border-(--border-main) rounded-xl p-4 bg-(--bg-surface) space-y-3 shadow-xs">
+                      {/* Clicked JO Delay KPI Inspector */}
+                      {selectedJoDelayKpi && (
+                        <div className="p-3.5 bg-(--bg-surface) border-2 border-solid border-red-500/40 rounded-xl space-y-3 shadow-xs animate-fadeIn">
+                          <div className="flex items-center justify-between border-b border-(--border-main) pb-2">
+                            <div className="flex items-center gap-2 text-xs font-bold uppercase text-red-600 dark:text-red-400">
+                              <Sparkles className="w-4 h-4" />
+                              <span>
+                                Inspecting KPI: {joDelayKpiLabels[selectedJoDelayKpi]} ({joDelayKpiInspectItems.length} Job Orders)
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedJoDelayKpi(null)}
+                              className="text-xs font-semibold text-(--text-muted) hover:text-(--text-primary) cursor-pointer"
+                            >
+                              Close Inspector
+                            </button>
+                          </div>
+
+                          <div className="overflow-x-auto border border-solid border-(--border-main) rounded-lg bg-(--bg-elevated)">
+                            <table className="w-full text-left text-xs border-collapse">
+                              <thead className="bg-(--bg-surface) text-[10px] text-(--text-muted) uppercase border-b border-(--border-main)">
+                                <tr>
+                                  <th className="p-2.5">Job Order No</th>
+                                  <th className="p-2.5">Plate No</th>
+                                  <th className="p-2.5">Priority</th>
+                                  <th className="p-2.5">Status</th>
+                                  <th className="p-2.5">Date Requested</th>
+                                  <th className="p-2.5">Target Completion</th>
+                                  <th className="p-2.5">Days Delayed</th>
+                                  <th className="p-2.5">Supervisor</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-(--border-main)">
+                                {paginatedJoDelayKpiItems.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={8} className="p-4 text-center text-(--text-muted) italic">
+                                      No overdue job orders found for this metric.
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  paginatedJoDelayKpiItems.map((r, idx) => (
+                                    <tr key={idx} className="hover:bg-red-500/10">
+                                      <td className="p-2.5 font-mono font-bold text-(--text-primary)">{r.job_order_no}</td>
+                                      <td className="p-2.5 font-semibold text-(--text-primary)">{r.plate_no}</td>
+                                      <td className="p-2.5 font-semibold text-amber-600 dark:text-amber-400">{r.priority_level}</td>
+                                      <td className="p-2.5">{r.current_status}</td>
+                                      <td className="p-2.5 font-mono text-(--text-secondary)">{r.date_requested}</td>
+                                      <td className="p-2.5 font-mono text-red-600 dark:text-red-400 font-bold">{r.expected_completion}</td>
+                                      <td className="p-2.5 font-mono font-extrabold text-red-600 dark:text-red-400">+{r.days_delayed} Days</td>
+                                      <td className="p-2.5 text-(--text-secondary)">{r.assigned_supervisor}</td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                          {renderPagination(joDelayKpiInspectPage, joDelayKpiInspectItems.length, setJoDelayKpiInspectPage)}
+                        </div>
+                      )}
+
+                      <div className="border border-solid border-(--border-main) rounded-xl p-4 bg-(--bg-surface) space-y-3 shadow-xs">
                         <div className="flex items-center justify-between border-b border-(--border-main) pb-3">
                           <div className="flex items-center gap-2">
                             <AlertOctagon className="w-4 h-4 text-red-500" />
@@ -1762,7 +2375,7 @@ export function Dashboard() {
                           </div>
                         </div>
 
-                        <div className="overflow-x-auto border border-(--border-main) rounded-lg">
+                        <div className="overflow-x-auto border border-solid border-(--border-main) rounded-lg">
                           <table className="w-full text-left text-xs border-collapse">
                             <thead>
                               <tr className="border-b border-(--border-main) text-(--text-muted) text-[10px] uppercase bg-(--bg-elevated) sticky top-0 z-10">
@@ -1804,12 +2417,289 @@ export function Dashboard() {
                       </div>
                     </div>
                   )}
+
+                  {/* SUB-VIEW 3: KANBAN BOARD */}
+                  {joSubTab === 'kanban' && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-[11px] text-(--text-muted) px-1">
+                        <span>Click any job order card to inspect full details, schedule dates, and cost breakdown.</span>
+                        <span>Active Orders: <strong className="text-(--text-primary)">{allActiveWorkOrders.length}</strong></span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 items-start">
+                        {/* Column 1: Queued */}
+                        <div className="bg-(--bg-surface) border border-solid border-(--border-main) rounded-xl p-3 space-y-2.5 shadow-xs">
+                          <div className="flex items-center justify-between border-b border-(--border-main) pb-2">
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-slate-500" />
+                              <h3 className="text-xs font-bold uppercase text-(--text-primary)">Queued</h3>
+                            </div>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-(--bg-elevated) border border-solid border-(--border-main) text-(--text-primary)">
+                              {kanbanColumns.queued.length}
+                            </span>
+                          </div>
+                          <div className="space-y-2 max-h-112 overflow-y-auto pr-0.5">
+                            {kanbanColumns.queued.length === 0 ? (
+                              <div className="text-center py-8 text-xs text-(--text-muted) italic border border-dashed border-(--border-main) rounded-lg">
+                                No queued job orders
+                              </div>
+                            ) : (
+                              kanbanColumns.queued.map((jo) => renderKanbanCard(jo, 'queued'))
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Column 2: On-Hold */}
+                        <div className="bg-(--bg-surface) border border-solid border-amber-500/30 rounded-xl p-3 space-y-2.5 shadow-xs">
+                          <div className="flex items-center justify-between border-b border-(--border-main) pb-2">
+                            <div className="flex items-center gap-2">
+                              <PauseCircle className="w-4 h-4 text-amber-500" />
+                              <h3 className="text-xs font-bold uppercase text-amber-600 dark:text-amber-400">On-Hold</h3>
+                            </div>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 border border-solid border-amber-500/30 text-amber-600 dark:text-amber-400">
+                              {kanbanColumns.onHold.length}
+                            </span>
+                          </div>
+                          <div className="space-y-2 max-h-112 overflow-y-auto pr-0.5">
+                            {kanbanColumns.onHold.length === 0 ? (
+                              <div className="text-center py-8 text-xs text-(--text-muted) italic border border-dashed border-(--border-main) rounded-lg">
+                                No job orders on-hold
+                              </div>
+                            ) : (
+                              kanbanColumns.onHold.map((jo) => renderKanbanCard(jo, 'on-hold'))
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Column 3: In-Progress */}
+                        <div className="bg-(--bg-surface) border border-solid border-blue-500/30 rounded-xl p-3 space-y-2.5 shadow-xs">
+                          <div className="flex items-center justify-between border-b border-(--border-main) pb-2">
+                            <div className="flex items-center gap-2">
+                              <Activity className="w-4 h-4 text-blue-500" />
+                              <h3 className="text-xs font-bold uppercase text-blue-600 dark:text-blue-400">In-Progress</h3>
+                            </div>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 border border-solid border-blue-500/30 text-blue-600 dark:text-blue-400">
+                              {kanbanColumns.inProgress.length}
+                            </span>
+                          </div>
+                          <div className="space-y-2 max-h-112 overflow-y-auto pr-0.5">
+                            {kanbanColumns.inProgress.length === 0 ? (
+                              <div className="text-center py-8 text-xs text-(--text-muted) italic border border-dashed border-(--border-main) rounded-lg">
+                                No in-progress job orders
+                              </div>
+                            ) : (
+                              kanbanColumns.inProgress.map((jo) => renderKanbanCard(jo, 'in-progress'))
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Column 4: Delayed */}
+                        <div className="bg-(--bg-surface) border border-solid border-red-500/30 rounded-xl p-3 space-y-2.5 shadow-xs">
+                          <div className="flex items-center justify-between border-b border-(--border-main) pb-2">
+                            <div className="flex items-center gap-2">
+                              <AlertOctagon className="w-4 h-4 text-red-500" />
+                              <h3 className="text-xs font-bold uppercase text-red-600 dark:text-red-400">Delayed</h3>
+                            </div>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/15 border border-solid border-red-500/30 text-red-600 dark:text-red-400">
+                              {kanbanColumns.delayed.length}
+                            </span>
+                          </div>
+                          <div className="space-y-2 max-h-112 overflow-y-auto pr-0.5">
+                            {kanbanColumns.delayed.length === 0 ? (
+                              <div className="text-center py-8 text-xs text-(--text-muted) italic border border-dashed border-(--border-main) rounded-lg">
+                                No delayed job orders
+                              </div>
+                            ) : (
+                              kanbanColumns.delayed.map((jo) => renderKanbanCard(jo, 'delayed'))
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </>
           )}
         </div>
       </div>
+
+      {/* Kanban Job Order Detail Modal */}
+      {selectedKanbanJo && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setSelectedKanbanJo(null)}
+        >
+          <div
+            className="w-full max-w-lg bg-(--bg-elevated) border border-solid border-(--border-main) rounded-2xl shadow-2xl overflow-hidden animate-fadeIn"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-(--border-main) bg-(--bg-surface)">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                  <ClipboardList className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-extrabold font-mono text-(--text-primary)">
+                      {selectedKanbanJo.record.job_order_no}
+                    </h3>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold border border-solid ${
+                        kanbanLaneLabels[selectedKanbanJo.lane].badgeClass
+                      }`}
+                    >
+                      {kanbanLaneLabels[selectedKanbanJo.lane].title}
+                    </span>
+                  </div>
+                  <p className="text-xs text-(--text-muted)">
+                    Vehicle Plate: <strong className="text-(--text-primary)">{selectedKanbanJo.record.plate_no}</strong> • ODO:{' '}
+                    <span className="font-mono">{selectedKanbanJo.record.odo_rdg.toLocaleString()}</span>
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedKanbanJo(null)}
+                className="p-1.5 rounded-lg text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle) cursor-pointer"
+                aria-label="Close job order details"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 space-y-4 text-xs">
+              {selectedKanbanJo.lane === 'delayed' && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-solid border-red-500/30 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-bold">
+                    <AlertOctagon className="w-4 h-4 shrink-0" />
+                    <span>Schedule Overdue</span>
+                  </div>
+                  <span className="font-mono font-extrabold text-sm text-red-600 dark:text-red-400">
+                    +{selectedKanbanJo.record.days_delayed} {selectedKanbanJo.record.days_delayed === 1 ? 'Day' : 'Days'} Delayed
+                  </span>
+                </div>
+              )}
+
+              {/* Status & Personnel */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl bg-(--bg-surface) border border-solid border-(--border-main) space-y-1">
+                  <div className="text-[10px] font-bold uppercase text-(--text-muted)">Priority & DB Status</div>
+                  <div className="flex items-center gap-2 pt-0.5">
+                    {renderPriorityBadge(selectedKanbanJo.record.priority_level)}
+                    <span className="font-semibold text-(--text-primary)">{selectedKanbanJo.record.current_status}</span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-(--bg-surface) border border-solid border-(--border-main) space-y-1">
+                  <div className="text-[10px] font-bold uppercase text-(--text-muted) flex items-center gap-1">
+                    <User className="w-3 h-3" /> Assigned Supervisor
+                  </div>
+                  <div className="font-bold text-(--text-primary) pt-0.5">
+                    {selectedKanbanJo.record.assigned_supervisor}
+                  </div>
+                </div>
+              </div>
+
+              {/* Timeline Dates */}
+              <div className="p-3 rounded-xl bg-(--bg-surface) border border-solid border-(--border-main) space-y-2">
+                <div className="text-[10px] font-bold uppercase text-(--text-muted) flex items-center gap-1">
+                  <Calendar className="w-3 h-3" /> Schedule Timeline
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                  <div>
+                    <div className="text-[10px] text-(--text-muted)">Requested</div>
+                    <div className="font-mono font-semibold text-(--text-primary)">
+                      {selectedKanbanJo.record.date_requested}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-(--text-muted)">Date Started</div>
+                    <div className="font-mono font-semibold text-(--text-primary)">
+                      {selectedKanbanJo.record.date_started || 'Not Started'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-(--text-muted)">Expected Comp.</div>
+                    <div
+                      className={`font-mono font-bold ${
+                        selectedKanbanJo.lane === 'delayed' ? 'text-red-600 dark:text-red-400' : 'text-(--text-primary)'
+                      }`}
+                    >
+                      {selectedKanbanJo.record.expected_completion || '—'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-(--text-muted)">Date Completed</div>
+                    <div className="font-mono font-semibold text-(--text-primary)">
+                      {selectedKanbanJo.record.date_completed || 'Open'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Requestor & Approver */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-2.5 rounded-xl bg-(--bg-surface) border border-solid border-(--border-main)">
+                  <div className="text-[10px] font-bold uppercase text-(--text-muted)">Requestor</div>
+                  <div className="font-semibold text-(--text-primary) mt-0.5">{selectedKanbanJo.record.requestor}</div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-(--bg-surface) border border-solid border-(--border-main)">
+                  <div className="text-[10px] font-bold uppercase text-(--text-muted)">Approver</div>
+                  <div className="font-semibold text-(--text-primary) mt-0.5">{selectedKanbanJo.record.approver}</div>
+                </div>
+              </div>
+
+              {/* Cost Breakdown */}
+              <div className="p-3 rounded-xl bg-(--bg-surface) border border-solid border-(--border-main) space-y-2">
+                <div className="text-[10px] font-bold uppercase text-(--text-muted) flex items-center gap-1">
+                  <DollarSign className="w-3 h-3" /> Cost Summary
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono">
+                  <div>
+                    <div className="text-[10px] font-sans text-(--text-muted)">Labor</div>
+                    <div className="font-semibold text-(--text-primary)">
+                      {selectedKanbanJo.record.labor_cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-sans text-(--text-muted)">Materials</div>
+                    <div className="font-semibold text-(--text-primary)">
+                      {selectedKanbanJo.record.materials_cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-sans text-(--text-muted)">Contract</div>
+                    <div className="font-semibold text-(--text-primary)">
+                      {selectedKanbanJo.record.contract_cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-sans text-(--text-muted)">Total Cost</div>
+                    <div className="font-extrabold text-emerald-600 dark:text-emerald-400">
+                      {selectedKanbanJo.record.total_cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end px-4 py-3 border-t border-(--border-main) bg-(--bg-surface)">
+              <button
+                type="button"
+                onClick={() => setSelectedKanbanJo(null)}
+                className="px-4 py-1.5 rounded-lg text-xs font-bold bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) cursor-pointer transition-colors"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

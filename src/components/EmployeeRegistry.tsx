@@ -92,7 +92,7 @@ function CustomDropdown<T extends string | number>({
 
       {isOpen && (
         <div
-          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-(--border-main) bg-(--bg-elevated) shadow-xl py-1 ${
+          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-slate-300 dark:border-slate-600 bg-(--bg-elevated) shadow-xl py-1 ${
             openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
           } ${menuClassName}`}
         >
@@ -219,21 +219,19 @@ function PaginationControls({
   const actualPages = Math.max(1, totalPages);
 
   return (
-    <div className="shrink-0 flex items-center justify-between px-3 py-2 border-t border-(--border-main) bg-(--bg-surface) text-xs">
-      <div className="text-(--text-muted)">
-        Showing <span className="font-semibold text-(--text-primary)">{startItem}</span> to{' '}
-        <span className="font-semibold text-(--text-primary)">{endItem}</span> of{' '}
-        <span className="font-semibold text-(--text-primary)">{totalItems}</span> entries
-      </div>
+    <div className="shrink-0 flex items-center justify-between pt-2 text-xs text-(--text-muted)">
+      <span>
+        Showing {startItem} to {endItem} of {totalItems} entries
+      </span>
       <div className="flex items-center gap-1">
         <button
           type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="p-1.5 rounded-lg border border-(--border-main) bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
           title="Previous Page"
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="w-3.5 h-3.5" />
         </button>
 
         <div className="flex items-center gap-1 px-1">
@@ -244,7 +242,7 @@ function PaginationControls({
                 key={page}
                 type="button"
                 onClick={() => onPageChange(page)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
+                className={`px-2 py-0.5 rounded text-xs font-semibold border transition-colors cursor-pointer ${
                   isCurrent
                     ? 'bg-(--accent-subtle) border-(--text-primary) text-(--text-primary)'
                     : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
@@ -260,14 +258,31 @@ function PaginationControls({
           type="button"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= actualPages}
-          className="p-1.5 rounded-lg border border-(--border-main) bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
           title="Next Page"
         >
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>
   );
+}
+
+function formatDateLocalYYYYMMDD(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getDefaultDateRange(): { from: string; to: string } {
+  const today = new Date();
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setDate(today.getDate() - 30);
+  return {
+    from: formatDateLocalYYYYMMDD(thirtyDaysAgo),
+    to: formatDateLocalYYYYMMDD(today),
+  };
 }
 
 function isWithinOptionalDateRange(dateVal?: string | null, dateFrom?: string, dateTo?: string): boolean {
@@ -304,8 +319,8 @@ export function EmployeeRegistry() {
   // Search Employee Records Tab State
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
-  const [recordDateFrom, setRecordDateFrom] = useState<string>('');
-  const [recordDateTo, setRecordDateTo] = useState<string>('');
+  const [recordDateFrom, setRecordDateFrom] = useState<string>(() => getDefaultDateRange().from);
+  const [recordDateTo, setRecordDateTo] = useState<string>(() => getDefaultDateRange().to);
   const [recordCategoryTab, setRecordCategoryTab] = useState<RecordCategoryTab>('resources');
   const [recordsLoading, setRecordsLoading] = useState<boolean>(false);
   const [recordsPage, setRecordsPage] = useState<number>(1);
@@ -314,6 +329,12 @@ export function EmployeeRegistry() {
   const [resourceTasks, setResourceTasks] = useState<ResourceTaskRecord[]>([]);
   const [tripAssignments, setTripAssignments] = useState<TripAssignmentRecord[]>([]);
   const [employeeIncidents, setEmployeeIncidents] = useState<EmployeeIncidentRecord[]>([]);
+
+  // Unified Tab Highlight Helper
+  const getTabClass = (isActive: boolean) =>
+    isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-solid border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-solid border-(--border-main)';
 
   const loadEmployees = async () => {
     try {
@@ -809,11 +830,11 @@ export function EmployeeRegistry() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 overflow-hidden">
       {/* Page Header */}
       <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-3">
         <div className="flex items-center gap-3">
-          <div className="bg-black text-white p-2 rounded-xl shadow-xs">
+          <div className="p-2 bg-(--accent-subtle) text-(--text-primary) rounded-xl">
             <Users className="w-6 h-6" />
           </div>
           <div>
@@ -821,6 +842,7 @@ export function EmployeeRegistry() {
             <p className="text-xs sm:text-sm text-(--text-muted)">Manage staff, mechanics, drivers, and operational personnel accounts and rates.</p>
           </div>
         </div>
+        {recordsLoading && <Loader2 className="w-5 h-5 text-(--text-primary) animate-spin" />}
       </div>
 
       {/* Messages */}
@@ -838,562 +860,562 @@ export function EmployeeRegistry() {
         </div>
       )}
 
-      {/* Tab bar header */}
-      <div className="shrink-0 flex border-b border-(--border-main) gap-2 overflow-x-auto">
-        <button
-          type="button"
-          onClick={() => setActiveTab('registry')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 rounded-t-lg transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'registry'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-secondary) hover:text-(--text-primary)'
-          }`}
-        >
-          <Users className="w-3.5 h-3.5" />
-          <span>Registered Employees ({employees.length})</span>
-        </button>
+      {/* Main Content Body Container */}
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-solid border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
+        {/* Primary Category Navigation Tabs */}
+        <div className="shrink-0 flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('registry')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'registry')}`}
+          >
+            <Users className={`w-4 h-4 ${activeTab === 'registry' ? '' : 'text-blue-500'}`} />
+            <span>Registered Employees ({employees.length})</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('search_records')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 rounded-t-lg transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'search_records'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-secondary) hover:text-(--text-primary)'
-          }`}
-        >
-          <Search className="w-3.5 h-3.5" />
-          <span>Search Employee Records</span>
-        </button>
-      </div>
-
-      {/* TAB 1: Registered Employees */}
-      {activeTab === 'registry' && (
-        <div className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-4 overflow-hidden space-y-3">
-          <div className="shrink-0 flex justify-end items-center">
-            <button
-              onClick={handleOpenAdd}
-              className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow-xs whitespace-nowrap"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Employee</span>
-            </button>
-          </div>
-
-          {/* Table container & Pagination */}
-          <div className="flex flex-col flex-1 min-h-0 space-y-2">
-            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
-                    <th className="py-2 px-3">Employee Code</th>
-                    <th className="py-2 px-3">Employee Name</th>
-                    <th className="py-2 px-3">Rate / Hour</th>
-                    <th className="py-2 px-3">Sell Rate / Hour</th>
-                    <th className="py-2 px-3">Status</th>
-                    <th className="py-2 px-3">Roles</th>
-                    <th className="py-2 px-3 text-right w-44">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                  {employees.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-6 text-center text-(--text-muted) text-xs">No employees registered.</td>
-                    </tr>
-                  ) : (
-                    paginatedEmployees.map((item) => (
-                      <tr key={item.employee_id} className="hover:bg-(--accent-subtle) transition-colors">
-                        <td className="py-2 px-3 font-mono font-bold text-(--text-primary)">{item.employee_code ?? ''}</td>
-                        <td className="py-2 px-3 font-semibold text-(--text-primary)">{item.employee_name ?? ''}</td>
-                        <td className="py-2 px-3 font-mono text-(--text-secondary)">₱{(Number(item.rate_per_hour ?? 0)).toFixed(2)}</td>
-                        <td className="py-2 px-3 font-mono text-(--text-secondary)">₱{(Number(item.sell_rate_per_hour ?? 0)).toFixed(2)}</td>
-                        <td className="py-2 px-3">
-                          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${item.is_active ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/50' : 'bg-(--accent-subtle) text-(--text-muted)'}`}>
-                            {item.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="py-2 px-3">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {/* Driver (Violet) / Shop (Blue) Badge First */}
-                            {item.is_driver ? (
-                              <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-violet-100 dark:bg-violet-950 text-violet-800 dark:text-violet-300 border border-violet-300 dark:border-violet-800/50">
-                                Driver
-                              </span>
-                            ) : (
-                              <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-800/50">
-                                Shop
-                              </span>
-                            )}
-
-                            {/* Supervisor Badge Second (Yellow Highlight) */}
-                            {item.is_supervisor && (
-                              <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-yellow-100 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-800/50">
-                                Supervisor
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-2 px-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleInspectEmployee(item.employee_id)}
-                              className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                              title="Search operational records for this employee"
-                            >
-                              <Search className="w-3 h-3" /> Records
-                            </button>
-                            <button
-                              onClick={() => handleOpenEdit(item)}
-                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Edit2 className="w-3 h-3" /> Edit
-                            </button>
-                            <button
-                              onClick={() => handleDelete(item.employee_id)}
-                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Trash2 className="w-3 h-3" /> Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <PaginationControls
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={employees.length}
-              itemsPerPage={ITEMS_PER_PAGE}
-              onPageChange={setCurrentPage}
-            />
-          </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('search_records')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'search_records')}`}
+          >
+            <Search className={`w-4 h-4 ${activeTab === 'search_records' ? '' : 'text-emerald-500'}`} />
+            <span>Search Employee Records</span>
+          </button>
         </div>
-      )}
 
-      {/* TAB 2: Search Employee Records */}
-      {activeTab === 'search_records' && (
-        <div className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-4 overflow-hidden space-y-3">
-          {/* Filter & Search Bar */}
-          <div className="shrink-0 grid grid-cols-1 md:grid-cols-12 gap-2.5 bg-(--bg-elevated) border border-(--border-main) p-3 rounded-xl">
-            {/* Keyword Search */}
-            <div className="md:col-span-4">
-              <label className="block text-[10px] uppercase text-(--text-muted) font-bold mb-1">
-                Filter Employee List
-              </label>
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 text-(--text-muted) absolute left-2.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setSearchQuery(val);
-                    const q = val.trim().toLowerCase();
-                    if (q) {
-                      const firstMatch = employees.find(
-                        (emp) =>
-                          emp.employee_code.toLowerCase().includes(q) ||
-                          emp.employee_name.toLowerCase().includes(q)
-                      );
-                      if (firstMatch) {
-                        setSelectedEmployeeId(firstMatch.employee_id);
-                      }
-                    }
-                  }}
-                  placeholder="Type code or name..."
-                  className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-2.5 py-1.5 text-xs focus:outline-none focus:border-(--text-primary)"
-                />
-              </div>
+        {/* TAB 1: Registered Employees */}
+        {activeTab === 'registry' && (
+          <div className="flex flex-col flex-1 min-h-0 space-y-2">
+            <div className="shrink-0 flex justify-end items-center">
+              <button
+                type="button"
+                onClick={handleOpenAdd}
+                className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Employee</span>
+              </button>
             </div>
 
-            {/* Employee Selector Dropdown */}
-            <div className="md:col-span-4">
-              <label className="block text-[10px] uppercase text-(--text-muted) font-bold mb-1">
-                Selected Employee ({matchingEmployees.length})
-              </label>
-              <CustomDropdown
-                value={selectedEmployeeId}
-                options={employeeDropdownOptions}
-                onChange={(val) => {
-                  setSelectedEmployeeId(val);
-                  setRecordsPage(1);
-                }}
-                buttonClassName="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:border-(--text-primary)"
+            {/* Table container & Pagination */}
+            <div className="flex flex-col flex-1 min-h-0 space-y-2">
+              <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                      <th className="py-2 px-3">Employee Code</th>
+                      <th className="py-2 px-3">Employee Name</th>
+                      <th className="py-2 px-3">Rate / Hour</th>
+                      <th className="py-2 px-3">Sell Rate / Hour</th>
+                      <th className="py-2 px-3">Status</th>
+                      <th className="py-2 px-3">Roles</th>
+                      <th className="py-2 px-3 text-right w-44">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                    {employees.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-6 text-center text-(--text-muted) text-xs">No employees registered.</td>
+                      </tr>
+                    ) : (
+                      paginatedEmployees.map((item) => (
+                        <tr key={item.employee_id} className="hover:bg-(--accent-subtle) transition-colors">
+                          <td className="py-2 px-3 font-mono font-bold text-(--text-primary)">{item.employee_code ?? ''}</td>
+                          <td className="py-2 px-3 font-semibold text-(--text-primary)">{item.employee_name ?? ''}</td>
+                          <td className="py-2 px-3 font-mono text-(--text-secondary)">₱{(Number(item.rate_per_hour ?? 0)).toFixed(2)}</td>
+                          <td className="py-2 px-3 font-mono text-(--text-secondary)">₱{(Number(item.sell_rate_per_hour ?? 0)).toFixed(2)}</td>
+                          <td className="py-2 px-3">
+                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${item.is_active ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/50' : 'bg-(--accent-subtle) text-(--text-muted)'}`}>
+                              {item.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {/* Driver (Violet) / Shop (Blue) Badge First */}
+                              {item.is_driver ? (
+                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-violet-100 dark:bg-violet-950 text-violet-800 dark:text-violet-300 border border-violet-300 dark:border-violet-800/50">
+                                  Driver
+                                </span>
+                              ) : (
+                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-800/50">
+                                  Shop
+                                </span>
+                              )}
+
+                              {/* Supervisor Badge Second (Yellow Highlight) */}
+                              {item.is_supervisor && (
+                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-yellow-100 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-800/50">
+                                  Supervisor
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleInspectEmployee(item.employee_id)}
+                                className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                title="Search operational records for this employee"
+                              >
+                                <Search className="w-3 h-3" /> Records
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEdit(item)}
+                                className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Edit2 className="w-3 h-3" /> Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(item.employee_id)}
+                                className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" /> Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={employees.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+                onPageChange={setCurrentPage}
               />
             </div>
+          </div>
+        )}
 
-            {/* Optional Date Range */}
-            <div className="md:col-span-4">
-              <label className="block text-[10px] uppercase text-(--text-muted) font-bold mb-1">
-                Activity Date Range (Optional)
-              </label>
-              <div className="flex items-center gap-1.5 bg-(--bg-surface) border border-(--border-main) rounded-lg px-2 py-1 text-xs">
-                <Calendar className="w-3.5 h-3.5 text-(--text-muted) shrink-0" />
-                <input
-                  type="date"
-                  value={recordDateFrom}
-                  onChange={(e) => {
-                    setRecordDateFrom(e.target.value);
+        {/* TAB 2: Search Employee Records */}
+        {activeTab === 'search_records' && (
+          <div className="flex flex-col flex-1 min-h-0 space-y-2">
+            {/* Filter & Search Bar */}
+            <div className="shrink-0 grid grid-cols-1 md:grid-cols-12 gap-2.5 bg-(--bg-surface) border border-(--border-main) p-3 rounded-xl">
+              {/* Keyword Search */}
+              <div className="md:col-span-4">
+                <label className="block text-[10px] uppercase text-(--text-muted) font-bold mb-1">
+                  Filter Employee List
+                </label>
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-(--text-muted) absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSearchQuery(val);
+                      const q = val.trim().toLowerCase();
+                      if (q) {
+                        const firstMatch = employees.find(
+                          (emp) =>
+                            emp.employee_code.toLowerCase().includes(q) ||
+                            emp.employee_name.toLowerCase().includes(q)
+                        );
+                        if (firstMatch) {
+                          setSelectedEmployeeId(firstMatch.employee_id);
+                        }
+                      }
+                    }}
+                    placeholder="Type code or name..."
+                    className="w-full bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Employee Selector Dropdown */}
+              <div className="md:col-span-4">
+                <label className="block text-[10px] uppercase text-(--text-muted) font-bold mb-1">
+                  Selected Employee ({matchingEmployees.length})
+                </label>
+                <CustomDropdown
+                  value={selectedEmployeeId}
+                  options={employeeDropdownOptions}
+                  onChange={(val) => {
+                    setSelectedEmployeeId(val);
                     setRecordsPage(1);
                   }}
-                  className="bg-transparent text-(--text-primary) text-xs focus:outline-none w-full cursor-pointer"
-                  title="From Date"
+                  buttonClassName="w-full bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-2.5 py-1.5 text-xs font-semibold hover:border-slate-400 dark:hover:border-slate-500"
                 />
-                <span className="text-(--text-muted)">–</span>
-                <input
-                  type="date"
-                  value={recordDateTo}
-                  onChange={(e) => {
-                    setRecordDateTo(e.target.value);
-                    setRecordsPage(1);
-                  }}
-                  className="bg-transparent text-(--text-primary) text-xs focus:outline-none w-full cursor-pointer"
-                  title="To Date"
-                />
-                {(recordDateFrom || recordDateTo) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRecordDateFrom('');
-                      setRecordDateTo('');
+              </div>
+
+              {/* Optional Date Range */}
+              <div className="md:col-span-4">
+                <label className="block text-[10px] uppercase text-(--text-muted) font-bold mb-1">
+                  Activity Date Range (Optional)
+                </label>
+                <div className="flex items-center gap-1.5 bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-xs">
+                  <Calendar className="w-3.5 h-3.5 text-(--text-muted) shrink-0" />
+                  <input
+                    type="date"
+                    value={recordDateFrom}
+                    onChange={(e) => {
+                      setRecordDateFrom(e.target.value);
                       setRecordsPage(1);
                     }}
-                    className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer"
-                    title="Clear date filter"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+                    className="bg-transparent text-(--text-primary) text-xs focus:outline-none w-full cursor-pointer"
+                    title="From Date"
+                  />
+                  <span className="text-(--text-muted)">–</span>
+                  <input
+                    type="date"
+                    value={recordDateTo}
+                    onChange={(e) => {
+                      setRecordDateTo(e.target.value);
+                      setRecordsPage(1);
+                    }}
+                    className="bg-transparent text-(--text-primary) text-xs focus:outline-none w-full cursor-pointer"
+                    title="To Date"
+                  />
+                  {(recordDateFrom || recordDateTo) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRecordDateFrom('');
+                        setRecordDateTo('');
+                        setRecordsPage(1);
+                      }}
+                      className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer"
+                      title="Clear date filter"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Category Sub-Tabs (Transaction Tables) */}
+            <div className="shrink-0 grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setRecordCategoryTab('resources');
+                  setRecordsPage(1);
+                }}
+                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
+                  recordCategoryTab === 'resources'
+                    ? 'bg-blue-500/15 border-blue-500 text-(--text-primary)'
+                    : 'bg-(--bg-surface) border-(--border-main) text-(--text-secondary) hover:border-blue-500/50'
+                }`}
+              >
+                <div>
+                  <div className="text-[10px] font-bold uppercase text-(--text-muted) flex items-center gap-1">
+                    <Wrench className="w-3 h-3 text-blue-500" /> Task Labor
+                  </div>
+                  <div className="text-base font-black font-mono text-(--text-primary)">
+                    {filteredResourceTasks.length}
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400">
+                  {filteredResourceTasks.reduce((sum, r) => sum + r.charged_time, 0).toFixed(1)} hrs
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setRecordCategoryTab('supervisor_jos');
+                  setRecordsPage(1);
+                }}
+                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
+                  recordCategoryTab === 'supervisor_jos'
+                    ? 'bg-amber-500/15 border-amber-500 text-(--text-primary)'
+                    : 'bg-(--bg-surface) border-(--border-main) text-(--text-secondary) hover:border-amber-500/50'
+                }`}
+              >
+                <div>
+                  <div className="text-[10px] font-bold uppercase text-(--text-muted) flex items-center gap-1">
+                    <ClipboardList className="w-3 h-3 text-amber-500" /> Supervised JOs
+                  </div>
+                  <div className="text-base font-black font-mono text-(--text-primary)">
+                    {filteredSupervisorJOs.length}
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400">
+                  ₱{filteredSupervisorJOs.reduce((sum, j) => sum + j.total_cost, 0).toLocaleString()}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setRecordCategoryTab('trips');
+                  setRecordsPage(1);
+                }}
+                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
+                  recordCategoryTab === 'trips'
+                    ? 'bg-violet-500/15 border-violet-500 text-(--text-primary)'
+                    : 'bg-(--bg-surface) border-(--border-main) text-(--text-secondary) hover:border-violet-500/50'
+                }`}
+              >
+                <div>
+                  <div className="text-[10px] font-bold uppercase text-(--text-muted) flex items-center gap-1">
+                    <Truck className="w-3 h-3 text-violet-500" /> Trip Assignments
+                  </div>
+                  <div className="text-base font-black font-mono text-(--text-primary)">
+                    {filteredTripAssignments.length}
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono text-violet-600 dark:text-violet-400">
+                  {filteredTripAssignments.reduce((sum, t) => sum + t.total_actual_fuel, 0).toFixed(1)} L
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setRecordCategoryTab('incidents');
+                  setRecordsPage(1);
+                }}
+                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
+                  recordCategoryTab === 'incidents'
+                    ? 'bg-rose-500/15 border-rose-500 text-(--text-primary)'
+                    : 'bg-(--bg-surface) border-(--border-main) text-(--text-secondary) hover:border-rose-500/50'
+                }`}
+              >
+                <div>
+                  <div className="text-[10px] font-bold uppercase text-(--text-muted) flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3 text-rose-500" /> Incident Reports
+                  </div>
+                  <div className="text-base font-black font-mono text-(--text-primary)">
+                    {filteredEmployeeIncidents.length}
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono text-rose-600 dark:text-rose-400">
+                  ₱{filteredEmployeeIncidents.reduce((sum, i) => sum + i.incident_loss, 0).toLocaleString()}
+                </span>
+              </button>
+            </div>
+
+            {/* Records Table & Pagination */}
+            <div className="flex flex-col flex-1 min-h-0 space-y-2">
+              <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
+                {recordsLoading ? (
+                  <div className="h-full flex items-center justify-center gap-2 text-xs text-(--text-muted)">
+                    <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
+                    <span>Loading employee transaction records...</span>
+                  </div>
+                ) : !selectedEmployee ? (
+                  <div className="h-full flex items-center justify-center p-8 text-center text-xs text-(--text-muted)">
+                    Select an employee above to view their operational records.
+                  </div>
+                ) : (
+                  <>
+                    {/* 1. Task Labor (joborder_resources + joborder_task_details + equipment_taskstandards) */}
+                    {recordCategoryTab === 'resources' && (
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                            <th className="py-2 px-3">Assigned Date</th>
+                            <th className="py-2 px-3">JO #</th>
+                            <th className="py-2 px-3">Plate No</th>
+                            <th className="py-2 px-3">Task Standard</th>
+                            <th className="py-2 px-3 text-right">Std Hrs</th>
+                            <th className="py-2 px-3 text-right">Charged Hrs</th>
+                            <th className="py-2 px-3 text-right">EE Rate</th>
+                            <th className="py-2 px-3 text-right">Line Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                          {paginatedResourceTasks.length === 0 ? (
+                            <tr>
+                              <td colSpan={8} className="py-6 text-center text-(--text-muted)">
+                                No job order task labor records found for {selectedEmployee.employee_name}.
+                              </td>
+                            </tr>
+                          ) : (
+                            paginatedResourceTasks.map((rec) => (
+                              <tr key={rec.job_order_resource_id} className="hover:bg-(--accent-subtle) transition-colors">
+                                <td className="py-2 px-3 font-mono">{rec.assigned_date}</td>
+                                <td className="py-2 px-3 font-mono font-bold text-(--text-primary)">
+                                  {rec.job_order_no ? `JO-${rec.job_order_no}` : 'N/A'}
+                                </td>
+                                <td className="py-2 px-3 font-mono font-semibold text-(--text-primary)">{rec.plate_no}</td>
+                                <td className="py-2 px-3 text-(--text-primary)">{rec.task_standard_desc}</td>
+                                <td className="py-2 px-3 text-right font-mono">{rec.standard_time.toFixed(2)}</td>
+                                <td className="py-2 px-3 text-right font-mono font-bold text-blue-600 dark:text-blue-400">
+                                  {rec.charged_time.toFixed(2)}
+                                </td>
+                                <td className="py-2 px-3 text-right font-mono">₱{rec.ee_rate.toFixed(2)}</td>
+                                <td className="py-2 px-3 text-right font-mono font-bold text-(--text-primary)">
+                                  ₱{rec.ee_line_total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    )}
+
+                    {/* 2. Supervisor Job Orders (joborder_master) */}
+                    {recordCategoryTab === 'supervisor_jos' && (
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                            <th className="py-2 px-3">JO #</th>
+                            <th className="py-2 px-3">Plate No</th>
+                            <th className="py-2 px-3">Date Started</th>
+                            <th className="py-2 px-3">Expected / Completed</th>
+                            <th className="py-2 px-3">Requestor</th>
+                            <th className="py-2 px-3 text-right">Labor</th>
+                            <th className="py-2 px-3 text-right">Materials</th>
+                            <th className="py-2 px-3 text-right">Total Cost</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                          {paginatedSupervisorJOs.length === 0 ? (
+                            <tr>
+                              <td colSpan={8} className="py-6 text-center text-(--text-muted)">
+                                No supervised job orders found for {selectedEmployee.employee_name}.
+                              </td>
+                            </tr>
+                          ) : (
+                            paginatedSupervisorJOs.map((jo) => (
+                              <tr key={jo.job_order_id} className="hover:bg-(--accent-subtle) transition-colors">
+                                <td className="py-2 px-3 font-mono font-bold text-(--text-primary)">JO-{jo.job_order_no}</td>
+                                <td className="py-2 px-3 font-mono font-semibold text-(--text-primary)">{jo.plate_no}</td>
+                                <td className="py-2 px-3 font-mono">{jo.date_started || 'Not Started'}</td>
+                                <td className="py-2 px-3 font-mono">
+                                  {jo.date_completed ? (
+                                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{jo.date_completed}</span>
+                                  ) : (
+                                    <span>Due: {jo.expected_completion}</span>
+                                  )}
+                                </td>
+                                <td className="py-2 px-3">{jo.requestor || '—'}</td>
+                                <td className="py-2 px-3 text-right font-mono">₱{jo.labor_cost.toLocaleString()}</td>
+                                <td className="py-2 px-3 text-right font-mono">₱{jo.materials_cost.toLocaleString()}</td>
+                                <td className="py-2 px-3 text-right font-mono font-bold text-(--text-primary)">
+                                  ₱{jo.total_cost.toLocaleString()}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    )}
+
+                    {/* 3. Trip Assignments (trip_assignments + trip_assignment_details) */}
+                    {recordCategoryTab === 'trips' && (
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                            <th className="py-2 px-3">Trip Date</th>
+                            <th className="py-2 px-3">Vehicle Plate</th>
+                            <th className="py-2 px-3 text-center">Route Legs</th>
+                            <th className="py-2 px-3 text-right">Std Fuel (L)</th>
+                            <th className="py-2 px-3 text-right">Buffer (L)</th>
+                            <th className="py-2 px-3 text-right">Allotted (L)</th>
+                            <th className="py-2 px-3 text-right">Actual Fuel (L)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                          {paginatedTripAssignments.length === 0 ? (
+                            <tr>
+                              <td colSpan={7} className="py-6 text-center text-(--text-muted)">
+                                No trip assignments found for {selectedEmployee.employee_name}.
+                              </td>
+                            </tr>
+                          ) : (
+                            paginatedTripAssignments.map((trip) => (
+                              <tr key={trip.trip_id} className="hover:bg-(--accent-subtle) transition-colors">
+                                <td className="py-2 px-3 font-mono font-bold text-(--text-primary)">{trip.trip_date}</td>
+                                <td className="py-2 px-3 font-mono font-semibold text-(--text-primary)">{trip.plate_no}</td>
+                                <td className="py-2 px-3 text-center font-mono">{trip.leg_count}</td>
+                                <td className="py-2 px-3 text-right font-mono">{trip.total_standard_fuel.toFixed(2)}</td>
+                                <td className="py-2 px-3 text-right font-mono">{trip.total_buffer_fuel.toFixed(2)}</td>
+                                <td className="py-2 px-3 text-right font-mono font-semibold text-violet-600 dark:text-violet-400">
+                                  {trip.total_fuel_allotted.toFixed(2)}
+                                </td>
+                                <td className="py-2 px-3 text-right font-mono font-bold text-(--text-primary)">
+                                  {trip.total_actual_fuel.toFixed(2)}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    )}
+
+                    {/* 4. Incident Reports (incident_report) */}
+                    {recordCategoryTab === 'incidents' && (
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                            <th className="py-2 px-3">Ref No</th>
+                            <th className="py-2 px-3">Incident Date</th>
+                            <th className="py-2 px-3">Plate No</th>
+                            <th className="py-2 px-3">Involvement</th>
+                            <th className="py-2 px-3">Severity</th>
+                            <th className="py-2 px-3">Description</th>
+                            <th className="py-2 px-3 text-right">Incident Loss</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                          {paginatedEmployeeIncidents.length === 0 ? (
+                            <tr>
+                              <td colSpan={7} className="py-6 text-center text-(--text-muted)">
+                                No incident reports referencing {selectedEmployee.employee_name}.
+                              </td>
+                            </tr>
+                          ) : (
+                            paginatedEmployeeIncidents.map((inc) => (
+                              <tr key={inc.incident_id} className="hover:bg-(--accent-subtle) transition-colors">
+                                <td className="py-2 px-3 font-mono font-bold text-rose-600">{inc.incident_refno}</td>
+                                <td className="py-2 px-3 font-mono">{inc.incident_date}</td>
+                                <td className="py-2 px-3 font-mono font-semibold text-(--text-primary)">{inc.plate_no}</td>
+                                <td className="py-2 px-3">
+                                  <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800/50">
+                                    {inc.role_in_incident}
+                                  </span>
+                                </td>
+                                <td className="py-2 px-3 font-semibold">{inc.incident_severity || 'N/A'}</td>
+                                <td className="py-2 px-3 max-w-xs truncate" title={inc.incident_description || ''}>
+                                  {inc.incident_description || '—'}
+                                </td>
+                                <td className="py-2 px-3 text-right font-mono font-bold text-rose-600">
+                                  ₱{inc.incident_loss.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    )}
+                  </>
                 )}
               </div>
+
+              <PaginationControls
+                currentPage={recordsPage}
+                totalPages={recordsTotalPages}
+                totalItems={activeRecordsCount}
+                itemsPerPage={ITEMS_PER_PAGE}
+                onPageChange={setRecordsPage}
+              />
             </div>
           </div>
-
-          {/* Category Sub-Tabs (Transaction Tables) */}
-          <div className="shrink-0 grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setRecordCategoryTab('resources');
-                setRecordsPage(1);
-              }}
-              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
-                recordCategoryTab === 'resources'
-                  ? 'bg-blue-500/15 border-blue-500 text-(--text-primary)'
-                  : 'bg-(--bg-elevated) border-(--border-main) text-(--text-secondary) hover:border-blue-500/50'
-              }`}
-            >
-              <div>
-                <div className="text-[10px] font-bold uppercase text-(--text-muted) flex items-center gap-1">
-                  <Wrench className="w-3 h-3 text-blue-500" /> Task Labor
-                </div>
-                <div className="text-base font-black font-mono text-(--text-primary)">
-                  {filteredResourceTasks.length}
-                </div>
-              </div>
-              <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400">
-                {filteredResourceTasks.reduce((sum, r) => sum + r.charged_time, 0).toFixed(1)} hrs
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setRecordCategoryTab('supervisor_jos');
-                setRecordsPage(1);
-              }}
-              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
-                recordCategoryTab === 'supervisor_jos'
-                  ? 'bg-amber-500/15 border-amber-500 text-(--text-primary)'
-                  : 'bg-(--bg-elevated) border-(--border-main) text-(--text-secondary) hover:border-amber-500/50'
-              }`}
-            >
-              <div>
-                <div className="text-[10px] font-bold uppercase text-(--text-muted) flex items-center gap-1">
-                  <ClipboardList className="w-3 h-3 text-amber-500" /> Supervised JOs
-                </div>
-                <div className="text-base font-black font-mono text-(--text-primary)">
-                  {filteredSupervisorJOs.length}
-                </div>
-              </div>
-              <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400">
-                ₱{filteredSupervisorJOs.reduce((sum, j) => sum + j.total_cost, 0).toLocaleString()}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setRecordCategoryTab('trips');
-                setRecordsPage(1);
-              }}
-              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
-                recordCategoryTab === 'trips'
-                  ? 'bg-violet-500/15 border-violet-500 text-(--text-primary)'
-                  : 'bg-(--bg-elevated) border-(--border-main) text-(--text-secondary) hover:border-violet-500/50'
-              }`}
-            >
-              <div>
-                <div className="text-[10px] font-bold uppercase text-(--text-muted) flex items-center gap-1">
-                  <Truck className="w-3 h-3 text-violet-500" /> Trip Assignments
-                </div>
-                <div className="text-base font-black font-mono text-(--text-primary)">
-                  {filteredTripAssignments.length}
-                </div>
-              </div>
-              <span className="text-[10px] font-mono text-violet-600 dark:text-violet-400">
-                {filteredTripAssignments.reduce((sum, t) => sum + t.total_actual_fuel, 0).toFixed(1)} L
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setRecordCategoryTab('incidents');
-                setRecordsPage(1);
-              }}
-              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
-                recordCategoryTab === 'incidents'
-                  ? 'bg-rose-500/15 border-rose-500 text-(--text-primary)'
-                  : 'bg-(--bg-elevated) border-(--border-main) text-(--text-secondary) hover:border-rose-500/50'
-              }`}
-            >
-              <div>
-                <div className="text-[10px] font-bold uppercase text-(--text-muted) flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3 text-rose-500" /> Incident Reports
-                </div>
-                <div className="text-base font-black font-mono text-(--text-primary)">
-                  {filteredEmployeeIncidents.length}
-                </div>
-              </div>
-              <span className="text-[10px] font-mono text-rose-600 dark:text-rose-400">
-                ₱{filteredEmployeeIncidents.reduce((sum, i) => sum + i.incident_loss, 0).toLocaleString()}
-              </span>
-            </button>
-          </div>
-
-          {/* Records Table & Pagination */}
-          <div className="flex flex-col flex-1 min-h-0 space-y-2">
-            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
-              {recordsLoading ? (
-                <div className="flex items-center justify-center h-48 gap-2 text-xs text-(--text-muted)">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Loading employee transaction records...</span>
-                </div>
-              ) : !selectedEmployee ? (
-                <div className="py-10 text-center text-xs text-(--text-muted)">
-                  Select an employee above to view their operational records.
-                </div>
-              ) : (
-                <>
-                  {/* 1. Task Labor (joborder_resources + joborder_task_details + equipment_taskstandards) */}
-                  {recordCategoryTab === 'resources' && (
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
-                          <th className="py-2 px-3">Assigned Date</th>
-                          <th className="py-2 px-3">JO #</th>
-                          <th className="py-2 px-3">Plate No</th>
-                          <th className="py-2 px-3">Task Standard</th>
-                          <th className="py-2 px-3 text-right">Std Hrs</th>
-                          <th className="py-2 px-3 text-right">Charged Hrs</th>
-                          <th className="py-2 px-3 text-right">EE Rate</th>
-                          <th className="py-2 px-3 text-right">Line Total</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                        {paginatedResourceTasks.length === 0 ? (
-                          <tr>
-                            <td colSpan={8} className="py-6 text-center text-(--text-muted)">
-                              No job order task labor records found for {selectedEmployee.employee_name}.
-                            </td>
-                          </tr>
-                        ) : (
-                          paginatedResourceTasks.map((rec) => (
-                            <tr key={rec.job_order_resource_id} className="hover:bg-(--accent-subtle) transition-colors">
-                              <td className="py-2 px-3 font-mono">{rec.assigned_date}</td>
-                              <td className="py-2 px-3 font-mono font-bold text-(--text-primary)">
-                                {rec.job_order_no ? `JO-${rec.job_order_no}` : 'N/A'}
-                              </td>
-                              <td className="py-2 px-3 font-mono font-semibold text-(--text-primary)">{rec.plate_no}</td>
-                              <td className="py-2 px-3 text-(--text-primary)">{rec.task_standard_desc}</td>
-                              <td className="py-2 px-3 text-right font-mono">{rec.standard_time.toFixed(2)}</td>
-                              <td className="py-2 px-3 text-right font-mono font-bold text-blue-600 dark:text-blue-400">
-                                {rec.charged_time.toFixed(2)}
-                              </td>
-                              <td className="py-2 px-3 text-right font-mono">₱{rec.ee_rate.toFixed(2)}</td>
-                              <td className="py-2 px-3 text-right font-mono font-bold text-(--text-primary)">
-                                ₱{rec.ee_line_total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  )}
-
-                  {/* 2. Supervisor Job Orders (joborder_master) */}
-                  {recordCategoryTab === 'supervisor_jos' && (
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
-                          <th className="py-2 px-3">JO #</th>
-                          <th className="py-2 px-3">Plate No</th>
-                          <th className="py-2 px-3">Date Started</th>
-                          <th className="py-2 px-3">Expected / Completed</th>
-                          <th className="py-2 px-3">Requestor</th>
-                          <th className="py-2 px-3 text-right">Labor</th>
-                          <th className="py-2 px-3 text-right">Materials</th>
-                          <th className="py-2 px-3 text-right">Total Cost</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                        {paginatedSupervisorJOs.length === 0 ? (
-                          <tr>
-                            <td colSpan={8} className="py-6 text-center text-(--text-muted)">
-                              No supervised job orders found for {selectedEmployee.employee_name}.
-                            </td>
-                          </tr>
-                        ) : (
-                          paginatedSupervisorJOs.map((jo) => (
-                            <tr key={jo.job_order_id} className="hover:bg-(--accent-subtle) transition-colors">
-                              <td className="py-2 px-3 font-mono font-bold text-(--text-primary)">JO-{jo.job_order_no}</td>
-                              <td className="py-2 px-3 font-mono font-semibold text-(--text-primary)">{jo.plate_no}</td>
-                              <td className="py-2 px-3 font-mono">{jo.date_started || 'Not Started'}</td>
-                              <td className="py-2 px-3 font-mono">
-                                {jo.date_completed ? (
-                                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{jo.date_completed}</span>
-                                ) : (
-                                  <span>Due: {jo.expected_completion}</span>
-                                )}
-                              </td>
-                              <td className="py-2 px-3">{jo.requestor || '—'}</td>
-                              <td className="py-2 px-3 text-right font-mono">₱{jo.labor_cost.toLocaleString()}</td>
-                              <td className="py-2 px-3 text-right font-mono">₱{jo.materials_cost.toLocaleString()}</td>
-                              <td className="py-2 px-3 text-right font-mono font-bold text-(--text-primary)">
-                                ₱{jo.total_cost.toLocaleString()}
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  )}
-
-                  {/* 3. Trip Assignments (trip_assignments + trip_assignment_details) */}
-                  {recordCategoryTab === 'trips' && (
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
-                          <th className="py-2 px-3">Trip Date</th>
-                          <th className="py-2 px-3">Vehicle Plate</th>
-                          <th className="py-2 px-3 text-center">Route Legs</th>
-                          <th className="py-2 px-3 text-right">Std Fuel (L)</th>
-                          <th className="py-2 px-3 text-right">Buffer (L)</th>
-                          <th className="py-2 px-3 text-right">Allotted (L)</th>
-                          <th className="py-2 px-3 text-right">Actual Fuel (L)</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                        {paginatedTripAssignments.length === 0 ? (
-                          <tr>
-                            <td colSpan={7} className="py-6 text-center text-(--text-muted)">
-                              No trip assignments found for {selectedEmployee.employee_name}.
-                            </td>
-                          </tr>
-                        ) : (
-                          paginatedTripAssignments.map((trip) => (
-                            <tr key={trip.trip_id} className="hover:bg-(--accent-subtle) transition-colors">
-                              <td className="py-2 px-3 font-mono font-bold text-(--text-primary)">{trip.trip_date}</td>
-                              <td className="py-2 px-3 font-mono font-semibold text-(--text-primary)">{trip.plate_no}</td>
-                              <td className="py-2 px-3 text-center font-mono">{trip.leg_count}</td>
-                              <td className="py-2 px-3 text-right font-mono">{trip.total_standard_fuel.toFixed(2)}</td>
-                              <td className="py-2 px-3 text-right font-mono">{trip.total_buffer_fuel.toFixed(2)}</td>
-                              <td className="py-2 px-3 text-right font-mono font-semibold text-violet-600 dark:text-violet-400">
-                                {trip.total_fuel_allotted.toFixed(2)}
-                              </td>
-                              <td className="py-2 px-3 text-right font-mono font-bold text-(--text-primary)">
-                                {trip.total_actual_fuel.toFixed(2)}
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  )}
-
-                  {/* 4. Incident Reports (incident_report) */}
-                  {recordCategoryTab === 'incidents' && (
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
-                          <th className="py-2 px-3">Ref No</th>
-                          <th className="py-2 px-3">Incident Date</th>
-                          <th className="py-2 px-3">Plate No</th>
-                          <th className="py-2 px-3">Involvement</th>
-                          <th className="py-2 px-3">Severity</th>
-                          <th className="py-2 px-3">Description</th>
-                          <th className="py-2 px-3 text-right">Incident Loss</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                        {paginatedEmployeeIncidents.length === 0 ? (
-                          <tr>
-                            <td colSpan={7} className="py-6 text-center text-(--text-muted)">
-                              No incident reports referencing {selectedEmployee.employee_name}.
-                            </td>
-                          </tr>
-                        ) : (
-                          paginatedEmployeeIncidents.map((inc) => (
-                            <tr key={inc.incident_id} className="hover:bg-(--accent-subtle) transition-colors">
-                              <td className="py-2 px-3 font-mono font-bold text-rose-600">{inc.incident_refno}</td>
-                              <td className="py-2 px-3 font-mono">{inc.incident_date}</td>
-                              <td className="py-2 px-3 font-mono font-semibold text-(--text-primary)">{inc.plate_no}</td>
-                              <td className="py-2 px-3">
-                                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800/50">
-                                  {inc.role_in_incident}
-                                </span>
-                              </td>
-                              <td className="py-2 px-3 font-semibold">{inc.incident_severity || 'N/A'}</td>
-                              <td className="py-2 px-3 max-w-xs truncate" title={inc.incident_description || ''}>
-                                {inc.incident_description || '—'}
-                              </td>
-                              <td className="py-2 px-3 text-right font-mono font-bold text-rose-600">
-                                ₱{inc.incident_loss.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  )}
-                </>
-              )}
-            </div>
-
-            <PaginationControls
-              currentPage={recordsPage}
-              totalPages={recordsTotalPages}
-              totalItems={activeRecordsCount}
-              itemsPerPage={ITEMS_PER_PAGE}
-              onPageChange={setRecordsPage}
-            />
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Modal Form */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-lg p-6 shadow-2xl max-h-[92vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-(--border-main) pb-3 shrink-0">
               <h3 className="text-lg font-bold text-(--text-primary)">
                 {editingId ? 'Edit Employee' : 'Add Employee'}
               </h3>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
                 className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer p-1"
               >
@@ -1405,79 +1427,83 @@ export function EmployeeRegistry() {
               <div className="overflow-y-auto space-y-4 p-1 flex-1">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs uppercase text-(--text-muted) font-semibold mb-1">Employee Code <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                      Employee Code <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="text"
                       required
                       value={employeeForm.employee_code}
                       onChange={(e) => setEmployeeForm({ ...employeeForm, employee_code: e.target.value })}
                       placeholder="e.g. EMP-001"
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs font-mono"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs uppercase text-(--text-muted) font-semibold mb-1">Employee Name <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                      Employee Name <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="text"
                       required
                       value={employeeForm.employee_name}
                       onChange={(e) => setEmployeeForm({ ...employeeForm, employee_name: e.target.value })}
                       placeholder="e.g. John Doe"
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs uppercase text-(--text-muted) font-semibold mb-1">Rate per Hour (₱)</label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">Rate per Hour (₱)</label>
                     <input
                       type="number"
                       step="any"
                       value={employeeForm.rate_per_hour}
                       onChange={(e) => setEmployeeForm({ ...employeeForm, rate_per_hour: e.target.value })}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs font-mono"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs uppercase text-(--text-muted) font-semibold mb-1">Sell Rate per Hour (₱)</label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">Sell Rate per Hour (₱)</label>
                     <input
                       type="number"
                       step="any"
                       value={employeeForm.sell_rate_per_hour}
                       onChange={(e) => setEmployeeForm({ ...employeeForm, sell_rate_per_hour: e.target.value })}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs font-mono"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                 </div>
 
                 <div className="flex items-center gap-6 pt-2 flex-wrap">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-(--text-muted) font-semibold">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-(--text-primary) font-semibold">
                     <input
                       type="checkbox"
                       checked={employeeForm.is_active}
                       onChange={(e) => setEmployeeForm({ ...employeeForm, is_active: e.target.checked })}
-                      className="w-4 h-4 rounded border-(--border-main) bg-(--bg-elevated) text-(--text-primary) focus:ring-0 cursor-pointer"
+                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 bg-(--bg-surface) text-(--btn-primary-bg) focus:ring-0 cursor-pointer"
                     />
                     <span>Active Status</span>
                   </label>
 
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-(--text-muted) font-semibold">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-(--text-primary) font-semibold">
                     <input
                       type="checkbox"
                       checked={employeeForm.is_supervisor}
                       onChange={(e) => setEmployeeForm({ ...employeeForm, is_supervisor: e.target.checked })}
-                      className="w-4 h-4 rounded border-(--border-main) bg-(--bg-elevated) text-(--text-primary) focus:ring-0 cursor-pointer"
+                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 bg-(--bg-surface) text-(--btn-primary-bg) focus:ring-0 cursor-pointer"
                     />
                     <span>Is Supervisor</span>
                   </label>
 
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-(--text-muted) font-semibold">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-(--text-primary) font-semibold">
                     <input
                       type="checkbox"
                       checked={employeeForm.is_driver}
                       onChange={(e) => setEmployeeForm({ ...employeeForm, is_driver: e.target.checked })}
-                      className="w-4 h-4 rounded border-(--border-main) bg-(--bg-elevated) text-(--text-primary) focus:ring-0 cursor-pointer"
+                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 bg-(--bg-surface) text-(--btn-primary-bg) focus:ring-0 cursor-pointer"
                     />
                     <span>Is Driver</span>
                   </label>
@@ -1495,7 +1521,7 @@ export function EmployeeRegistry() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50 transition-colors"
+                  className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow disabled:opacity-50 transition-colors"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   <span>{editingId ? 'Update Employee' : 'Save Employee'}</span>

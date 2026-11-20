@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { ClipboardList, Search, Calendar, Gauge, FileText, Loader2, CheckCircle, X, AlertCircle, Car, Flag, Plus, Trash2, Layers, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ClipboardList, Search, Calendar, Gauge, FileText, Loader2, CheckCircle, X, AlertCircle, Car, Flag, Plus, Trash2, Layers, Activity, ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import { CustomDropdown } from './ui/CustomDropdown';
 
 interface VehiclePm {
@@ -80,6 +80,7 @@ export function DailyInspection() {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [filterNoticeMsg, setFilterNoticeMsg] = useState<string | null>(null);
 
   // Inspection Flags Tab States
   const [dailyRisks, setDailyRisks] = useState<DailyRiskRecord[]>([]);
@@ -110,6 +111,12 @@ export function DailyInspection() {
   const [fmeaSearchQuery, setFmeaSearchQuery] = useState<string>('');
 
   const todayDateStr = new Date().toISOString().split('T')[0];
+
+  // Unified Tab Highlight Helper (matching VehiclePmViewer)
+  const getTabClass = (isActive: boolean) =>
+    isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-solid border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-solid border-(--border-main)';
 
   // Computed fields for form
   const previousRdg = previousRdgInput !== '' ? Number(previousRdgInput) : 0;
@@ -218,6 +225,7 @@ export function DailyInspection() {
 
       setDailyRisks(formatted);
       setFilteredDailyRisks(formatted.filter(r => r.log_date === todayDateStr));
+      setFilterNoticeMsg(null);
       setCurrentPage(1);
     } catch {
       // Error handling
@@ -611,10 +619,14 @@ export function DailyInspection() {
 
     if (searchFlagDate) {
       result = result.filter(r => r.log_date === searchFlagDate);
-    }
-
-    if (searchFlagVehicleId) {
-      result = result.filter(r => r.vehicle_id === searchFlagVehicleId);
+      if (searchFlagVehicleId) {
+        result = result.filter(r => r.vehicle_id === searchFlagVehicleId);
+      }
+      setFilterNoticeMsg(null);
+    } else {
+      // Date filter is cleared: limit to the latest 100 records only
+      result = result.slice(0, 100);
+      setFilterNoticeMsg('Date filter cleared — showing the latest 100 inspection flag records only.');
     }
 
     setFilteredDailyRisks(result);
@@ -626,7 +638,9 @@ export function DailyInspection() {
     setSearchFlagDate('');
     setSearchFlagVehicleId('');
     setDateFilteredVehicles([]);
-    setFilteredDailyRisks(dailyRisks.filter(r => r.log_date === todayDateStr));
+    // Date filter is cleared: limit to the latest 100 records only
+    setFilteredDailyRisks(dailyRisks.slice(0, 100));
+    setFilterNoticeMsg('Date filter cleared — showing the latest 100 inspection flag records only.');
     setCurrentPage(1);
     setIsSearchFlagsModalOpen(false);
   };
@@ -669,32 +683,26 @@ export function DailyInspection() {
 
       {/* Main Content Body Container */}
       <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
-        {/* Tab Navigation Header */}
-        <div className="flex border-b border-(--border-main) gap-2 shrink-0">
+        {/* Primary Category Navigation Tab Bar (matching VehiclePmViewer) */}
+        <div className="shrink-0 flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1 overflow-x-auto">
           <button
+            type="button"
             onClick={() => setActiveTab('form')}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors cursor-pointer border-b-2 ${
-              activeTab === 'form'
-                ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-                : 'border-transparent text-(--text-secondary) hover:text-(--text-primary)'
-            }`}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'form')}`}
           >
-            <ClipboardList className="w-3.5 h-3.5" />
+            <ClipboardList className="w-4 h-4" />
             <span>Daily Inspection Form</span>
           </button>
 
           <button
+            type="button"
             onClick={() => {
               setActiveTab('flags');
               fetchDailyRisks();
             }}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors cursor-pointer border-b-2 ${
-              activeTab === 'flags'
-                ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-                : 'border-transparent text-(--text-secondary) hover:text-(--text-primary)'
-            }`}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'flags')}`}
           >
-            <Flag className="w-3.5 h-3.5" />
+            <Flag className="w-4 h-4" />
             <span>Inspection Flags</span>
           </button>
         </div>
@@ -908,6 +916,24 @@ export function DailyInspection() {
                 </button>
               </div>
             </div>
+
+            {/* Form Notification Banner when Date Filter is Cleared */}
+            {filterNoticeMsg && (
+              <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200 px-3.5 py-2 rounded-lg flex items-center justify-between gap-3 text-xs shrink-0">
+                <div className="flex items-center gap-2">
+                  <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span>{filterNoticeMsg}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFilterNoticeMsg(null)}
+                  className="text-amber-700 dark:text-amber-300 hover:opacity-75 p-0.5 cursor-pointer"
+                  title="Dismiss notice"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
 
             {/* Scrollable table body */}
             <div className="flex-1 min-h-0 overflow-y-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
@@ -1130,6 +1156,11 @@ export function DailyInspection() {
                     }}
                     className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
                   />
+                  {!searchFlagDate && (
+                    <p className="text-[11px] text-(--text-muted)">
+                      Leaving the date empty limits results to the latest 100 records.
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">

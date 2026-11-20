@@ -1247,6 +1247,13 @@ export function OpsDashboard() {
       ? (metrics.totalBufferFuel / metrics.totalAllottedFuel) * 100
       : 0;
 
+  const getMainTabClass = (tabKey: MainTab) => {
+    const isActive = activeMainTab === tabKey;
+    return isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-(--border-main)';
+  };
+
   return (
     <div className="h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 flex flex-col overflow-hidden">
       {/* Top Header */}
@@ -1360,7 +1367,7 @@ export function OpsDashboard() {
         </div>
 
         {/* Primary Navigation Tabs */}
-        <div className="flex border-b border-(--border-main) gap-2 shrink-0 overflow-x-auto">
+        <div className="flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1 shrink-0">
           {[
             { id: 'overview', label: '1. Dispatch & Fuel Overview', icon: Gauge },
             { id: 'routes', label: `2. Route Summary (${routePerformance.length})`, icon: MapPin },
@@ -1368,19 +1375,15 @@ export function OpsDashboard() {
             { id: 'equipment', label: `4. Equipment Ledger (${equipmentAssignments.length})`, icon: Truck },
           ].map((tab) => {
             const Icon = tab.icon;
-            const isActive = activeMainTab === tab.id;
+            const tabKey = tab.id as MainTab;
             return (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveMainTab(tab.id as MainTab)}
-                className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors cursor-pointer border-b-2 whitespace-nowrap ${
-                  isActive
-                    ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-                    : 'border-transparent text-(--text-secondary) hover:text-(--text-primary)'
-                }`}
+                onClick={() => setActiveMainTab(tabKey)}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getMainTabClass(tabKey)}`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-500' : 'text-(--text-muted)'}`} />
+                <Icon className="w-4 h-4" />
                 <span>{tab.label}</span>
               </button>
             );

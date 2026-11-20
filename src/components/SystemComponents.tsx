@@ -92,7 +92,7 @@ function CustomDropdown<T extends string | number>({
 
       {isOpen && !disabled && (
         <div
-          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-(--border-main) bg-(--bg-elevated) shadow-xl py-1 ${
+          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-slate-300 dark:border-slate-600 bg-(--bg-elevated) shadow-xl py-1 ${
             openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
           } ${menuClassName}`}
         >
@@ -174,6 +174,12 @@ export function SystemComponents() {
     component_code: '', 
     component_desc: '' 
   });
+
+  // Unified Tab Highlight Helper (matching TaskStandards)
+  const getTabClass = (isActive: boolean) =>
+    isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-solid border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-solid border-(--border-main)';
 
   const loadData = useCallback(async () => {
     try {
@@ -365,7 +371,7 @@ export function SystemComponents() {
   }, [activeTab, filteredSystems.length, filteredComponents.length, pageSize]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 overflow-hidden">
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-3">
         <div className="flex items-center gap-3">
@@ -377,8 +383,10 @@ export function SystemComponents() {
             <p className="text-xs sm:text-sm text-(--text-muted)">Configure equipment systems and their associated sub-components.</p>
           </div>
         </div>
+        {loading && <Loader2 className="w-5 h-5 text-(--text-primary) animate-spin" />}
       </div>
 
+      {/* Messages */}
       {successMsg && (
         <div className="shrink-0 bg-(--accent-subtle) border border-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg flex items-center gap-2.5 text-xs">
           <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -393,194 +401,198 @@ export function SystemComponents() {
         </div>
       )}
 
-      {/* Tab Navigation */}
-      <div className="shrink-0 flex border-b border-(--border-main) gap-2 overflow-x-auto">
-        <button
-          onClick={() => setActiveTab('systems')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'systems'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <Cpu className="w-3.5 h-3.5" />
-          <span>Equipment Systems</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('components')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'components'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>Equipment Components</span>
-        </button>
-      </div>
-
-      {/* Tab Content Container */}
-      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-4 overflow-hidden space-y-3">
-        <div className="shrink-0 flex flex-wrap items-center gap-2">
-          {activeTab === 'components' && (
-            <div className="flex items-center gap-2">
-              <Filter className="w-3.5 h-3.5 text-(--text-muted)" />
-              <CustomDropdown
-                value={selectedSystemFilter}
-                options={filterSystemOptions}
-                onChange={(val) => setSelectedSystemFilter(val)}
-                buttonClassName="bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-1.5 text-xs focus:border-(--text-primary)"
-              />
-            </div>
-          )}
-
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
-            <input
-              type="text"
-              placeholder={activeTab === 'systems' ? 'Filter systems...' : 'Search by component code or description...'}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
-            />
-          </div>
+      {/* Main Content Body Container (matching TaskStandards) */}
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-solid border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
+        {/* Primary Category Navigation Tabs */}
+        <div className="shrink-0 flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('systems')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'systems')}`}
+          >
+            <Cpu className={`w-4 h-4 ${activeTab === 'systems' ? '' : 'text-blue-500'}`} />
+            <span>Equipment Systems</span>
+          </button>
 
           <button
-            onClick={handleOpenAdd}
-            className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
+            type="button"
+            onClick={() => setActiveTab('components')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'components')}`}
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Record</span>
+            <Layers className={`w-4 h-4 ${activeTab === 'components' ? '' : 'text-amber-500'}`} />
+            <span>Equipment Components</span>
           </button>
         </div>
 
-        {/* Scrollable Container with Sticky Table Headers */}
-        <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
-          {loading ? (
-            <div className="h-full flex items-center justify-center text-(--text-muted) gap-2 text-xs">
-              <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
-              <span>Loading records...</span>
+        {/* Tab Content Area */}
+        <div className="flex flex-col flex-1 min-h-0 space-y-2">
+          <div className="shrink-0 flex flex-wrap items-center gap-2">
+            {activeTab === 'components' && (
+              <div className="flex items-center gap-2">
+                <Filter className="w-3.5 h-3.5 text-(--text-muted)" />
+                <CustomDropdown
+                  value={selectedSystemFilter}
+                  options={filterSystemOptions}
+                  onChange={(val) => setSelectedSystemFilter(val)}
+                  buttonClassName="bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-1.5 text-xs hover:border-slate-400 dark:hover:border-slate-500"
+                />
+              </div>
+            )}
+
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
+              <input
+                type="text"
+                placeholder={activeTab === 'systems' ? 'Filter systems...' : 'Search by component code or description...'}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
             </div>
-          ) : activeTab === 'systems' ? (
-            filteredSystems.length === 0 ? (
-              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
-                No equipment systems found. Click &quot;Add Record&quot; above.
+
+            <button
+              type="button"
+              onClick={handleOpenAdd}
+              className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Record</span>
+            </button>
+          </div>
+
+          {/* Scrollable Container with Sticky Table Headers */}
+          <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
+            {loading ? (
+              <div className="h-full flex items-center justify-center text-(--text-muted) gap-2 text-xs">
+                <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
+                <span>Loading records...</span>
               </div>
+            ) : activeTab === 'systems' ? (
+              filteredSystems.length === 0 ? (
+                <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                  No equipment systems found. Click &quot;Add Record&quot; above.
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                      <th className="py-2 px-3">System Code</th>
+                      <th className="py-2 px-3">System Description</th>
+                      <th className="py-2 px-3 text-right w-28">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                    {paginatedList.map((item) => {
+                      const system = item as EquipmentSystemRecord;
+                      return (
+                        <tr key={system.system_id} className="hover:bg-(--accent-subtle) transition-colors">
+                          <td className="py-2 px-3 font-semibold text-(--text-primary)">{system.system_code}</td>
+                          <td className="py-2 px-3 text-(--text-muted)">{system.system_desc}</td>
+                          <td className="py-2 px-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEdit(system)}
+                                className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Edit2 className="w-3 h-3" /> Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(system.system_id, 'equipment_system', 'system_id')}
+                                className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" /> Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )
             ) : (
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
-                    <th className="py-2 px-3">System Code</th>
-                    <th className="py-2 px-3">System Description</th>
-                    <th className="py-2 px-3 text-right w-28">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                  {paginatedList.map((item) => {
-                    const system = item as EquipmentSystemRecord;
-                    return (
-                      <tr key={system.system_id} className="hover:bg-(--accent-subtle) transition-colors">
-                        <td className="py-2 px-3 font-semibold text-(--text-primary)">{system.system_code}</td>
-                        <td className="py-2 px-3 text-(--text-muted)">{system.system_desc}</td>
-                        <td className="py-2 px-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleOpenEdit(system)}
-                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Edit2 className="w-3 h-3" /> Edit
-                            </button>
-                            <button
-                              onClick={() => handleDelete(system.system_id, 'equipment_system', 'system_id')}
-                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Trash2 className="w-3 h-3" /> Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )
-          ) : (
-            filteredComponents.length === 0 ? (
-              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
-                No equipment components found. Click &quot;Add Record&quot; above.
+              filteredComponents.length === 0 ? (
+                <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                  No equipment components found. Click &quot;Add Record&quot; above.
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                      <th className="py-2 px-3">Component Code</th>
+                      <th className="py-2 px-3">Component Description</th>
+                      <th className="py-2 px-3">System Reference</th>
+                      <th className="py-2 px-3 text-right w-28">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                    {paginatedList.map((item) => {
+                      const component = item as EquipmentComponentRecord;
+                      const matchedSystem = systems.find((s) => s.system_id === component.system_id);
+                      return (
+                        <tr key={component.component_id} className="hover:bg-(--accent-subtle) transition-colors">
+                          <td className="py-2 px-3 font-semibold text-(--text-primary)">{component.component_code}</td>
+                          <td className="py-2 px-3 text-(--text-muted)">{component.component_desc}</td>
+                          <td className="py-2 px-3 text-(--text-primary) font-medium">
+                            {matchedSystem ? `${matchedSystem.system_code}\n${matchedSystem.system_desc}` : '—'}
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEdit(component)}
+                                className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Edit2 className="w-3 h-3" /> Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(component.component_id, 'equipment_component', 'component_id')}
+                                className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" /> Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )
+            )}
+          </div>
+
+          {/* Pagination */}
+          {!loading && ((activeTab === 'systems' && filteredSystems.length > 0) || (activeTab === 'components' && filteredComponents.length > 0)) && (
+            <div className="shrink-0 flex items-center justify-between pt-2 text-xs text-(--text-muted)">
+              <span>
+                Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, activeTab === 'systems' ? filteredSystems.length : filteredComponents.length)} of {activeTab === 'systems' ? filteredSystems.length : filteredComponents.length} entries
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <span>Page {currentPage} of {totalPages}</span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage >= totalPages}
+                  className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
               </div>
-            ) : (
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
-                    <th className="py-2 px-3">Component Code</th>
-                    <th className="py-2 px-3">Component Description</th>
-                    <th className="py-2 px-3">System Reference</th>
-                    <th className="py-2 px-3 text-right w-28">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                  {paginatedList.map((item) => {
-                    const component = item as EquipmentComponentRecord;
-                    const matchedSystem = systems.find((s) => s.system_id === component.system_id);
-                    return (
-                      <tr key={component.component_id} className="hover:bg-(--accent-subtle) transition-colors">
-                        <td className="py-2 px-3 font-semibold text-(--text-primary)">{component.component_code}</td>
-                        <td className="py-2 px-3 text-(--text-muted)">{component.component_desc}</td>
-                        <td className="py-2 px-3 text-(--text-primary) font-medium">
-                          {matchedSystem ? `${matchedSystem.system_code}\n${matchedSystem.system_desc}` : '—'}
-                        </td>
-                        <td className="py-2 px-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleOpenEdit(component)}
-                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Edit2 className="w-3 h-3" /> Edit
-                            </button>
-                            <button
-                              onClick={() => handleDelete(component.component_id, 'equipment_component', 'component_id')}
-                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Trash2 className="w-3 h-3" /> Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )
+            </div>
           )}
         </div>
-
-        {/* Pagination */}
-        {!loading && ((activeTab === 'systems' && filteredSystems.length > 0) || (activeTab === 'components' && filteredComponents.length > 0)) && (
-          <div className="shrink-0 flex items-center justify-between pt-2 text-xs text-(--text-muted)">
-            <span>
-              Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, activeTab === 'systems' ? filteredSystems.length : filteredComponents.length)} of {activeTab === 'systems' ? filteredSystems.length : filteredComponents.length} entries
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <span>Page {currentPage} of {totalPages}</span>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage >= totalPages}
-                className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* FORM MODAL */}
@@ -592,6 +604,7 @@ export function SystemComponents() {
                 {editingId ? 'Edit Record' : 'Add New Record'}
               </h3>
               <button 
+                type="button"
                 onClick={() => setIsModalOpen(false)}
                 className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer p-1"
               >
@@ -613,7 +626,7 @@ export function SystemComponents() {
                         value={systemForm.system_code}
                         onChange={(e) => setSystemForm({ ...systemForm, system_code: e.target.value })}
                         placeholder="e.g. ENG, HYD"
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                     <div>
@@ -626,7 +639,7 @@ export function SystemComponents() {
                         value={systemForm.system_desc}
                         onChange={(e) => setSystemForm({ ...systemForm, system_desc: e.target.value })}
                         placeholder="Describe equipment system..."
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                   </>
@@ -642,7 +655,7 @@ export function SystemComponents() {
                         value={componentForm.system_id}
                         options={modalSystemOptions}
                         onChange={(val) => setComponentForm({ ...componentForm, system_id: val })}
-                        buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) rounded-lg px-3 py-2 text-xs focus:border-(--text-primary)"
+                        buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-3 py-2 text-xs hover:border-slate-400 dark:hover:border-slate-500"
                       />
                     </div>
                     <div>
@@ -655,7 +668,7 @@ export function SystemComponents() {
                         value={componentForm.component_code}
                         onChange={(e) => setComponentForm({ ...componentForm, component_code: e.target.value })}
                         placeholder="e.g. ENG_TURBO"
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                     <div>
@@ -668,7 +681,7 @@ export function SystemComponents() {
                         value={componentForm.component_desc}
                         onChange={(e) => setComponentForm({ ...componentForm, component_desc: e.target.value })}
                         placeholder="Describe component details..."
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                   </>

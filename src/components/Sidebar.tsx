@@ -142,8 +142,8 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
         )}
       </div>
 
-      {/* Navigation Links — Strict Scrollable Body Container */}
-      <nav className="flex-1 min-h-0 px-3 py-3 space-y-1.5 overflow-y-scroll overscroll-auto">
+      {/* Navigation Links — Auto-Hiding Scrollable Body Container */}
+      <nav className="flex-1 min-h-0 px-3 py-3 space-y-1.5 overflow-y-auto overscroll-contain [scrollbar-none] hover:scrollbar-thin [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-(--sidebar-border)">
         {/* Dashboard */}
         <button
           onClick={() => {
@@ -256,7 +256,7 @@ export function Sidebar({ themeMode = 'dark', cycleTheme }: SidebarProps) {
                 className={`relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${getActiveClasses('/job-orders/dashboard')}`}
               >
                 <LayoutGrid className="w-3.5 h-3.5 shrink-0" />
-                <span className={`truncate ${getActiveTextClass('/job-orders/dashboard')}`}>Dashboard</span>
+                <span className={`truncate ${getActiveTextClass('/job-orders/dashboard')}`}>JO Dashboard</span>
               </button>
               <button
                 onClick={() => navigate('/job-orders')}

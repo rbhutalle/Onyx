@@ -200,21 +200,19 @@ function PaginationControls({
   const actualPages = Math.max(1, totalPages);
 
   return (
-    <div className="shrink-0 flex items-center justify-between px-3 py-2 border-t border-(--border-main) bg-(--bg-surface) text-xs">
-      <div className="text-(--text-muted)">
-        Showing <span className="font-semibold text-(--text-primary)">{startItem}</span> to{' '}
-        <span className="font-semibold text-(--text-primary)">{endItem}</span> of{' '}
-        <span className="font-semibold text-(--text-primary)">{totalItems}</span> entries
-      </div>
+    <div className="shrink-0 flex items-center justify-between pt-2 text-xs text-(--text-muted)">
+      <span>
+        Showing {startItem} to {endItem} of {totalItems} entries
+      </span>
       <div className="flex items-center gap-1">
         <button
           type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage <= 1 || totalItems === 0}
-          className="p-1.5 rounded-lg border border-(--border-main) bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
           title="Previous Page"
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="w-3.5 h-3.5" />
         </button>
 
         <div className="flex items-center gap-1 px-1">
@@ -226,7 +224,7 @@ function PaginationControls({
                 type="button"
                 onClick={() => onPageChange(page)}
                 disabled={totalItems === 0}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
+                className={`px-2 py-0.5 rounded text-xs font-semibold border transition-colors cursor-pointer ${
                   isCurrent
                     ? 'bg-(--accent-subtle) border-(--text-primary) text-(--text-primary)'
                     : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
@@ -242,10 +240,10 @@ function PaginationControls({
           type="button"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= actualPages || totalItems === 0}
-          className="p-1.5 rounded-lg border border-(--border-main) bg-(--bg-elevated) text-(--text-secondary) hover:text-(--text-primary) disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
           title="Next Page"
         >
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>
@@ -328,6 +326,12 @@ export function VehicleRegistry() {
     is_active: true,
     is_stationary: false,
   });
+
+  // Unified Tab Highlight Helper (matching EmployeeRegistry)
+  const getTabClass = (isActive: boolean) =>
+    isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-solid border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-solid border-(--border-main)';
 
   const resetAllPages = () => {
     setVehiclesPage(1);
@@ -853,11 +857,11 @@ export function VehicleRegistry() {
   const paginatedFlags = dailyFlags.slice((flagsPage - 1) * ITEMS_PER_PAGE, flagsPage * ITEMS_PER_PAGE);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 overflow-hidden">
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-3">
         <div className="flex items-center gap-3">
-          <div className="bg-black text-white p-2 rounded-xl shadow-xs">
+          <div className="p-2 bg-(--accent-subtle) text-(--text-primary) rounded-xl">
             <Car className="w-6 h-6" />
           </div>
           <div>
@@ -865,6 +869,7 @@ export function VehicleRegistry() {
             <p className="text-xs sm:text-sm text-(--text-muted)">Search an Equipment to inspect its registry, PM schedule, and daily logs.</p>
           </div>
         </div>
+        {pickerLoading && <Loader2 className="w-5 h-5 text-(--text-primary) animate-spin" />}
       </div>
 
       {successMsg && (
@@ -882,7 +887,7 @@ export function VehicleRegistry() {
       )}
 
       {/* Collapsible Search / Picker Section */}
-      <div className="shrink-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl overflow-hidden">
+      <div className="shrink-0 bg-(--bg-elevated) border border-(--border-main) shadow-xs rounded-xl overflow-hidden">
         <div className="px-4 py-2.5 bg-(--accent-subtle) border-b border-(--border-main) flex items-center justify-between">
           <div className="flex items-center gap-2 flex-wrap">
             <Search className="w-4 h-4 text-(--text-primary)" />
@@ -891,12 +896,12 @@ export function VehicleRegistry() {
             </span>
             {selectedVehicle && (
               <div className="flex items-center gap-2 ml-2">
-                <span className="text-xs bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) px-2 py-0.5 rounded font-mono font-bold">
+                <span className="text-xs bg-(--bg-surface) border border-(--border-main) text-(--text-primary) px-2 py-0.5 rounded font-mono font-bold">
                   {selectedVehicle.plate_no}
                 </span>
                 {(selectedVehicle.make_name || selectedVehicle.model_name) && (
                   <span className="text-xs text-(--text-muted) font-medium">
-                    • {selectedVehicle.make_name || ''} {selectedVehicle.model_name ? selectedVehicle.model_name : ''}
+                    - {selectedVehicle.make_name || ''} {selectedVehicle.model_name ? selectedVehicle.model_name : ''}
                   </span>
                 )}
                 {selectedVehicle.service_rdg !== null && (
@@ -910,7 +915,7 @@ export function VehicleRegistry() {
           <button 
             type="button" 
             onClick={() => setIsSearchCollapsed(!isSearchCollapsed)}
-            className="flex items-center gap-1.5 text-xs text-(--text-muted) hover:text-(--text-primary) bg-(--bg-elevated) border border-(--border-main) px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 text-xs text-(--text-muted) hover:text-(--text-primary) bg-(--bg-surface) border border-(--border-main) px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
           >
             <span>{isSearchCollapsed ? 'Expand' : 'Collapse'}</span>
             {isSearchCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
@@ -920,7 +925,7 @@ export function VehicleRegistry() {
         {!isSearchCollapsed && (
           <div className="p-3">
             {selectedVehicle ? (
-              <div className="flex items-center justify-between bg-(--bg-elevated) border border-(--border-main) p-3 rounded-xl">
+              <div className="flex items-center justify-between bg-(--bg-surface) border border-(--border-main) p-3 rounded-xl">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full text-xs">
                   <div>
                     <span className="text-[11px] text-(--text-muted) uppercase">Equipment ID</span>
@@ -955,7 +960,7 @@ export function VehicleRegistry() {
                   setShowPicker(true);
                   fetchPickerVehicles('');
                 }}
-                className="w-full bg-(--bg-elevated) border border-(--border-main) hover:border-(--text-primary) text-(--text-secondary) px-3 py-2.5 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer"
+                className="w-full bg-(--bg-surface) border border-(--border-main) hover:border-(--text-primary) text-(--text-secondary) px-3 py-2.5 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer"
               >
                 <span className="flex items-center gap-2">
                   <Search className="w-4 h-4 text-(--text-primary)" />
@@ -968,75 +973,61 @@ export function VehicleRegistry() {
         )}
       </div>
 
-      {/* Tab Navigation */}
-      <div className="shrink-0 flex border-b border-(--border-main) gap-2 overflow-x-auto">
-        <button
-          onClick={() => setActiveTab('vehicles')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer rounded-t-lg whitespace-nowrap ${
-            activeTab === 'vehicles'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
-          }`}
-        >
-          <Car className="w-3.5 h-3.5" />
-          <span>Equipment Details ({filteredVehiclesList.length})</span>
-        </button>
+      {/* Main Content Body Container (matching EmployeeRegistry) */}
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-solid border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
+        {/* Primary Category Navigation Tabs */}
+        <div className="shrink-0 flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('vehicles')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'vehicles')}`}
+          >
+            <Car className={`w-4 h-4 ${activeTab === 'vehicles' ? '' : 'text-blue-500'}`} />
+            <span>Equipment Details ({filteredVehiclesList.length})</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('pm_status')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer rounded-t-lg whitespace-nowrap ${
-            activeTab === 'pm_status'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
-          }`}
-        >
-          <ShieldAlert className="w-3.5 h-3.5" />
-          <span>Equipment PM Status ({vehiclePms.length})</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('pm_status')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'pm_status')}`}
+          >
+            <ShieldAlert className={`w-4 h-4 ${activeTab === 'pm_status' ? '' : 'text-amber-500'}`} />
+            <span>Equipment PM Status ({vehiclePms.length})</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('components')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer rounded-t-lg whitespace-nowrap ${
-            activeTab === 'components'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
-          }`}
-        >
-          <Wrench className="w-3.5 h-3.5" />
-          <span>Components ({installedComponents.length + historicalComponents.length})</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('components')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'components')}`}
+          >
+            <Wrench className={`w-4 h-4 ${activeTab === 'components' ? '' : 'text-violet-500'}`} />
+            <span>Components ({installedComponents.length + historicalComponents.length})</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('daily_logs')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer rounded-t-lg whitespace-nowrap ${
-            activeTab === 'daily_logs'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
-          }`}
-        >
-          <Activity className="w-3.5 h-3.5" />
-          <span>Daily Telemetry Logs ({vehicleLogs.length})</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('daily_logs')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'daily_logs')}`}
+          >
+            <Activity className={`w-4 h-4 ${activeTab === 'daily_logs' ? '' : 'text-emerald-500'}`} />
+            <span>Daily Telemetry Logs ({vehicleLogs.length})</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('daily_flags')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer rounded-t-lg whitespace-nowrap ${
-            activeTab === 'daily_flags'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary) hover:bg-(--accent-subtle)'
-          }`}
-        >
-          <Flag className="w-3.5 h-3.5" />
-          <span>Daily Inspection Flags ({dailyFlags.length})</span>
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('daily_flags')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'daily_flags')}`}
+          >
+            <Flag className={`w-4 h-4 ${activeTab === 'daily_flags' ? '' : 'text-rose-500'}`} />
+            <span>Daily Inspection Flags ({dailyFlags.length})</span>
+          </button>
+        </div>
 
-      {/* Main Container Body */}
-      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-4 overflow-hidden space-y-3">
+        {/* TAB 1: Equipment Details */}
         {activeTab === 'vehicles' && (
           <div className="flex flex-col flex-1 min-h-0 space-y-2.5">
             {/* Filters & Add Action Bar */}
-            <div className="shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-(--bg-elevated) p-3 rounded-lg border border-(--border-main)">
+            <div className="shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-(--bg-surface) p-3 rounded-lg border border-(--border-main)">
               <div className="flex items-center gap-2 flex-wrap flex-1">
                 <Filter className="w-4 h-4 text-(--text-muted)" />
                 <input
@@ -1047,7 +1038,7 @@ export function VehicleRegistry() {
                     setTableSearchId(e.target.value);
                     setVehiclesPage(1);
                   }}
-                  className="bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary) w-full sm:w-48"
+                  className="bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 w-full sm:w-48"
                 />
                 <input
                   type="text"
@@ -1057,10 +1048,11 @@ export function VehicleRegistry() {
                     setTableSearchModel(e.target.value);
                     setVehiclesPage(1);
                   }}
-                  className="bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary) w-full sm:w-48"
+                  className="bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 w-full sm:w-48"
                 />
                 {(tableSearchId || tableSearchModel) && (
                   <button
+                    type="button"
                     onClick={() => {
                       setTableSearchId('');
                       setTableSearchModel('');
@@ -1074,18 +1066,19 @@ export function VehicleRegistry() {
               </div>
 
               <button
+                type="button"
                 onClick={handleOpenAdd}
-                className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
+                className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow shrink-0"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Equipment</span>
               </button>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
+                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
                     <th className="py-2 px-3">Equipment ID</th>
                     <th className="py-2 px-3">Model</th>
                     <th className="py-2 px-3">Service Standard</th>
@@ -1144,18 +1137,21 @@ export function VehicleRegistry() {
                           <td className="py-2 px-3 text-right">
                             <div className="flex items-center justify-end gap-2">
                               <button
+                                type="button"
                                 onClick={() => handleOpenEdit(item)}
                                 className="text-xs text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
                               >
                                 <Edit2 className="w-3 h-3" /> Edit
                               </button>
                               <button
+                                type="button"
                                 onClick={() => handleDelete(item.vehicle_id)}
                                 className="text-xs text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                               >
                                 <Trash2 className="w-3 h-3" /> Delete
                               </button>
                               <button
+                                type="button"
                                 onClick={() => handleInitializeVehicle(item)}
                                 className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-semibold"
                               >
@@ -1181,11 +1177,12 @@ export function VehicleRegistry() {
           </div>
         )}
 
+        {/* TAB 2: Equipment PM Status */}
         {activeTab === 'pm_status' && (
           <div className="flex flex-col flex-1 min-h-0 space-y-2">
             <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-2">
               {vehiclePms.length === 0 ? (
-                <div className="py-12 text-center text-(--text-muted) text-xs bg-(--bg-elevated) rounded-xl border border-(--border-main)">
+                <div className="py-12 text-center text-(--text-muted) text-xs bg-(--bg-surface) rounded-xl border border-(--border-main)">
                   No PM schedule records found for the selected Equipment.
                 </div>
               ) : (
@@ -1200,10 +1197,10 @@ export function VehicleRegistry() {
                   ];
 
                   return (
-                    <div key={pm.vehicle_pm_id} className="space-y-4 bg-(--bg-elevated) border border-(--border-main) p-4 rounded-xl shadow-xs">
+                    <div key={pm.vehicle_pm_id} className="space-y-4 bg-(--bg-surface) border border-(--border-main) p-4 rounded-xl shadow-xs">
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-(--border-main) pb-3">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-black text-white rounded-xl shadow-xs">
+                          <div className="p-2 bg-(--accent-subtle) text-(--text-primary) rounded-xl shadow-xs">
                             <Gauge className="w-4 h-4" />
                           </div>
                           <div>
@@ -1218,7 +1215,7 @@ export function VehicleRegistry() {
                           type="button"
                           onClick={() => handleOpenPmEdit(pm)}
                           title="Update PM Schedule"
-                          className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs shrink-0 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) cursor-pointer"
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow shrink-0 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) cursor-pointer"
                         >
                           <RefreshCw className="w-3.5 h-3.5" />
                           <span>Update PM Schedule</span>
@@ -1234,7 +1231,7 @@ export function VehicleRegistry() {
                               className={`p-4 rounded-xl border transition-all ${
                                 isDue 
                                   ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/60 shadow-xs' 
-                                  : 'bg-(--bg-surface) border-(--border-main) shadow-xs'
+                                  : 'bg-(--bg-elevated) border-(--border-main) shadow-xs'
                               }`}
                             >
                               <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-dashed border-(--border-main)">
@@ -1249,19 +1246,19 @@ export function VehicleRegistry() {
                               </div>
 
                               <div className="space-y-2 text-xs font-mono">
-                                <div className="flex justify-between bg-(--bg-elevated) px-3 py-1.5 rounded-lg border border-(--border-main)">
+                                <div className="flex justify-between bg-(--bg-surface) px-3 py-1.5 rounded-lg border border-(--border-main)">
                                   <span className="text-(--text-muted) text-[11px]">Previous:</span>
                                   <span className="text-(--text-secondary) font-semibold">{pml.prev ?? '—'}</span>
                                 </div>
-                                <div className="flex justify-between bg-(--bg-elevated) px-3 py-1.5 rounded-lg border border-(--border-main)">
+                                <div className="flex justify-between bg-(--bg-surface) px-3 py-1.5 rounded-lg border border-(--border-main)">
                                   <span className="text-(--text-muted) text-[11px]">Current:</span>
                                   <span className="text-amber-600 dark:text-amber-400 font-bold">{pml.curr ?? '—'}</span>
                                 </div>
-                                <div className="flex justify-between bg-(--bg-elevated) px-3 py-1.5 rounded-lg border border-(--border-main)">
+                                <div className="flex justify-between bg-(--bg-surface) px-3 py-1.5 rounded-lg border border-(--border-main)">
                                   <span className="text-(--text-muted) text-[11px]">Next Target:</span>
                                   <span className="text-(--text-primary) font-bold">{pml.next ?? '—'}</span>
                                 </div>
-                                <div className="flex justify-between bg-(--bg-elevated) px-3 py-1.5 rounded-lg border border-(--border-main)">
+                                <div className="flex justify-between bg-(--bg-surface) px-3 py-1.5 rounded-lg border border-(--border-main)">
                                   <span className="text-(--text-muted) text-[11px]">Completed:</span>
                                   <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{pml.date ? new Date(pml.date).toLocaleDateString() : '—'}</span>
                                 </div>
@@ -1286,11 +1283,11 @@ export function VehicleRegistry() {
           </div>
         )}
 
-        {/* Components Tab with Sub-Tabs & Always-Visible Pagination */}
+        {/* TAB 3: Components Tab with Sub-Tabs & Always-Visible Pagination */}
         {activeTab === 'components' && (
           <div className="flex flex-col flex-1 min-h-0 space-y-3 overflow-hidden">
             {/* Sub-Tab Navigation Bar */}
-            <div className="shrink-0 flex items-center gap-2 bg-(--bg-elevated) p-1.5 rounded-lg border border-(--border-main)">
+            <div className="shrink-0 flex items-center gap-2 bg-(--bg-surface) p-1.5 rounded-lg border border-(--border-main)">
               <button
                 type="button"
                 onClick={() => setComponentSubTab('installed')}
@@ -1320,10 +1317,10 @@ export function VehicleRegistry() {
             {/* Sub-Tab Content: Installed Components */}
             {componentSubTab === 'installed' && (
               <div className="flex flex-col flex-1 min-h-0 space-y-2">
-                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
-                      <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
+                      <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
                         <th className="py-2 px-3">Component</th>
                         <th className="py-2 px-3">Install Date</th>
                         <th className="py-2 px-3">Install Service Rdg</th>
@@ -1366,10 +1363,10 @@ export function VehicleRegistry() {
             {/* Sub-Tab Content: Component History */}
             {componentSubTab === 'history' && (
               <div className="flex flex-col flex-1 min-h-0 space-y-2">
-                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+                <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
-                      <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
+                      <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
                         <th className="py-2 px-3">Component</th>
                         <th className="py-2 px-3">Install Date</th>
                         <th className="py-2 px-3">Vehicle Install Rdg</th>
@@ -1417,13 +1414,13 @@ export function VehicleRegistry() {
           </div>
         )}
 
-        {/* Daily Telemetry Logs with Always-Visible Pagination */}
+        {/* TAB 4: Daily Telemetry Logs with Always-Visible Pagination */}
         {activeTab === 'daily_logs' && (
           <div className="flex flex-col flex-1 min-h-0 space-y-2">
-            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
+                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
                     <th className="py-2 px-3">Log Date</th>
                     <th className="py-2 px-3">Equipment (Plate)</th>
                     <th className="py-2 px-3">Previous Reading</th>
@@ -1466,13 +1463,13 @@ export function VehicleRegistry() {
           </div>
         )}
 
-        {/* Daily Inspection Flags with Always-Visible Pagination */}
+        {/* TAB 5: Daily Inspection Flags with Always-Visible Pagination */}
         {activeTab === 'daily_flags' && (
           <div className="flex flex-col flex-1 min-h-0 space-y-2">
-            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+            <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
+                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
                     <th className="py-2 px-3">Date</th>
                     <th className="py-2 px-3">Failure Cause (Risk Source)</th>
                     <th className="py-2 px-3">Failure Mode (Detail)</th>
@@ -1525,13 +1522,14 @@ export function VehicleRegistry() {
 
       {/* PM Schedule Modal */}
       {isPmModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
             <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 shrink-0 bg-(--bg-surface)">
               <h3 className="text-lg font-bold text-(--text-primary)">
                 Update Preventive Maintenance Schedule — <span className="text-(--text-primary)">{selectedVehicle?.plate_no ?? ''}</span>
               </h3>
               <button 
+                type="button"
                 onClick={() => setIsPmModalOpen(false)}
                 className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer p-1"
               >
@@ -1542,13 +1540,13 @@ export function VehicleRegistry() {
             <form onSubmit={handleSavePmForm} className="flex flex-col flex-1 overflow-hidden">
               <div className="p-6 overflow-y-auto space-y-4 flex-1">
                 <div>
-                  <label className="block text-xs uppercase text-(--text-muted) font-semibold mb-1">Current Reading (Read-Only)</label>
+                  <label className="block text-xs font-semibold text-(--text-primary) mb-1">Current Reading (Read-Only)</label>
                   <input
                     type="text"
                     readOnly
                     disabled
                     value={pmForm.current_rdg}
-                    className="w-full md:w-1/3 bg-(--bg-elevated) border border-(--border-main) rounded-lg px-3 py-2 text-xs text-(--text-muted) font-mono cursor-not-allowed select-none"
+                    className="w-full md:w-1/3 bg-(--bg-surface) border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-xs text-(--text-muted) font-mono cursor-not-allowed select-none"
                   />
                 </div>
 
@@ -1577,7 +1575,7 @@ export function VehicleRegistry() {
                             id={item.flagKey}
                             checked={Boolean(pmForm[item.flagKey as keyof typeof pmForm])}
                             onChange={(e) => setPmForm({ ...pmForm, [item.flagKey]: e.target.checked })}
-                            className="rounded border-(--border-main) bg-(--bg-elevated) text-(--text-primary) focus:ring-0 w-4 h-4 cursor-pointer"
+                            className="rounded border-slate-300 dark:border-slate-600 bg-(--bg-elevated) text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
                           />
                           <label htmlFor={item.flagKey} className="text-xs font-semibold text-amber-700 dark:text-amber-300 cursor-pointer">Flagged / Due</label>
                         </div>
@@ -1585,42 +1583,42 @@ export function VehicleRegistry() {
 
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
                         <div>
-                          <span className="block text-(--text-muted) mb-1 text-[11px] font-semibold">Previous</span>
+                          <span className="block text-(--text-primary) mb-1 text-[11px] font-semibold">Previous</span>
                           <input
                             type="number"
                             step="any"
                             value={String(pmForm[item.prevKey as keyof typeof pmForm] ?? '')}
                             onChange={(e) => setPmForm({ ...pmForm, [item.prevKey]: e.target.value })}
-                            className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded px-2.5 py-1.5 font-mono text-xs"
+                            className="w-full bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded px-2.5 py-1.5 font-mono text-xs"
                           />
                         </div>
                         <div>
-                          <span className="block text-(--text-muted) mb-1 text-[11px] font-semibold">Current</span>
+                          <span className="block text-(--text-primary) mb-1 text-[11px] font-semibold">Current</span>
                           <input
                             type="number"
                             step="any"
                             value={String(pmForm[item.currKey as keyof typeof pmForm] ?? '')}
                             onChange={(e) => setPmForm({ ...pmForm, [item.currKey]: e.target.value })}
-                            className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded px-2.5 py-1.5 font-mono text-xs"
+                            className="w-full bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded px-2.5 py-1.5 font-mono text-xs"
                           />
                         </div>
                         <div>
-                          <span className="block text-(--text-muted) mb-1 text-[11px] font-semibold">Next Target</span>
+                          <span className="block text-(--text-primary) mb-1 text-[11px] font-semibold">Next Target</span>
                           <input
                             type="number"
                             step="any"
                             value={String(pmForm[item.nextKey as keyof typeof pmForm] ?? '')}
                             onChange={(e) => setPmForm({ ...pmForm, [item.nextKey]: e.target.value })}
-                            className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded px-2.5 py-1.5 font-mono text-xs"
+                            className="w-full bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded px-2.5 py-1.5 font-mono text-xs"
                           />
                         </div>
                         <div>
-                          <span className="block text-(--text-muted) mb-1 text-[11px] font-semibold">Date Completed</span>
+                          <span className="block text-(--text-primary) mb-1 text-[11px] font-semibold">Date Completed</span>
                           <input
                             type="date"
                             value={String(pmForm[item.dateKey as keyof typeof pmForm] ?? '')}
                             onChange={(e) => setPmForm({ ...pmForm, [item.dateKey]: e.target.value })}
-                            className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded px-2.5 py-1.5 font-mono text-xs"
+                            className="w-full bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded px-2.5 py-1.5 font-mono text-xs"
                           />
                         </div>
                       </div>
@@ -1640,7 +1638,7 @@ export function VehicleRegistry() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50 transition-colors"
+                  className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow disabled:opacity-50 transition-colors"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   <span>Save PM Schedule</span>
@@ -1653,7 +1651,7 @@ export function VehicleRegistry() {
 
       {/* Vehicle Picker Modal */}
       {showPicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
             <div className="flex justify-between items-center px-6 py-4 border-b border-(--border-main) bg-(--bg-surface) shrink-0">
               <h3 className="text-lg font-bold text-(--text-primary)">Select Equipment</h3>
@@ -1677,12 +1675,12 @@ export function VehicleRegistry() {
                     setSearchQuery(e.target.value);
                     fetchPickerVehicles(e.target.value);
                   }}
-                  className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-9 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
+                  className="w-full bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) pl-9 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
               </div>
               <button
                 type="submit"
-                className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer shadow-xs"
+                className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer shadow"
               >
                 Search
               </button>
@@ -1703,10 +1701,10 @@ export function VehicleRegistry() {
                   <div
                     key={v.vehicle_id || index}
                     onClick={() => handleSelectVehicle(v)}
-                    className="flex items-center justify-between bg-(--bg-elevated) hover:bg-(--accent-subtle) border border-(--border-main) p-2.5 rounded-lg transition-colors cursor-pointer group"
+                    className="flex items-center justify-between bg-(--bg-surface) hover:bg-(--accent-subtle) border border-(--border-main) p-2.5 rounded-lg transition-colors cursor-pointer group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-black text-white rounded-lg shadow-xs transition-colors">
+                      <div className="p-2 bg-(--accent-subtle) text-(--text-primary) rounded-lg shadow-xs transition-colors">
                         <Car className="w-4 h-4" />
                       </div>
                       <div>
@@ -1730,13 +1728,14 @@ export function VehicleRegistry() {
 
       {/* Edit/Add Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
             <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 shrink-0 bg-(--bg-surface)">
               <h3 className="text-lg font-bold text-(--text-primary)">
                 {editingId ? 'Edit Equipment' : 'Add Equipment'}
               </h3>
               <button 
+                type="button"
                 onClick={() => setIsModalOpen(false)}
                 className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer p-1"
               >
@@ -1749,10 +1748,12 @@ export function VehicleRegistry() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Customer Dropdown */}
                   <div className="relative" ref={customerDropdownRef}>
-                    <label className="block text-xs uppercase text-(--text-muted) font-semibold mb-1">Customer <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                      Customer <span className="text-red-500">*</span>
+                    </label>
                     <div 
                       onClick={() => setIsCustomerDropdownOpen(!isCustomerDropdownOpen)}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) rounded-lg px-3 py-2 text-xs text-(--text-primary) flex items-center justify-between cursor-pointer focus:border-(--text-primary)"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-xs text-(--text-primary) flex items-center justify-between cursor-pointer hover:border-slate-400 dark:hover:border-slate-500"
                     >
                       <span className={vehicleForm.customer_id ? 'text-(--text-primary)' : 'text-(--text-muted)'}>
                         {(() => {
@@ -1765,14 +1766,14 @@ export function VehicleRegistry() {
                     </div>
 
                     {isCustomerDropdownOpen && (
-                      <div className="absolute left-0 right-0 top-full mt-1 bg-(--bg-elevated) border border-(--border-main) rounded-xl shadow-2xl z-50 overflow-hidden">
+                      <div className="absolute left-0 right-0 top-full mt-1 bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 rounded-xl shadow-2xl z-50 overflow-hidden">
                         <div className="p-2 border-b border-(--border-main)">
                           <input
                             type="text"
                             placeholder="Search active customer..."
                             value={customerSearchQuery}
                             onChange={(e) => setCustomerSearchQuery(e.target.value)}
-                            className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
+                            className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                             autoFocus
                           />
                         </div>
@@ -1802,10 +1803,12 @@ export function VehicleRegistry() {
 
                   {/* Vehicle Model Dropdown */}
                   <div className="relative" ref={modelDropdownRef}>
-                    <label className="block text-xs uppercase text-(--text-muted) font-semibold mb-1">Equipment Model <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                      Equipment Model <span className="text-red-500">*</span>
+                    </label>
                     <div 
                       onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) rounded-lg px-3 py-2 text-xs text-(--text-primary) flex items-center justify-between cursor-pointer focus:border-(--text-primary)"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-xs text-(--text-primary) flex items-center justify-between cursor-pointer hover:border-slate-400 dark:hover:border-slate-500"
                     >
                       <span className={vehicleForm.model_id ? 'text-(--text-primary)' : 'text-(--text-muted)'}>
                         {(() => {
@@ -1818,14 +1821,14 @@ export function VehicleRegistry() {
                     </div>
 
                     {isModelDropdownOpen && (
-                      <div className="absolute left-0 right-0 top-full mt-1 bg-(--bg-elevated) border border-(--border-main) rounded-xl shadow-2xl z-50 overflow-hidden">
+                      <div className="absolute left-0 right-0 top-full mt-1 bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 rounded-xl shadow-2xl z-50 overflow-hidden">
                         <div className="p-2 border-b border-(--border-main)">
                           <input
                             type="text"
                             placeholder="Search make or model..."
                             value={modelSearchQuery}
                             onChange={(e) => setModelSearchQuery(e.target.value)}
-                            className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
+                            className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                             autoFocus
                           />
                         </div>
@@ -1856,12 +1859,14 @@ export function VehicleRegistry() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs uppercase text-(--text-muted) font-semibold mb-1">Service Standard <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                      Service Standard <span className="text-red-500">*</span>
+                    </label>
                     <select
                       required
                       value={vehicleForm.service_standard_id}
                       onChange={(e) => setVehicleForm({ ...vehicleForm, service_standard_id: e.target.value })}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) cursor-pointer"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer"
                     >
                       <option value="">Select Service Standard</option>
                       {standards.map((s) => (
@@ -1873,32 +1878,34 @@ export function VehicleRegistry() {
                   </div>
 
                   <div>
-                    <label className="block text-xs uppercase text-(--text-muted) font-semibold mb-1">Equipment ID <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">
+                      Equipment ID <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="text"
                       required
                       value={vehicleForm.plate_no}
                       onChange={(e) => setVehicleForm({ ...vehicleForm, plate_no: e.target.value })}
                       placeholder="e.g. ABC1234"
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) font-semibold"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-semibold"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs uppercase text-(--text-muted) font-semibold mb-1">Conduction No</label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">Conduction No</label>
                     <input
                       type="text"
                       value={vehicleForm.conduction_no}
                       onChange={(e) => setVehicleForm({ ...vehicleForm, conduction_no: e.target.value })}
                       placeholder="Optional"
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs uppercase text-(--text-muted) font-semibold mb-1">Year (1900-2100)</label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">Year (1900-2100)</label>
                     <input
                       type="number"
                       min="1900"
@@ -1906,30 +1913,30 @@ export function VehicleRegistry() {
                       value={vehicleForm.year}
                       onChange={(e) => setVehicleForm({ ...vehicleForm, year: e.target.value })}
                       placeholder="e.g. 2024"
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs uppercase text-(--text-muted) font-semibold mb-1">Registration Date</label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">Registration Date</label>
                     <input
                       type="date"
                       value={vehicleForm.registration_date}
                       onChange={(e) => setVehicleForm({ ...vehicleForm, registration_date: e.target.value })}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs uppercase text-(--text-muted) font-semibold mb-1">Initial Service Reading</label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">Initial Service Reading</label>
                     <input
                       type="number"
                       step="any"
                       value={vehicleForm.service_rdg}
                       onChange={(e) => setVehicleForm({ ...vehicleForm, service_rdg: e.target.value })}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) font-mono"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono"
                     />
                   </div>
 
@@ -1940,9 +1947,9 @@ export function VehicleRegistry() {
                         id="is_active_chk"
                         checked={vehicleForm.is_active}
                         onChange={(e) => setVehicleForm({ ...vehicleForm, is_active: e.target.checked })}
-                        className="rounded border-(--border-main) bg-(--bg-elevated) text-(--text-primary) focus:ring-0 w-4 h-4 cursor-pointer"
+                        className="rounded border-slate-300 dark:border-slate-600 bg-(--bg-surface) text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
                       />
-                      <label htmlFor="is_active_chk" className="text-xs uppercase text-(--text-muted) font-semibold cursor-pointer">Is Active</label>
+                      <label htmlFor="is_active_chk" className="text-xs font-semibold text-(--text-primary) cursor-pointer">Is Active</label>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -1951,9 +1958,9 @@ export function VehicleRegistry() {
                         id="is_stationary_chk"
                         checked={vehicleForm.is_stationary}
                         onChange={(e) => setVehicleForm({ ...vehicleForm, is_stationary: e.target.checked })}
-                        className="rounded border-(--border-main) bg-(--bg-elevated) text-(--text-primary) focus:ring-0 w-4 h-4 cursor-pointer"
+                        className="rounded border-slate-300 dark:border-slate-600 bg-(--bg-surface) text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
                       />
-                      <label htmlFor="is_stationary_chk" className="text-xs uppercase text-(--text-muted) font-semibold cursor-pointer">Is Stationary</label>
+                      <label htmlFor="is_stationary_chk" className="text-xs font-semibold text-(--text-primary) cursor-pointer">Is Stationary</label>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -1962,21 +1969,21 @@ export function VehicleRegistry() {
                         id="has_init_chk"
                         disabled
                         checked={vehicleForm.has_initialized_rdg}
-                        className="rounded border-(--border-main) bg-(--bg-elevated) text-(--text-muted) w-4 h-4 cursor-not-allowed opacity-60"
+                        className="rounded border-slate-300 dark:border-slate-600 bg-(--bg-surface) text-(--text-muted) w-4 h-4 cursor-not-allowed opacity-60"
                       />
-                      <label htmlFor="has_init_chk" className="text-xs uppercase text-(--text-muted) font-semibold cursor-not-allowed">Initialized (Read Only)</label>
+                      <label htmlFor="has_init_chk" className="text-xs font-semibold text-(--text-muted) cursor-not-allowed">Initialized (Read Only)</label>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase text-(--text-muted) font-semibold mb-1">Description</label>
+                  <label className="block text-xs font-semibold text-(--text-primary) mb-1">Description</label>
                   <textarea
                     rows={2}
                     value={vehicleForm.description}
                     onChange={(e) => setVehicleForm({ ...vehicleForm, description: e.target.value })}
                     placeholder="Optional vehicle notes or specifications..."
-                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                    className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -2006,7 +2013,7 @@ export function VehicleRegistry() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50 transition-colors"
+                    className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow disabled:opacity-50 transition-colors"
                   >
                     {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     <span>{editingId ? 'Update Equipment' : 'Save Equipment'}</span>

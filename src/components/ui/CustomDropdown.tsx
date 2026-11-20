@@ -58,9 +58,9 @@ export function CustomDropdown({
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) px-3.5 py-2 rounded-lg text-xs flex items-center justify-between focus:outline-none focus:border-(--text-primary) ${
-          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-        }`}
+        className={`w-full bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 text-(--text-primary) px-3.5 py-2 rounded-lg text-xs flex items-center justify-between transition-colors focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 ${
+          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-slate-400 dark:hover:border-slate-500'
+        } ${isOpen ? 'border-blue-500 ring-1 ring-blue-500' : ''}`}
       >
         <span className={selectedOption ? 'text-(--text-primary)' : 'text-(--text-muted)'}>
           {selectedOption ? selectedOption.label : placeholder}
@@ -70,7 +70,7 @@ export function CustomDropdown({
 
       {/* Dropdown Options Popup List */}
       {isOpen && !disabled && (
-        <div className="absolute z-50 w-full mt-1 bg-(--bg-surface) border border-(--border-main) rounded-lg shadow-xl max-h-60 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-1 bg-(--bg-surface) border border-slate-300 dark:border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto">
           {options.length === 0 ? (
             <div className="px-3.5 py-2.5 text-xs text-(--text-muted) italic">No options available</div>
           ) : (

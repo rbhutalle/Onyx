@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Wrench,
   AlertCircle,
+  AlertTriangle,
   Hash,
   Coins,
   Layers,
@@ -106,7 +107,7 @@ function CustomDropdown({ id, value, onChange, options, placeholder = 'Select...
   );
 }
 
-/* --- Multi-Series Monthly Bar / Line Chart (OpsDashboard Pattern) --- */
+/* --- Multi-Series Monthly Bar / Line Chart --- */
 interface MultiSeriesMonthBucket {
   monthKey: string;
   monthLabel: string;
@@ -541,6 +542,38 @@ interface KanbanCardItem {
   labor_cost: number;
   contract_cost: number;
   total_cost: number;
+  is_delayed_status: boolean;
+  is_past_due_active: boolean;
+  days_overdue: number;
+}
+
+type KpiInspectCategory =
+  | 'planned'
+  | 'emergency'
+  | 'rework'
+  | 'all'
+  | 'materials'
+  | 'labor'
+  | 'contract';
+
+interface KpiInspectionSelection {
+  tab: 'type' | 'costs' | 'breakdown';
+  category: KpiInspectCategory;
+  title: string;
+}
+
+interface InspectedJobOrderRow {
+  job_order_no: string;
+  plate_no: string;
+  make_model: string;
+  type_desc: string;
+  status_name: string;
+  date_created: string;
+  date_needed: string;
+  materials_cost: number;
+  labor_cost: number;
+  contract_cost: number;
+  total_cost: number;
 }
 
 type KanbanColumnKey = 'Queued' | 'On-hold' | 'In-Progress' | 'Delayed' | 'Completed' | 'Cancelled';
@@ -607,6 +640,162 @@ function normalizeKanbanStatus(rawStatus: string): KanbanColumnKey | null {
   return null;
 }
 
+function getStatusBadgeStyle(statusName: string): string {
+  const norm = normalizeKanbanStatus(statusName);
+  const found = KANBAN_COLUMNS.find((c) => c.key === norm);
+  return found
+    ? found.badgeClass
+    : 'bg-(--bg-elevated) text-(--text-secondary) border-(--border-main)';
+}
+
+function getLocalTodayIso(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function computeDaysOverdue(dateNeededIso: string, todayIso: string): number {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateNeededIso)) return 0;
+  if (dateNeededIso >= todayIso) return 0;
+  const [nY, nM, nD] = dateNeededIso.split('-').map(Number);
+  const [tY, tM, tD] = todayIso.split('-').map(Number);
+  const neededMs = Date.UTC(nY, nM - 1, nD);
+  const todayMs = Date.UTC(tY, tM - 1, tD);
+  return Math.max(1, Math.round((todayMs - neededMs) / (1000 * 60 * 60 * 24)));
+}
+
+/* --- Reusable Job Order Inspection Table for Clickable KPI Cards --- */
+interface KpiJobOrderInspectionPanelProps {
+  headerTitle: string;
+  rows: InspectedJobOrderRow[];
+  onClose: () => void;
+}
+
+function KpiJobOrderInspectionPanel({ headerTitle, rows, onClose }: KpiJobOrderInspectionPanelProps) {
+  const totals = useMemo(
+    () =>
+      rows.reduce(
+        (acc, r) => {
+          acc.materials += r.materials_cost;
+          acc.labor += r.labor_cost;
+          acc.contract += r.contract_cost;
+          acc.total += r.total_cost;
+          return acc;
+        },
+        { materials: 0, labor: 0, contract: 0, total: 0 }
+      ),
+    [rows]
+  );
+
+  return (
+    <div className="border-2 border-(--btn-primary-bg)/50 rounded-xl p-4 bg-(--bg-surface) space-y-3 shadow-lg animate-fadeIn">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-(--border-main) pb-2.5">
+        <div className="flex items-center gap-2">
+          <ClipboardList className="w-4 h-4 text-(--btn-primary-bg)" />
+          <h4 className="text-xs font-extrabold uppercase text-(--text-primary)">
+            {headerTitle}
+          </h4>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-3 py-1 bg-(--bg-elevated) hover:bg-(--accent-subtle) border border-(--border-main) text-(--text-primary) rounded-lg text-xs font-bold transition-colors cursor-pointer"
+        >
+          Close
+        </button>
+      </div>
+
+      <div className="overflow-x-auto max-h-80 overflow-y-auto border border-(--border-main) rounded-lg">
+        <table className="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr className="border-b border-(--border-main) text-(--text-muted) text-[10px] uppercase bg-(--bg-elevated) sticky top-0 z-10 shadow-xs">
+              <th className="p-2.5">JO Number</th>
+              <th className="p-2.5">Equipment (Plate No)</th>
+              <th className="p-2.5">JO Type</th>
+              <th className="p-2.5">Status</th>
+              <th className="p-2.5">Date Created / Needed</th>
+              <th className="p-2.5 text-right">Materials Cost</th>
+              <th className="p-2.5 text-right">Labor Cost</th>
+              <th className="p-2.5 text-right">Contract Cost</th>
+              <th className="p-2.5 text-right">Total Cost</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-(--border-main)">
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="p-6 text-center text-(--text-muted)">
+                  No matching job orders found for this KPI selection.
+                </td>
+              </tr>
+            ) : (
+              rows.map((r, idx) => (
+                <tr key={`${r.job_order_no}-${idx}`} className="hover:bg-(--accent-subtle) transition-colors">
+                  <td className="p-2.5 font-mono font-extrabold text-(--text-primary)">{r.job_order_no}</td>
+                  <td className="p-2.5">
+                    <div className="font-bold text-(--text-primary)">{r.plate_no}</div>
+                    <div className="text-[10px] text-(--text-muted)">{r.make_model}</div>
+                  </td>
+                  <td className="p-2.5 text-(--text-secondary)">{r.type_desc}</td>
+                  <td className="p-2.5">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadgeStyle(r.status_name)}`}>
+                      {r.status_name}
+                    </span>
+                  </td>
+                  <td className="p-2.5 font-mono text-[11px]">
+                    <div>
+                      <span className="text-(--text-muted)">Created:</span>{' '}
+                      <span className="text-(--text-primary)">{r.date_created}</span>
+                    </div>
+                    <div>
+                      <span className="text-(--text-muted)">Needed:</span>{' '}
+                      <span className="font-bold text-(--text-primary)">{r.date_needed}</span>
+                    </div>
+                  </td>
+                  <td className="p-2.5 text-right font-mono text-blue-600 dark:text-blue-400">
+                    ₱{r.materials_cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td className="p-2.5 text-right font-mono text-amber-600 dark:text-amber-400">
+                    ₱{r.labor_cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td className="p-2.5 text-right font-mono text-purple-600 dark:text-purple-400">
+                    ₱{r.contract_cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td className="p-2.5 text-right font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                    ₱{r.total_cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+          {rows.length > 0 && (
+            <tfoot>
+              <tr className="border-t-2 border-(--border-main) bg-(--bg-elevated) font-bold text-xs">
+                <td colSpan={5} className="p-2.5 text-right uppercase text-[10px] text-(--text-muted)">
+                  Total ({rows.length} {rows.length === 1 ? 'Job Order' : 'Job Orders'}):
+                </td>
+                <td className="p-2.5 text-right font-mono text-blue-600 dark:text-blue-400">
+                  ₱{totals.materials.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="p-2.5 text-right font-mono text-amber-600 dark:text-amber-400">
+                  ₱{totals.labor.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="p-2.5 text-right font-mono text-purple-600 dark:text-purple-400">
+                  ₱{totals.contract.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="p-2.5 text-right font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                  ₱{totals.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+              </tr>
+            </tfoot>
+          )}
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export function JobOrderDashboard() {
   const [activeSubTab, setActiveSubTab] = useState<'type' | 'costs' | 'breakdown' | 'vehicles' | 'kanban'>('type');
   const [rankingTab, setRankingTab] = useState<'jobs' | 'cost'>('jobs');
@@ -620,6 +809,9 @@ export function JobOrderDashboard() {
   const [selectedMonthKey, setSelectedMonthKey] = useState<string | null>(null);
   const [selectedCostMonthKey, setSelectedCostMonthKey] = useState<string | null>(null);
   const [selectedBreakdownMonthKey, setSelectedBreakdownMonthKey] = useState<string | null>(null);
+
+  // Active KPI Card Inspection Selection
+  const [kpiInspection, setKpiInspection] = useState<KpiInspectionSelection | null>(null);
 
   // Selected Kanban Card for Inspection Table
   const [selectedKanbanCard, setSelectedKanbanCard] = useState<KanbanCardItem | null>(null);
@@ -681,6 +873,7 @@ export function JobOrderDashboard() {
     setSelectedMonthKey(null);
     setSelectedCostMonthKey(null);
     setSelectedBreakdownMonthKey(null);
+    setKpiInspection(null);
   };
 
   const handleEndDateChange = (val: string) => {
@@ -688,6 +881,18 @@ export function JobOrderDashboard() {
     setSelectedMonthKey(null);
     setSelectedCostMonthKey(null);
     setSelectedBreakdownMonthKey(null);
+    setKpiInspection(null);
+  };
+
+  const handleSwitchSubTab = (tab: typeof activeSubTab) => {
+    setActiveSubTab(tab);
+    setKpiInspection(null);
+  };
+
+  const toggleKpiInspection = (tab: 'type' | 'costs' | 'breakdown', category: KpiInspectCategory, title: string) => {
+    setKpiInspection((prev) =>
+      prev && prev.tab === tab && prev.category === category ? null : { tab, category, title }
+    );
   };
 
   // Filter States
@@ -749,7 +954,6 @@ export function JobOrderDashboard() {
       setSupervisorsList(activeSupervisors);
       setAllJobsCache(allJobs);
 
-      // Build employee name lookup map
       const employeeNameMap = new Map<string, string>();
       activeSupervisors.forEach((emp: Record<string, unknown>) => {
         if (emp.employee_id && emp.employee_name) {
@@ -784,7 +988,6 @@ export function JobOrderDashboard() {
         }
       });
 
-      // Deduplicate rawVehicles by vehicle_id
       const uniqueVehiclesMap = new Map<string, Record<string, unknown>>();
       rawVehicles.forEach((v: Record<string, unknown>) => {
         const vId = String(v.vehicle_id);
@@ -893,7 +1096,6 @@ export function JobOrderDashboard() {
         };
       }));
 
-      // Process Issue / Task History from vehicle_daily_risks
       const rawRisks = (risksRes.data || []) as Record<string, unknown>[];
       const riskOccurrenceMap = new Map<string, { risk_name: string; dates: string[] }>();
 
@@ -923,7 +1125,6 @@ export function JobOrderDashboard() {
 
       setVehicleTaskHistory(processedDailyRisks);
 
-      // Repeat Repair History Formula
       const rawTasks = (tasksRes.data || []) as Record<string, unknown>[];
       const taskStandardMap = new Map<string, { task_name: string; dates: string[] }>();
       rawTasks.forEach((t: Record<string, unknown>) => {
@@ -960,7 +1161,6 @@ export function JobOrderDashboard() {
 
       setVehicleRepeatHistory(dynamicRepeatHistory);
 
-      // PM Status Details
       const pmRecord = pmRes.data || {};
       const currentRdg = Number(pmRecord.current_rdg || 45000);
 
@@ -1056,7 +1256,13 @@ export function JobOrderDashboard() {
     ...supervisorsList.map((sup) => ({ value: sup.employee_id, label: sup.employee_name }))
   ], [supervisorsList]);
 
-  // Vehicle segment lookup map (Customer / Make / Model) for monthly charts
+  // Vehicle lookup & segment IDs
+  const vehiclesMap = useMemo(() => {
+    const map = new Map<string, VehicleRecord>();
+    vehiclesData.forEach((v) => map.set(v.vehicle_id, v));
+    return map;
+  }, [vehiclesData]);
+
   const segmentVehicleIds = useMemo(() => {
     const ids = new Set<string>();
     vehiclesData.forEach((v) => {
@@ -1131,7 +1337,7 @@ export function JobOrderDashboard() {
       });
   }, [vehiclesData, allJobsCache, filterCustomer, filterMake, filterModel, filterJobOrderTypeId, filterStatusId, filterSupervisorId, startDate, endDate, defaultStartDate, defaultEndDate]);
 
-  // Kanban Board Grouped Cards (Decoupled from period startDate/endDate; displays plate_no)
+  // Kanban Board Grouped Cards with Delayed Highlight Metadata
   const kanbanBoardData = useMemo(() => {
     const grouped: Record<KanbanColumnKey, KanbanCardItem[]> = {
       Queued: [],
@@ -1142,13 +1348,13 @@ export function JobOrderDashboard() {
       Cancelled: []
     };
 
-    const equipmentMap = new Map<string, VehicleRecord>();
-    vehiclesData.forEach((v) => equipmentMap.set(v.vehicle_id, v));
+    const todayIso = getLocalTodayIso();
+    let totalDelayedCount = 0;
 
     allJobsCache.forEach((j) => {
       if (!j.vehicle_id) return;
       const eqId = String(j.vehicle_id);
-      const eq = equipmentMap.get(eqId);
+      const eq = vehiclesMap.get(eqId);
 
       if (filterCustomer !== 'ALL' && eq?.customer_name !== filterCustomer) return;
       if (filterMake !== 'ALL' && eq?.make_name !== filterMake) return;
@@ -1181,6 +1387,15 @@ export function JobOrderDashboard() {
       const rawNeeded = j.expected_completion || j.date_completed;
       const dateNeeded = rawNeeded ? String(rawNeeded).substring(0, 10) : 'TBD';
 
+      const isTerminalStatus = columnKey === 'Completed' || columnKey === 'Cancelled';
+      const daysOverdue = !isTerminalStatus ? computeDaysOverdue(dateNeeded, todayIso) : 0;
+      const isDelayedStatus = columnKey === 'Delayed';
+      const isPastDueActive = !isTerminalStatus && !isDelayedStatus && daysOverdue > 0;
+
+      if (isDelayedStatus || isPastDueActive) {
+        totalDelayedCount += 1;
+      }
+
       grouped[columnKey].push({
         job_order_no: String(j.job_order_no || 'N/A'),
         vehicle_id: eqId,
@@ -1194,18 +1409,24 @@ export function JobOrderDashboard() {
         materials_cost: Number(j.materials_cost || 0),
         labor_cost: Number(j.labor_cost || 0),
         contract_cost: Number(j.contract_cost || 0),
-        total_cost: Number(j.total_cost || 0)
+        total_cost: Number(j.total_cost || 0),
+        is_delayed_status: isDelayedStatus,
+        is_past_due_active: isPastDueActive,
+        days_overdue: daysOverdue
       });
     });
 
     (Object.keys(grouped) as KanbanColumnKey[]).forEach((col) => {
-      grouped[col].sort((a, b) => b.date_created.localeCompare(a.date_created));
+      grouped[col].sort((a, b) => {
+        if (b.days_overdue !== a.days_overdue) return b.days_overdue - a.days_overdue;
+        return b.date_created.localeCompare(a.date_created);
+      });
     });
 
-    return grouped;
+    return { grouped, totalDelayedCount };
   }, [
     allJobsCache,
-    vehiclesData,
+    vehiclesMap,
     jobOrderStatuses,
     jobOrderTypes,
     filterCustomer,
@@ -1216,7 +1437,7 @@ export function JobOrderDashboard() {
     filterStatusId
   ]);
 
-  // Compute job order type counts & costs based on filtered equipment or all jobs cache within date range AND selectedMonthKey
+  // Compute job order type counts & costs
   const jobOrderTypeMetrics = useMemo(() => {
     const typeCountMap = new Map<string, number>();
     const typeCostMap = new Map<string, number>();
@@ -1292,7 +1513,7 @@ export function JobOrderDashboard() {
     };
   }, [segmentVehicleIds, allJobsCache, jobOrderTypes, filterSupervisorId, filterJobOrderTypeId, filterStatusId, startDate, endDate, selectedMonthKey]);
 
-  // Compute Job Order Costs sub-tab metrics dynamically filtered by selectedCostMonthKey
+  // Compute Job Order Costs sub-tab metrics
   const jobOrderCostSubTabMetrics = useMemo(() => {
     let plannedCost = 0;
     let emergencyCost = 0;
@@ -1335,7 +1556,7 @@ export function JobOrderDashboard() {
     };
   }, [segmentVehicleIds, allJobsCache, jobOrderTypes, filterSupervisorId, filterJobOrderTypeId, filterStatusId, startDate, endDate, selectedCostMonthKey]);
 
-  // Compute Job Order Cost Breakdown sub-tab metrics dynamically filtered by selectedBreakdownMonthKey
+  // Compute Job Order Cost Breakdown sub-tab metrics
   const jobOrderBreakdownSubTabMetrics = useMemo(() => {
     let materialsCost = 0;
     let laborCost = 0;
@@ -1372,6 +1593,116 @@ export function JobOrderDashboard() {
       totalCost
     };
   }, [segmentVehicleIds, allJobsCache, filterSupervisorId, filterJobOrderTypeId, filterStatusId, startDate, endDate, selectedBreakdownMonthKey]);
+
+  // Inspected Job Orders for the active clicked KPI Card
+  const inspectedKpiJobOrders = useMemo(() => {
+    if (!kpiInspection) return { headerTitle: '', rows: [] as InspectedJobOrderRow[] };
+
+    const activeMonthFilter =
+      kpiInspection.tab === 'type'
+        ? selectedMonthKey
+        : kpiInspection.tab === 'costs'
+        ? selectedCostMonthKey
+        : selectedBreakdownMonthKey;
+
+    const rows: InspectedJobOrderRow[] = [];
+
+    allJobsCache.forEach((j) => {
+      if (!j.vehicle_id) return;
+      const vId = String(j.vehicle_id);
+      if (!segmentVehicleIds.has(vId)) return;
+
+      const createdAt = String(j.created_at || '').substring(0, 10);
+      if (createdAt && (createdAt < startDate || createdAt > endDate)) return;
+      if (activeMonthFilter && (!createdAt || createdAt.substring(0, 7) !== activeMonthFilter)) return;
+
+      if (filterSupervisorId !== 'ALL' && String(j.assigned_supervisor) !== filterSupervisorId) return;
+      if (filterJobOrderTypeId !== 'ALL' && String(j.type_id || '') !== filterJobOrderTypeId) return;
+      if (filterStatusId !== 'ALL' && String(j.status_id || '') !== filterStatusId) return;
+
+      const rawType = j.joborder_type as Record<string, unknown> | null;
+      let typeDesc = String(rawType?.type_desc || '');
+      if (!typeDesc && j.type_id) {
+        const foundType = jobOrderTypes.find((t) => t.type_id === String(j.type_id));
+        if (foundType) typeDesc = foundType.type_desc;
+      }
+      if (!typeDesc) typeDesc = 'General / Unclassified';
+      const lowerType = typeDesc.toLowerCase();
+
+      const matCost = Number(j.materials_cost || 0);
+      const labCost = Number(j.labor_cost || 0);
+      const conCost = Number(j.contract_cost || 0);
+      const totCost = Number(j.total_cost || 0);
+
+      if (kpiInspection.category === 'planned' && !lowerType.includes('plan')) return;
+      if (kpiInspection.category === 'emergency' && !(lowerType.includes('emerg') || lowerType.includes('unplan'))) return;
+      if (kpiInspection.category === 'rework' && !(lowerType.includes('rework') || lowerType.includes('repeat'))) return;
+      if (kpiInspection.category === 'materials' && matCost <= 0) return;
+      if (kpiInspection.category === 'labor' && labCost <= 0) return;
+      if (kpiInspection.category === 'contract' && conCost <= 0) return;
+
+      const rawStat = j.joborder_status as Record<string, unknown> | null;
+      let statusName = String(rawStat?.status_name || '');
+      if (!statusName && j.status_id) {
+        const foundStatus = jobOrderStatuses.find((st) => st.status_id === String(j.status_id));
+        if (foundStatus) statusName = foundStatus.status_name;
+      }
+      if (!statusName) statusName = 'Open';
+
+      const eq = vehiclesMap.get(vId);
+      const rawVeh = j.vehicles as Record<string, unknown> | null;
+      const plateNo = eq?.plate_no || (rawVeh?.plate_no ? String(rawVeh.plate_no) : 'N/A');
+      const makeModel = eq ? `${eq.make_name} ${eq.model_name}` : 'Unknown Equipment';
+
+      const rawNeeded = j.expected_completion || j.date_completed;
+      const dateNeeded = rawNeeded ? String(rawNeeded).substring(0, 10) : 'TBD';
+
+      rows.push({
+        job_order_no: String(j.job_order_no || 'N/A'),
+        plate_no: plateNo,
+        make_model: makeModel,
+        type_desc: typeDesc,
+        status_name: statusName,
+        date_created: createdAt || '—',
+        date_needed: dateNeeded,
+        materials_cost: matCost,
+        labor_cost: labCost,
+        contract_cost: conCost,
+        total_cost: totCost
+      });
+    });
+
+    rows.sort((a, b) => b.date_created.localeCompare(a.date_created));
+
+    const activeStatusObj =
+      filterStatusId !== 'ALL'
+        ? jobOrderStatuses.find((st) => st.status_id === filterStatusId)
+        : null;
+
+    const contextTags: string[] = [kpiInspection.title];
+    if (activeStatusObj) {
+      contextTags.push(activeStatusObj.status_name);
+    }
+
+    const headerTitle = `Job Order Inspection: ${rows.length} (${contextTags.join(' • ')})`;
+
+    return { headerTitle, rows };
+  }, [
+    kpiInspection,
+    selectedMonthKey,
+    selectedCostMonthKey,
+    selectedBreakdownMonthKey,
+    allJobsCache,
+    segmentVehicleIds,
+    startDate,
+    endDate,
+    filterSupervisorId,
+    filterJobOrderTypeId,
+    filterStatusId,
+    jobOrderTypes,
+    jobOrderStatuses,
+    vehiclesMap
+  ]);
 
   // Compute Monthly Job Order Type Count Analysis
   const monthlyJobOrderTypeCounts = useMemo(() => {
@@ -1517,7 +1848,6 @@ export function JobOrderDashboard() {
     await fetchVehicleDrilldown(v.vehicle_id);
   };
 
-  // Theme-aware active tab styling referencing index.css CSS variables
   const getMainTabClass = (tabKey: typeof activeSubTab) => {
     const isActive = activeSubTab === tabKey;
     return isActive
@@ -1686,7 +2016,7 @@ export function JobOrderDashboard() {
               <div className="flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1">
                 <button
                   type="button"
-                  onClick={() => setActiveSubTab('type')}
+                  onClick={() => handleSwitchSubTab('type')}
                   className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${getMainTabClass('type')}`}
                 >
                   <Layers className="w-4 h-4" />
@@ -1695,7 +2025,7 @@ export function JobOrderDashboard() {
 
                 <button
                   type="button"
-                  onClick={() => setActiveSubTab('costs')}
+                  onClick={() => handleSwitchSubTab('costs')}
                   className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${getMainTabClass('costs')}`}
                 >
                   <PhilippinePeso className="w-4 h-4" />
@@ -1704,7 +2034,7 @@ export function JobOrderDashboard() {
 
                 <button
                   type="button"
-                  onClick={() => setActiveSubTab('breakdown')}
+                  onClick={() => handleSwitchSubTab('breakdown')}
                   className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${getMainTabClass('breakdown')}`}
                 >
                   <PieChart className="w-4 h-4" />
@@ -1713,7 +2043,7 @@ export function JobOrderDashboard() {
 
                 <button
                   type="button"
-                  onClick={() => setActiveSubTab('vehicles')}
+                  onClick={() => handleSwitchSubTab('vehicles')}
                   className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${getMainTabClass('vehicles')}`}
                 >
                   <Wrench className="w-4 h-4" />
@@ -1722,7 +2052,7 @@ export function JobOrderDashboard() {
 
                 <button
                   type="button"
-                  onClick={() => setActiveSubTab('kanban')}
+                  onClick={() => handleSwitchSubTab('kanban')}
                   className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${getMainTabClass('kanban')}`}
                 >
                   <Kanban className="w-4 h-4" />
@@ -1790,49 +2120,90 @@ export function JobOrderDashboard() {
                     />
                   </div>
 
-                  {/* 2. Dynamically Filtered Job Order KPI Cards */}
+                  {/* 2. Clickable Job Order Type KPI Cards */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => toggleKpiInspection('type', 'planned', 'Planned JO')}
+                      className={`text-left p-3 bg-sky-500/10 hover:bg-sky-500/15 border border-sky-500/20 rounded-xl space-y-1 shadow-xs transition-all cursor-pointer ${
+                        kpiInspection?.tab === 'type' && kpiInspection.category === 'planned'
+                          ? 'ring-2 ring-sky-500 bg-sky-500/20'
+                          : ''
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-sky-600 dark:text-sky-400">
                         Planned JO Count {selectedMonthKey ? `(${monthlyJobOrderTypeCounts.find((m) => m.monthKey === selectedMonthKey)?.monthLabel})` : ''}
                       </div>
                       <div className="text-lg font-extrabold text-sky-600 dark:text-sky-400 font-mono">{jobOrderTypeMetrics.plannedCount.toLocaleString()}</div>
-                      <div className="text-[10px] text-sky-600/80 dark:text-sky-400/80">Scheduled maintenance</div>
-                    </div>
+                      <div className="text-[10px] text-sky-600/80 dark:text-sky-400/80">Click to inspect details</div>
+                    </button>
 
-                    <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => toggleKpiInspection('type', 'emergency', 'Emergency JO')}
+                      className={`text-left p-3 bg-rose-500/10 hover:bg-rose-500/15 border border-rose-500/20 rounded-xl space-y-1 shadow-xs transition-all cursor-pointer ${
+                        kpiInspection?.tab === 'type' && kpiInspection.category === 'emergency'
+                          ? 'ring-2 ring-rose-500 bg-rose-500/20'
+                          : ''
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-rose-600 dark:text-rose-400">
                         Emergency JO Count {selectedMonthKey ? `(${monthlyJobOrderTypeCounts.find((m) => m.monthKey === selectedMonthKey)?.monthLabel})` : ''}
                       </div>
                       <div className="text-lg font-extrabold text-rose-600 dark:text-rose-400 font-mono">{jobOrderTypeMetrics.emergencyCount.toLocaleString()}</div>
-                      <div className="text-[10px] text-rose-600/80 dark:text-rose-400/80">Unplanned breakdowns</div>
-                    </div>
+                      <div className="text-[10px] text-rose-600/80 dark:text-rose-400/80">Click to inspect details</div>
+                    </button>
 
-                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => toggleKpiInspection('type', 'rework', 'Rework JO')}
+                      className={`text-left p-3 bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/20 rounded-xl space-y-1 shadow-xs transition-all cursor-pointer ${
+                        kpiInspection?.tab === 'type' && kpiInspection.category === 'rework'
+                          ? 'ring-2 ring-amber-500 bg-amber-500/20'
+                          : ''
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">
                         Rework JO Count {selectedMonthKey ? `(${monthlyJobOrderTypeCounts.find((m) => m.monthKey === selectedMonthKey)?.monthLabel})` : ''}
                       </div>
                       <div className="text-lg font-extrabold text-amber-600 dark:text-amber-400 font-mono">{jobOrderTypeMetrics.reworkCount.toLocaleString()}</div>
-                      <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">Repeat or corrective repairs</div>
-                    </div>
+                      <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">Click to inspect details</div>
+                    </button>
 
-                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => toggleKpiInspection('type', 'all', 'Total Job Orders')}
+                      className={`text-left p-3 bg-blue-500/10 hover:bg-blue-500/15 border border-blue-500/20 rounded-xl space-y-1 shadow-xs transition-all cursor-pointer ${
+                        kpiInspection?.tab === 'type' && kpiInspection.category === 'all'
+                          ? 'ring-2 ring-blue-500 bg-blue-500/20'
+                          : ''
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400">
                         Total Job Orders {selectedMonthKey ? `(${monthlyJobOrderTypeCounts.find((m) => m.monthKey === selectedMonthKey)?.monthLabel})` : ''}
                       </div>
                       <div className="text-lg font-extrabold text-blue-600 dark:text-blue-400 font-mono">
-                        {(selectedMonthKey ? jobOrderTypeMetrics.filteredTotalJoCount : vehicleKpis.totalJo).toLocaleString()}
+                        {jobOrderTypeMetrics.filteredTotalJoCount.toLocaleString()}
                       </div>
-                      <div className="text-[10px] text-blue-600/80 dark:text-blue-400/80">Combined total count</div>
-                    </div>
+                      <div className="text-[10px] text-blue-600/80 dark:text-blue-400/80">Click to inspect details</div>
+                    </button>
                   </div>
+
+                  {/* 3. KPI Inspection Details Table */}
+                  {kpiInspection?.tab === 'type' && (
+                    <KpiJobOrderInspectionPanel
+                      headerTitle={inspectedKpiJobOrders.headerTitle}
+                      rows={inspectedKpiJobOrders.rows}
+                      onClose={() => setKpiInspection(null)}
+                    />
+                  )}
                 </div>
               )}
 
               {/* Sub-Tab 2: Job Order Costs */}
               {activeSubTab === 'costs' && (
                 <div className="space-y-4 animate-fadeIn">
-                  {/* 1. Monthly Comparative Cost Analysis Chart (Bar <= 2 mos | Line > 2 mos) */}
+                  {/* 1. Monthly Comparative Cost Analysis Chart */}
                   <div className="p-4 bg-(--bg-surface) border border-(--border-main) rounded-xl space-y-3 shadow-xs flex flex-col">
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-(--border-main) pb-2">
                       <div className="flex items-center gap-2">
@@ -1890,47 +2261,88 @@ export function JobOrderDashboard() {
                     />
                   </div>
 
-                  {/* 2. Dynamically Filtered Job Order Costs KPI Cards */}
+                  {/* 2. Clickable Job Order Costs KPI Cards */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => toggleKpiInspection('costs', 'planned', 'Planned JO Cost')}
+                      className={`text-left p-3 bg-sky-500/10 hover:bg-sky-500/15 border border-sky-500/20 rounded-xl space-y-1 shadow-xs transition-all cursor-pointer ${
+                        kpiInspection?.tab === 'costs' && kpiInspection.category === 'planned'
+                          ? 'ring-2 ring-sky-500 bg-sky-500/20'
+                          : ''
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-sky-600 dark:text-sky-400">
                         Planned JO Total Cost {selectedCostMonthKey ? `(${monthlyComparativeCosts.find((m) => m.monthKey === selectedCostMonthKey)?.monthLabel})` : ''}
                       </div>
                       <div className="text-lg font-extrabold text-sky-600 dark:text-sky-400">₱{jobOrderCostSubTabMetrics.plannedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      <div className="text-[10px] text-sky-600/80 dark:text-sky-400/80">Scheduled maintenance</div>
-                    </div>
+                      <div className="text-[10px] text-sky-600/80 dark:text-sky-400/80">Click to inspect details</div>
+                    </button>
 
-                    <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => toggleKpiInspection('costs', 'emergency', 'Emergency JO Cost')}
+                      className={`text-left p-3 bg-rose-500/10 hover:bg-rose-500/15 border border-rose-500/20 rounded-xl space-y-1 shadow-xs transition-all cursor-pointer ${
+                        kpiInspection?.tab === 'costs' && kpiInspection.category === 'emergency'
+                          ? 'ring-2 ring-rose-500 bg-rose-500/20'
+                          : ''
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-rose-600 dark:text-rose-400">
                         Emergency JO Total Cost {selectedCostMonthKey ? `(${monthlyComparativeCosts.find((m) => m.monthKey === selectedCostMonthKey)?.monthLabel})` : ''}
                       </div>
                       <div className="text-lg font-extrabold text-rose-600 dark:text-rose-400">₱{jobOrderCostSubTabMetrics.emergencyCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      <div className="text-[10px] text-rose-600/80 dark:text-rose-400/80">Unplanned breakdowns</div>
-                    </div>
+                      <div className="text-[10px] text-rose-600/80 dark:text-rose-400/80">Click to inspect details</div>
+                    </button>
 
-                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => toggleKpiInspection('costs', 'rework', 'Rework JO Cost')}
+                      className={`text-left p-3 bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/20 rounded-xl space-y-1 shadow-xs transition-all cursor-pointer ${
+                        kpiInspection?.tab === 'costs' && kpiInspection.category === 'rework'
+                          ? 'ring-2 ring-amber-500 bg-amber-500/20'
+                          : ''
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">
                         Rework JO Total Cost {selectedCostMonthKey ? `(${monthlyComparativeCosts.find((m) => m.monthKey === selectedCostMonthKey)?.monthLabel})` : ''}
                       </div>
                       <div className="text-lg font-extrabold text-amber-600 dark:text-amber-400">₱{jobOrderCostSubTabMetrics.reworkCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">Repeat or corrective repairs</div>
-                    </div>
+                      <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">Click to inspect details</div>
+                    </button>
 
-                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => toggleKpiInspection('costs', 'all', 'Total JO Cost')}
+                      className={`text-left p-3 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/30 rounded-xl space-y-1 shadow-xs transition-all cursor-pointer ${
+                        kpiInspection?.tab === 'costs' && kpiInspection.category === 'all'
+                          ? 'ring-2 ring-emerald-500 bg-emerald-500/20'
+                          : ''
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">
                         TOTAL JO Cost {selectedCostMonthKey ? `(${monthlyComparativeCosts.find((m) => m.monthKey === selectedCostMonthKey)?.monthLabel})` : ''}
                       </div>
                       <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">₱{jobOrderCostSubTabMetrics.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      <div className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">Combined maintenance cost</div>
-                    </div>
+                      <div className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">Click to inspect details</div>
+                    </button>
                   </div>
+
+                  {/* 3. KPI Inspection Details Table */}
+                  {kpiInspection?.tab === 'costs' && (
+                    <KpiJobOrderInspectionPanel
+                      headerTitle={inspectedKpiJobOrders.headerTitle}
+                      rows={inspectedKpiJobOrders.rows}
+                      onClose={() => setKpiInspection(null)}
+                    />
+                  )}
                 </div>
               )}
 
               {/* Sub-Tab 3: Job Order Cost Breakdown */}
               {activeSubTab === 'breakdown' && (
                 <div className="space-y-4 animate-fadeIn">
-                  {/* 1. Monthly Component Cost Analysis Chart (Bar <= 2 mos | Line > 2 mos) */}
+                  {/* 1. Monthly Component Cost Analysis Chart */}
                   <div className="p-4 bg-(--bg-surface) border border-(--border-main) rounded-xl space-y-3 shadow-xs flex flex-col">
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-(--border-main) pb-2">
                       <div className="flex items-center gap-2">
@@ -1988,40 +2400,81 @@ export function JobOrderDashboard() {
                     />
                   </div>
 
-                  {/* 2. Dynamically Filtered Cost Breakdown KPI Cards */}
+                  {/* 2. Clickable Cost Breakdown KPI Cards */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => toggleKpiInspection('breakdown', 'materials', 'Materials Cost')}
+                      className={`text-left p-3 bg-blue-500/10 hover:bg-blue-500/15 border border-blue-500/20 rounded-xl space-y-1 shadow-xs transition-all cursor-pointer ${
+                        kpiInspection?.tab === 'breakdown' && kpiInspection.category === 'materials'
+                          ? 'ring-2 ring-blue-500 bg-blue-500/20'
+                          : ''
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400">
                         Materials Cost {selectedBreakdownMonthKey ? `(${monthlyComponentComparativeCosts.find((m) => m.monthKey === selectedBreakdownMonthKey)?.monthLabel})` : ''}
                       </div>
                       <div className="text-lg font-extrabold text-blue-600 dark:text-blue-400">₱{jobOrderBreakdownSubTabMetrics.materialsCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      <div className="text-[10px] text-blue-600/80 dark:text-blue-400/80">Total parts & materials</div>
-                    </div>
+                      <div className="text-[10px] text-blue-600/80 dark:text-blue-400/80">Click to inspect details</div>
+                    </button>
 
-                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => toggleKpiInspection('breakdown', 'labor', 'Labor Cost')}
+                      className={`text-left p-3 bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/20 rounded-xl space-y-1 shadow-xs transition-all cursor-pointer ${
+                        kpiInspection?.tab === 'breakdown' && kpiInspection.category === 'labor'
+                          ? 'ring-2 ring-amber-500 bg-amber-500/20'
+                          : ''
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">
                         Labor Cost {selectedBreakdownMonthKey ? `(${monthlyComponentComparativeCosts.find((m) => m.monthKey === selectedBreakdownMonthKey)?.monthLabel})` : ''}
                       </div>
                       <div className="text-lg font-extrabold text-amber-600 dark:text-amber-400">₱{jobOrderBreakdownSubTabMetrics.laborCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">Total labor charges</div>
-                    </div>
+                      <div className="text-[10px] text-amber-600/80 dark:text-amber-400/80">Click to inspect details</div>
+                    </button>
 
-                    <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => toggleKpiInspection('breakdown', 'contract', 'Contract Cost')}
+                      className={`text-left p-3 bg-purple-500/10 hover:bg-purple-500/15 border border-purple-500/20 rounded-xl space-y-1 shadow-xs transition-all cursor-pointer ${
+                        kpiInspection?.tab === 'breakdown' && kpiInspection.category === 'contract'
+                          ? 'ring-2 ring-purple-500 bg-purple-500/20'
+                          : ''
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-purple-600 dark:text-purple-400">
                         Contract Cost {selectedBreakdownMonthKey ? `(${monthlyComponentComparativeCosts.find((m) => m.monthKey === selectedBreakdownMonthKey)?.monthLabel})` : ''}
                       </div>
                       <div className="text-lg font-extrabold text-purple-600 dark:text-purple-400">₱{jobOrderBreakdownSubTabMetrics.contractCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      <div className="text-[10px] text-purple-600/80 dark:text-purple-400/80">Total outsourced services</div>
-                    </div>
+                      <div className="text-[10px] text-purple-600/80 dark:text-purple-400/80">Click to inspect details</div>
+                    </button>
 
-                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-1 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => toggleKpiInspection('breakdown', 'all', 'Total Cost')}
+                      className={`text-left p-3 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/30 rounded-xl space-y-1 shadow-xs transition-all cursor-pointer ${
+                        kpiInspection?.tab === 'breakdown' && kpiInspection.category === 'all'
+                          ? 'ring-2 ring-emerald-500 bg-emerald-500/20'
+                          : ''
+                      }`}
+                    >
                       <div className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">
                         TOTAL COST {selectedBreakdownMonthKey ? `(${monthlyComponentComparativeCosts.find((m) => m.monthKey === selectedBreakdownMonthKey)?.monthLabel})` : ''}
                       </div>
                       <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">₱{jobOrderBreakdownSubTabMetrics.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      <div className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">Matls + Labor + Contract</div>
-                    </div>
+                      <div className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">Click to inspect details</div>
+                    </button>
                   </div>
+
+                  {/* 3. KPI Inspection Details Table */}
+                  {kpiInspection?.tab === 'breakdown' && (
+                    <KpiJobOrderInspectionPanel
+                      headerTitle={inspectedKpiJobOrders.headerTitle}
+                      rows={inspectedKpiJobOrders.rows}
+                      onClose={() => setKpiInspection(null)}
+                    />
+                  )}
                 </div>
               )}
 
@@ -2117,16 +2570,30 @@ export function JobOrderDashboard() {
                       <h3 className="text-xs font-bold uppercase text-(--text-primary)">
                         Job Order Status Kanban Board
                       </h3>
+                      {kanbanBoardData.totalDelayedCount > 0 && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                          <AlertTriangle className="w-3 h-3" />
+                          <span>{kanbanBoardData.totalDelayedCount} Delayed / Overdue</span>
+                        </span>
+                      )}
                     </div>
-                    <span className="text-[11px] text-(--text-muted)">
-                      Showing all job orders across all dates • Click any card to inspect details
-                    </span>
+                    <div className="flex flex-wrap items-center gap-3 text-[10px] text-(--text-muted)">
+                      <span className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 rounded-xs bg-orange-500 inline-block" />
+                        Delayed Status
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 rounded-xs bg-rose-500 inline-block" />
+                        Past Date Needed (Overdue)
+                      </span>
+                      <span className="hidden sm:inline">• Click any card to inspect details</span>
+                    </div>
                   </div>
 
                   <div className="overflow-x-auto pb-2">
                     <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-3 min-w-255">
                       {KANBAN_COLUMNS.map((col) => {
-                        const cards = kanbanBoardData[col.key] || [];
+                        const cards = kanbanBoardData.grouped[col.key] || [];
                         return (
                           <div
                             key={col.key}
@@ -2154,6 +2621,18 @@ export function JobOrderDashboard() {
                               ) : (
                                 cards.map((item, idx) => {
                                   const isCardSelected = selectedKanbanCard?.job_order_no === item.job_order_no;
+
+                                  // Distinct color highlighting for Delayed status vs Past-Due active cards
+                                  let cardSurfaceClass =
+                                    'bg-(--bg-elevated) hover:bg-(--accent-subtle) border-(--border-main)';
+                                  if (item.is_past_due_active) {
+                                    cardSurfaceClass =
+                                      'bg-rose-500/10 hover:bg-rose-500/15 border-rose-500/45 border-l-4 border-l-rose-500';
+                                  } else if (item.is_delayed_status) {
+                                    cardSurfaceClass =
+                                      'bg-orange-500/10 hover:bg-orange-500/15 border-orange-500/45 border-l-4 border-l-orange-500';
+                                  }
+
                                   return (
                                     <button
                                       type="button"
@@ -2161,15 +2640,52 @@ export function JobOrderDashboard() {
                                       onClick={() =>
                                         setSelectedKanbanCard(isCardSelected ? null : item)
                                       }
-                                      className={`w-full text-left p-2.5 bg-(--bg-elevated) hover:bg-(--accent-subtle) border rounded-lg shadow-2xs transition-all space-y-1.5 cursor-pointer ${
+                                      className={`w-full text-left p-2.5 border rounded-lg shadow-2xs transition-all space-y-1.5 cursor-pointer ${cardSurfaceClass} ${
                                         isCardSelected
-                                          ? 'border-(--btn-primary-bg) ring-2 ring-(--btn-primary-bg)/40 bg-(--accent-subtle)'
-                                          : 'border-(--border-main)'
+                                          ? 'ring-2 ring-(--btn-primary-bg) border-(--btn-primary-bg)'
+                                          : ''
                                       }`}
                                     >
+                                      {/* Delayed / Overdue Alert Banner */}
+                                      {(item.is_delayed_status || item.is_past_due_active) && (
+                                        <div className="flex items-center justify-between gap-1">
+                                          <span
+                                            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wide ${
+                                              item.is_past_due_active
+                                                ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30'
+                                                : 'bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-500/30'
+                                            }`}
+                                          >
+                                            <span
+                                              className={`w-1.5 h-1.5 rounded-full animate-pulse ${
+                                                item.is_past_due_active ? 'bg-rose-500' : 'bg-orange-500'
+                                              }`}
+                                            />
+                                            <span>
+                                              {item.days_overdue > 0
+                                                ? `${item.days_overdue}d Overdue`
+                                                : 'Delayed'}
+                                            </span>
+                                          </span>
+                                          {item.is_past_due_active && (
+                                            <span className="text-[9px] font-bold text-rose-600 dark:text-rose-400">
+                                              Past Due
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+
                                       {/* JO Number & Type */}
                                       <div className="flex items-center justify-between gap-1">
-                                        <span className="font-mono text-xs font-extrabold text-(--text-primary) truncate">
+                                        <span
+                                          className={`font-mono text-xs font-extrabold truncate ${
+                                            item.is_past_due_active
+                                              ? 'text-rose-700 dark:text-rose-300'
+                                              : item.is_delayed_status
+                                              ? 'text-orange-700 dark:text-orange-300'
+                                              : 'text-(--text-primary)'
+                                          }`}
+                                        >
                                           {item.job_order_no}
                                         </span>
                                         <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-(--bg-surface) border border-(--border-main) text-(--text-muted) shrink-0">
@@ -2179,7 +2695,15 @@ export function JobOrderDashboard() {
 
                                       {/* Equipment (plate_no) */}
                                       <div className="flex items-center gap-1.5 text-[11px] text-(--text-secondary)">
-                                        <Truck className="w-3.5 h-3.5 text-(--btn-primary-bg) shrink-0" />
+                                        <Truck
+                                          className={`w-3.5 h-3.5 shrink-0 ${
+                                            item.is_past_due_active
+                                              ? 'text-rose-500'
+                                              : item.is_delayed_status
+                                              ? 'text-orange-500'
+                                              : 'text-(--btn-primary-bg)'
+                                          }`}
+                                        />
                                         <span className="font-bold text-(--text-primary) truncate">
                                           {item.plate_no}
                                         </span>
@@ -2198,10 +2722,26 @@ export function JobOrderDashboard() {
                                         </div>
                                         <div className="flex items-center justify-between gap-1">
                                           <span className="flex items-center gap-1">
-                                            <CalendarClock className="w-3 h-3 shrink-0" />
+                                            <CalendarClock
+                                              className={`w-3 h-3 shrink-0 ${
+                                                item.is_past_due_active
+                                                  ? 'text-rose-500'
+                                                  : item.is_delayed_status
+                                                  ? 'text-orange-500'
+                                                  : ''
+                                              }`}
+                                            />
                                             <span>Date Needed:</span>
                                           </span>
-                                          <span className="font-mono font-bold text-(--text-primary)">
+                                          <span
+                                            className={`font-mono font-bold ${
+                                              item.is_past_due_active
+                                                ? 'text-rose-600 dark:text-rose-400 underline'
+                                                : item.is_delayed_status
+                                                ? 'text-orange-600 dark:text-orange-400'
+                                                : 'text-(--text-primary)'
+                                            }`}
+                                          >
                                             {item.date_needed}
                                           </span>
                                         </div>
@@ -2226,6 +2766,19 @@ export function JobOrderDashboard() {
                           <h4 className="text-xs font-extrabold uppercase text-(--text-primary)">
                             Job Order Inspection: {selectedKanbanCard.job_order_no} ({selectedKanbanCard.status_label})
                           </h4>
+                          {(selectedKanbanCard.is_delayed_status || selectedKanbanCard.is_past_due_active) && (
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                                selectedKanbanCard.is_past_due_active
+                                  ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                                  : 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30'
+                              }`}
+                            >
+                              {selectedKanbanCard.days_overdue > 0
+                                ? `${selectedKanbanCard.days_overdue} Days Overdue`
+                                : 'Delayed'}
+                            </span>
+                          )}
                         </div>
                         <button
                           type="button"
@@ -2269,7 +2822,17 @@ export function JobOrderDashboard() {
                                 </div>
                                 <div>
                                   <span className="text-(--text-muted)">Needed:</span>{' '}
-                                  <span className="font-bold text-(--text-primary)">{selectedKanbanCard.date_needed}</span>
+                                  <span
+                                    className={`font-bold ${
+                                      selectedKanbanCard.is_past_due_active
+                                        ? 'text-rose-600 dark:text-rose-400'
+                                        : selectedKanbanCard.is_delayed_status
+                                        ? 'text-orange-600 dark:text-orange-400'
+                                        : 'text-(--text-primary)'
+                                    }`}
+                                  >
+                                    {selectedKanbanCard.date_needed}
+                                  </span>
                                 </div>
                               </td>
                               <td className="p-2.5 text-right font-mono text-blue-600 dark:text-blue-400">

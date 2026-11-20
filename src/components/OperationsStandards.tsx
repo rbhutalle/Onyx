@@ -86,6 +86,12 @@ export function OperationsStandards() {
     is_active: true
   });
 
+  // Unified Tab Highlight Helper (matching VehicleModels)
+  const getTabClass = (isActive: boolean) =>
+    isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-solid border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-solid border-(--border-main)';
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -335,7 +341,7 @@ export function OperationsStandards() {
   const totalCurrentEntries = activeTab === 'statuses' ? filteredStatuses.length : filteredRoutes.length;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 overflow-hidden">
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-3">
         <div className="flex items-center gap-3">
@@ -347,8 +353,10 @@ export function OperationsStandards() {
             <p className="text-xs sm:text-sm text-(--text-muted)">Configure status definitions, route fuel metrics, and operations parameters.</p>
           </div>
         </div>
+        {loading && <Loader2 className="w-5 h-5 text-(--text-primary) animate-spin" />}
       </div>
 
+      {/* Messages */}
       {successMsg && (
         <div className="shrink-0 bg-(--accent-subtle) border border-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg flex items-center gap-2.5 text-xs">
           <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -363,207 +371,211 @@ export function OperationsStandards() {
         </div>
       )}
 
-      {/* Clean Tab Navigation */}
-      <div className="shrink-0 flex border-b border-(--border-main) gap-2 overflow-x-auto">
-        <button
-          onClick={() => setActiveTab('statuses')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'statuses'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <Activity className="w-3.5 h-3.5" />
-          <span>Operations Standards</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('routes')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-            activeTab === 'routes'
-              ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)'
-              : 'border-transparent text-(--text-muted) hover:text-(--text-primary)'
-          }`}
-        >
-          <MapPin className="w-3.5 h-3.5" />
-          <span>Routes</span>
-        </button>
-      </div>
-
-      {/* Tab Content Container */}
-      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-4 overflow-hidden space-y-3">
-        <div className="shrink-0 flex flex-wrap items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
-            <input
-              type="text"
-              placeholder={activeTab === 'statuses' ? 'Filter standards...' : 'Search by Route Code, Name, Origin or Destination...'}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
-            />
-          </div>
+      {/* Main Content Body Container (matching VehicleModels) */}
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-solid border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
+        {/* Primary Category Navigation Tabs */}
+        <div className="shrink-0 flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('statuses')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'statuses')}`}
+          >
+            <Activity className={`w-4 h-4 ${activeTab === 'statuses' ? '' : 'text-blue-500'}`} />
+            <span>Operations Standards</span>
+          </button>
 
           <button
-            onClick={handleOpenAdd}
-            className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
+            type="button"
+            onClick={() => setActiveTab('routes')}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeTab === 'routes')}`}
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>{activeTab === 'statuses' ? 'Add Standard' : 'Add Route'}</span>
+            <MapPin className={`w-4 h-4 ${activeTab === 'routes' ? '' : 'text-emerald-500'}`} />
+            <span>Routes</span>
           </button>
         </div>
 
-        {/* Scrollable Container with Sticky Table Headers */}
-        <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
-          {loading ? (
-            <div className="h-full flex items-center justify-center text-(--text-muted) gap-2 text-xs">
-              <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
-              <span>Loading records...</span>
+        {/* Tab Content Area */}
+        <div className="flex flex-col flex-1 min-h-0 space-y-2">
+          <div className="shrink-0 flex flex-wrap items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-(--text-muted)" />
+              <input
+                type="text"
+                placeholder={activeTab === 'statuses' ? 'Filter standards...' : 'Search by Route Code, Name, Origin or Destination...'}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
             </div>
-          ) : activeTab === 'statuses' ? (
-            filteredStatuses.length === 0 ? (
-              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
-                No operations standards found. Click &quot;Add Standard&quot; above.
+
+            <button
+              type="button"
+              onClick={handleOpenAdd}
+              className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow whitespace-nowrap"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>{activeTab === 'statuses' ? 'Add Standard' : 'Add Route'}</span>
+            </button>
+          </div>
+
+          {/* Scrollable Container with Sticky Table Headers */}
+          <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
+            {loading ? (
+              <div className="h-full flex items-center justify-center text-(--text-muted) gap-2 text-xs">
+                <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
+                <span>Loading records...</span>
               </div>
+            ) : activeTab === 'statuses' ? (
+              filteredStatuses.length === 0 ? (
+                <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                  No operations standards found. Click &quot;Add Standard&quot; above.
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                      <th className="py-2 px-3">Status Name</th>
+                      <th className="py-2 px-3">Description</th>
+                      <th className="py-2 px-3 text-right w-28">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                    {paginatedList.map((item) => {
+                      const statusRec = item as OperationsStatusRecord;
+                      return (
+                        <tr key={statusRec.operations_id} className="hover:bg-(--accent-subtle) transition-colors">
+                          <td className="py-2 px-3 font-semibold text-(--text-primary)">
+                            <span className="inline-block px-2 py-0.5 bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) rounded text-xs font-semibold">
+                              {statusRec.status_name || 'N/A'}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-(--text-muted)">{statusRec.description || '—'}</td>
+                          <td className="py-2 px-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditStatus(statusRec)}
+                                className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Edit2 className="w-3 h-3" /> Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteStatus(statusRec.operations_id)}
+                                className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" /> Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )
             ) : (
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
-                    <th className="py-2 px-3">Status Name</th>
-                    <th className="py-2 px-3">Description</th>
-                    <th className="py-2 px-3 text-right w-28">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                  {paginatedList.map((item) => {
-                    const statusRec = item as OperationsStatusRecord;
-                    return (
-                      <tr key={statusRec.operations_id} className="hover:bg-(--accent-subtle) transition-colors">
-                        <td className="py-2 px-3 font-semibold text-(--text-primary)">
-                          <span className="inline-block px-2 py-0.5 bg-(--accent-subtle) text-(--text-primary) border border-(--border-main) rounded text-xs font-semibold">
-                            {statusRec.status_name || 'N/A'}
-                          </span>
-                        </td>
-                        <td className="py-2 px-3 text-(--text-muted)">{statusRec.description || '—'}</td>
-                        <td className="py-2 px-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleOpenEditStatus(statusRec)}
-                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Edit2 className="w-3 h-3" /> Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteStatus(statusRec.operations_id)}
-                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Trash2 className="w-3 h-3" /> Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )
-          ) : (
-            filteredRoutes.length === 0 ? (
-              <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
-                No matching routes found. Click &quot;Add Route&quot; above.
+              filteredRoutes.length === 0 ? (
+                <div className="h-full flex items-center justify-center p-8 text-center text-(--text-muted) text-xs">
+                  No matching routes found. Click &quot;Add Route&quot; above.
+                </div>
+              ) : (
+                <table className="w-full min-w-187.5 text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
+                      <th className="py-2 px-3">Route Code / Name</th>
+                      <th className="py-2 px-3">Origin & Destination</th>
+                      <th className="py-2 px-3">Distance</th>
+                      <th className="py-2 px-3">Fuel Standards</th>
+                      <th className="py-2 px-3">Type</th>
+                      <th className="py-2 px-3">Status</th>
+                      <th className="py-2 px-3 text-right w-28">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
+                    {paginatedList.map((item) => {
+                      const route = item as RouteRecord;
+                      return (
+                        <tr key={route.route_id} className="hover:bg-(--accent-subtle) transition-colors">
+                          <td className="py-2 px-3">
+                            <div className="font-semibold text-(--text-primary)">{route.route_name}</div>
+                            <div className="text-[10px] font-mono text-(--text-muted)">{route.route_code}</div>
+                          </td>
+                          <td className="py-2 px-3 text-xs">
+                            <span className="font-medium text-(--text-primary)">{route.origin}</span>
+                            <span className="mx-1.5 text-(--text-muted)">→</span>
+                            <span className="font-medium text-(--text-primary)">{route.destination}</span>
+                          </td>
+                          <td className="py-2 px-3 font-mono">{route.distance_km} km</td>
+                          <td className="py-2 px-3 font-mono text-xs">
+                            <div className="text-(--text-primary)">Std: {route.standard_fuel_liters}L</div>
+                            <div className="text-(--text-muted) text-[10px]">Buf: {route.buffer_allowance_liters}L</div>
+                            <div className="text-emerald-600 dark:text-emerald-400 font-semibold">Max: {route.max_authorized_liters ?? (Number(route.standard_fuel_liters || 0) + Number(route.buffer_allowance_liters || 0))}L</div>
+                          </td>
+                          <td className="py-2 px-3">
+                            <div className="text-(--text-primary) font-medium">{route.terrain_type}</div>
+                            <div className="text-(--text-muted) text-[10px]">{route.traffic_factor}</div>
+                          </td>
+                          <td className="py-2 px-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${route.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main)'}`}>
+                              {route.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditRoute(route)}
+                                className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Edit2 className="w-3 h-3" /> Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteRoute(route.route_id)}
+                                className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" /> Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )
+            )}
+          </div>
+
+          {/* Pagination */}
+          {!loading && totalCurrentEntries > 0 && (
+            <div className="shrink-0 flex items-center justify-between pt-2 text-xs text-(--text-muted)">
+              <span>
+                Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalCurrentEntries)} of {totalCurrentEntries} entries
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <span>Page {currentPage} of {totalPages}</span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage >= totalPages}
+                  className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
               </div>
-            ) : (
-              <table className="w-full min-w-187.5 text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
-                    <th className="py-2 px-3">Route Code / Name</th>
-                    <th className="py-2 px-3">Origin & Destination</th>
-                    <th className="py-2 px-3">Distance</th>
-                    <th className="py-2 px-3">Fuel Standards</th>
-                    <th className="py-2 px-3">Type</th>
-                    <th className="py-2 px-3">Status</th>
-                    <th className="py-2 px-3 text-right w-28">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
-                  {paginatedList.map((item) => {
-                    const route = item as RouteRecord;
-                    return (
-                      <tr key={route.route_id} className="hover:bg-(--accent-subtle) transition-colors">
-                        <td className="py-2 px-3">
-                          <div className="font-semibold text-(--text-primary)">{route.route_name}</div>
-                          <div className="text-[10px] font-mono text-(--text-muted)">{route.route_code}</div>
-                        </td>
-                        <td className="py-2 px-3 text-xs">
-                          <span className="font-medium text-(--text-primary)">{route.origin}</span>
-                          <span className="mx-1.5 text-(--text-muted)">→</span>
-                          <span className="font-medium text-(--text-primary)">{route.destination}</span>
-                        </td>
-                        <td className="py-2 px-3 font-mono">{route.distance_km} km</td>
-                        <td className="py-2 px-3 font-mono text-xs">
-                          <div className="text-(--text-primary)">Std: {route.standard_fuel_liters}L</div>
-                          <div className="text-(--text-muted) text-[10px]">Buf: {route.buffer_allowance_liters}L</div>
-                          <div className="text-emerald-600 dark:text-emerald-400 font-semibold">Max: {route.max_authorized_liters ?? (Number(route.standard_fuel_liters || 0) + Number(route.buffer_allowance_liters || 0))}L</div>
-                        </td>
-                        <td className="py-2 px-3">
-                          <div className="text-(--text-primary) font-medium">{route.terrain_type}</div>
-                          <div className="text-(--text-muted) text-[10px]">{route.traffic_factor}</div>
-                        </td>
-                        <td className="py-2 px-3">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${route.is_active ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-(--accent-subtle) text-(--text-muted) border border-(--border-main)'}`}>
-                            {route.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="py-2 px-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleOpenEditRoute(route)}
-                              className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Edit2 className="w-3 h-3" /> Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteRoute(route.route_id)}
-                              className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Trash2 className="w-3 h-3" /> Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )
+            </div>
           )}
         </div>
-
-        {/* Pagination */}
-        {!loading && totalCurrentEntries > 0 && (
-          <div className="shrink-0 flex items-center justify-between pt-2 text-xs text-(--text-muted)">
-            <span>
-              Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalCurrentEntries)} of {totalCurrentEntries} entries
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <span>Page {currentPage} of {totalPages}</span>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage >= totalPages}
-                className="p-1 bg-(--bg-elevated) border border-(--border-main) rounded hover:opacity-80 disabled:opacity-40 cursor-pointer text-(--text-primary)"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* FORM MODAL */}
@@ -577,6 +589,7 @@ export function OperationsStandards() {
                   : (activeTab === 'statuses' ? 'Add Operations Standard' : 'Add Route')}
               </h3>
               <button 
+                type="button"
                 onClick={() => setIsModalOpen(false)}
                 className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer p-1"
               >
@@ -598,7 +611,7 @@ export function OperationsStandards() {
                         value={statusForm.status_name}
                         onChange={(e) => setStatusForm({ ...statusForm, status_name: e.target.value })}
                         placeholder="e.g. Active, Standby, Maintenance..."
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                     <div>
@@ -608,7 +621,7 @@ export function OperationsStandards() {
                         value={statusForm.description}
                         onChange={(e) => setStatusForm({ ...statusForm, description: e.target.value })}
                         placeholder="Optional details or operational context..."
-                        className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                        className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                   </>
@@ -625,7 +638,7 @@ export function OperationsStandards() {
                           value={routeForm.route_code}
                           onChange={(e) => setRouteForm({ ...routeForm, route_code: e.target.value })}
                           placeholder="e.g. RT-001"
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) font-mono"
+                          className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono"
                         />
                       </div>
                       <div>
@@ -638,7 +651,7 @@ export function OperationsStandards() {
                           value={routeForm.route_name}
                           onChange={(e) => setRouteForm({ ...routeForm, route_name: e.target.value })}
                           placeholder="e.g. North Express Line"
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                          className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                         />
                       </div>
                     </div>
@@ -654,7 +667,7 @@ export function OperationsStandards() {
                           value={routeForm.origin}
                           onChange={(e) => setRouteForm({ ...routeForm, origin: e.target.value })}
                           placeholder="Origin terminal/city"
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                          className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                         />
                       </div>
                       <div>
@@ -667,7 +680,7 @@ export function OperationsStandards() {
                           value={routeForm.destination}
                           onChange={(e) => setRouteForm({ ...routeForm, destination: e.target.value })}
                           placeholder="Destination terminal/city"
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                          className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                         />
                       </div>
                     </div>
@@ -684,7 +697,7 @@ export function OperationsStandards() {
                           value={routeForm.distance_km}
                           onChange={(e) => setRouteForm({ ...routeForm, distance_km: e.target.value })}
                           placeholder="e.g. 150.50"
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary) font-mono"
+                          className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono"
                         />
                       </div>
                       <div>
@@ -694,7 +707,7 @@ export function OperationsStandards() {
                           value={routeForm.terrain_type}
                           onChange={(e) => setRouteForm({ ...routeForm, terrain_type: e.target.value })}
                           placeholder="e.g. FLAT, HILLY"
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                          className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                         />
                       </div>
                       <div>
@@ -704,7 +717,7 @@ export function OperationsStandards() {
                           value={routeForm.traffic_factor}
                           onChange={(e) => setRouteForm({ ...routeForm, traffic_factor: e.target.value })}
                           placeholder="e.g. HIGHWAY, URBAN"
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-(--text-primary)"
+                          className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                         />
                       </div>
                     </div>
@@ -718,7 +731,7 @@ export function OperationsStandards() {
                           value={routeForm.standard_fuel_liters}
                           onChange={(e) => setRouteForm({ ...routeForm, standard_fuel_liters: e.target.value })}
                           placeholder="0.00"
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) font-mono"
+                          className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono"
                         />
                       </div>
                       <div>
@@ -729,12 +742,12 @@ export function OperationsStandards() {
                           value={routeForm.buffer_allowance_liters}
                           onChange={(e) => setRouteForm({ ...routeForm, buffer_allowance_liters: e.target.value })}
                           placeholder="0.00"
-                          className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-(--text-primary) font-mono"
+                          className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono"
                         />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-(--text-primary) mb-1">Max Authorized (L)</label>
-                        <div className="bg-(--bg-elevated) border border-(--border-main) rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 flex items-center">
+                        <div className="bg-(--bg-surface) border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 flex items-center">
                           <Fuel className="w-3.5 h-3.5 mr-1.5 shrink-0" />
                           {(Number(routeForm.standard_fuel_liters || 0) + Number(routeForm.buffer_allowance_liters || 0)).toFixed(2)} L
                         </div>
@@ -747,7 +760,7 @@ export function OperationsStandards() {
                           type="checkbox"
                           checked={routeForm.round_trip}
                           onChange={(e) => setRouteForm({ ...routeForm, round_trip: e.target.checked })}
-                          className="rounded bg-(--bg-elevated) border border-(--border-main) text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
+                          className="rounded bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
                         />
                         <span className="text-xs font-semibold text-(--text-primary)">Round Trip</span>
                       </label>
@@ -756,7 +769,7 @@ export function OperationsStandards() {
                           type="checkbox"
                           checked={routeForm.is_active}
                           onChange={(e) => setRouteForm({ ...routeForm, is_active: e.target.checked })}
-                          className="rounded bg-(--bg-elevated) border border-(--border-main) text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
+                          className="rounded bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
                         />
                         <span className="text-xs font-semibold text-(--text-primary)">Is Active</span>
                       </label>

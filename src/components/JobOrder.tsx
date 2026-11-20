@@ -245,6 +245,12 @@ export function JobOrder() {
   const [resourceForm, setResourceForm] = useState({ job_order_task_id: '', employee_id: '', charged_time: '0', assigned_date: '' });
   const [contractForm, setContractForm] = useState({ contract_decription: '', qty: '1', unit_price: '0', list_price: '0' });
 
+  // Unified Tab Highlight Helper (matching IncidentReport)
+  const getTabClass = (isActive: boolean) =>
+    isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-solid border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-solid border-(--border-main)';
+
   // Recalculate and persist labor_cost, materials_cost, contract_cost, and total_cost
   const recalculateAndSaveJobOrderCosts = async (targetJobOrderId: string) => {
     try {
@@ -988,7 +994,7 @@ export function JobOrder() {
         </div>
       )}
 
-{/* HEADER CARD (Master Job Order Viewer - Fixed Height) */}
+      {/* HEADER CARD (Master Job Order Viewer - Fixed Height) */}
       <div className="bg-(--bg-elevated) border border-(--border-main) shadow-xs rounded-xl p-4 shrink-0 space-y-3">
         <div className={`flex flex-wrap items-center justify-between gap-2 ${!isHeaderCollapsed ? 'border-b border-(--border-main) pb-3' : ''}`}>
           <div className="flex items-center gap-3 min-w-0">
@@ -1139,57 +1145,69 @@ export function JobOrder() {
 
       {/* CHILD TABS SECTION (Fills Remaining Screen Height) */}
       {currentJobOrder && (
-        <div className="bg-(--bg-elevated) border border-(--border-main) shadow-xl rounded-xl p-4 flex flex-col flex-1 min-h-0 overflow-hidden space-y-3">
-          <div className="flex flex-wrap justify-between items-center gap-3 border-b border-(--border-main) pb-3 shrink-0">
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => setActiveChildTab('tasks')}
-                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer shrink-0 ${
-                  activeChildTab === 'tasks' ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) border border-(--border-main)'
-                }`}
-              >
-                <Wrench className="w-3.5 h-3.5" />
-                <span>Task Details ({taskDetails.length})</span>
-              </button>
-
-              <button
-                onClick={() => setActiveChildTab('materials')}
-                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer shrink-0 ${
-                  activeChildTab === 'materials' ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) border border-(--border-main)'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Materials ({materials.length})</span>
-              </button>
-
-              <button
-                onClick={() => setActiveChildTab('resources')}
-                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer shrink-0 ${
-                  activeChildTab === 'resources' ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) border border-(--border-main)'
-                }`}
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>Resources ({resources.length})</span>
-              </button>
-
-              <button
-                onClick={() => setActiveChildTab('contracts')}
-                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer shrink-0 ${
-                  activeChildTab === 'contracts' ? 'border-(--text-primary) text-(--text-primary) bg-(--accent-subtle)' : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) border border-(--border-main)'
-                }`}
-              >
-                <Briefcase className="w-3.5 h-3.5" />
-                <span>Contracted Jobs ({contracts.length})</span>
-              </button>
+        <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-solid border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
+          <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-b border-(--border-main) pb-2.5">
+            <div>
+              <h2 className="text-sm sm:text-base font-bold text-(--text-primary) flex items-center gap-2">
+                <Layers className="w-4 h-4 text-(--text-primary)" />
+                Job Order Details & Breakdown
+                <span className="text-xs text-(--text-primary) font-mono">
+                  (JO #{currentJobOrder.job_order_no})
+                </span>
+              </h2>
             </div>
 
             <button
+              type="button"
               onClick={handleOpenAddChild}
               disabled={!currentJobOrder || isStatusCompleted || isStatusCancelled}
-              className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) disabled:opacity-40 disabled:cursor-not-allowed text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow shrink-0 ${
+                !currentJobOrder || isStatusCompleted || isStatusCancelled
+                  ? 'bg-(--accent-subtle) text-(--text-muted) opacity-50 cursor-not-allowed'
+                  : 'bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) cursor-pointer'
+              }`}
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5" />
               <span>Add Details</span>
+            </button>
+          </div>
+
+          {/* Primary Category Navigation Tab Bar (matching IncidentReport) */}
+          <div className="shrink-0 flex flex-wrap items-center gap-2 border-b border-(--border-main) pb-3 pt-1 overflow-x-auto">
+            <button
+              type="button"
+              onClick={() => setActiveChildTab('tasks')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeChildTab === 'tasks')}`}
+            >
+              <Wrench className="w-4 h-4" />
+              <span>Task Details ({taskDetails.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveChildTab('materials')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeChildTab === 'materials')}`}
+            >
+              <Layers className="w-4 h-4" />
+              <span>Materials ({materials.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveChildTab('resources')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeChildTab === 'resources')}`}
+            >
+              <Users className="w-4 h-4" />
+              <span>Resources ({resources.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveChildTab('contracts')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(activeChildTab === 'contracts')}`}
+            >
+              <Briefcase className="w-4 h-4" />
+              <span>Contracted Jobs ({contracts.length})</span>
             </button>
           </div>
 

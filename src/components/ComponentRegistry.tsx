@@ -93,7 +93,7 @@ function CustomDropdown<T extends string | number>({
 
       {isOpen && !disabled && (
         <div
-          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-(--border-main) bg-(--bg-elevated) shadow-xl py-1 ${
+          className={`absolute z-50 min-w-full w-max max-w-md max-h-60 overflow-y-auto rounded-lg border border-slate-300 dark:border-slate-600 bg-(--bg-elevated) shadow-xl py-1 ${
             openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
           } ${menuClassName}`}
         >
@@ -229,8 +229,13 @@ export function ComponentRegistry() {
     equipment_component_desc: '',
     serial_no: '',
     is_active: true,
-    cost: '0',
   });
+
+  // Unified Tab Highlight Helper
+  const getTabClass = (isActive: boolean) =>
+    isActive
+      ? 'bg-(--btn-primary-bg) text-(--btn-primary-text) border border-solid border-(--btn-primary-bg) shadow-md ring-2 ring-(--btn-primary-bg)/30'
+      : 'bg-(--bg-surface) text-(--text-secondary) hover:text-(--text-primary) hover:bg-(--accent-subtle) border border-solid border-(--border-main)';
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -386,7 +391,6 @@ export function ComponentRegistry() {
       equipment_component_desc: '',
       serial_no: '',
       is_active: true,
-      cost: '0',
     });
     setIsModalOpen(true);
   };
@@ -415,7 +419,6 @@ export function ComponentRegistry() {
       equipment_component_desc: item.equipment_component_desc || '',
       serial_no: item.serial_no || '',
       is_active: item.is_active ?? true,
-      cost: item.cost !== null && item.cost !== undefined ? String(item.cost) : '0',
     });
     setIsModalOpen(true);
   };
@@ -459,7 +462,6 @@ export function ComponentRegistry() {
         equipment_component_desc: componentForm.equipment_component_desc.trim() || null,
         serial_no: componentForm.serial_no.trim() || null,
         is_active: componentForm.is_active,
-        cost: componentForm.cost !== '' ? Number(componentForm.cost) : 0,
       };
 
       if (editingId) {
@@ -469,14 +471,14 @@ export function ComponentRegistry() {
           .eq('equipment_component_id', editingId);
 
         if (error) throw error;
-        setSuccessMsg('Component maintenance record updated successfully!');
+        setSuccessMsg('Component registry record updated successfully!');
       } else {
         const { error } = await supabase
           .from('component_maintenance')
           .insert([payload]);
 
         if (error) throw error;
-        setSuccessMsg('Component maintenance record registered successfully!');
+        setSuccessMsg('Component registry record saved successfully!');
       }
 
       setIsModalOpen(false);
@@ -556,72 +558,76 @@ export function ComponentRegistry() {
   const displayedComponents = components.slice(startIndex, endIndex);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3">
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-6xl mx-auto px-4 sm:px-6 space-y-3 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-(--border-main) pb-3 shrink-0">
-        <div className="p-2 bg-black text-white rounded-xl shadow-xs">
-          <Layers className="w-6 h-6" />
+      <div className="shrink-0 flex items-center justify-between border-b border-(--border-main) pb-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-(--accent-subtle) text-(--text-primary) rounded-xl">
+            <Layers className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-(--text-primary)">Component Registry</h1>
+            <p className="text-xs sm:text-sm text-(--text-muted)">Manage equipment systems, component assemblies, serial numbers, and maintenance metrics.</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-(--text-primary)">Component Maintenance Registry</h1>
-          <p className="text-xs sm:text-sm text-(--text-muted)">Manage equipment systems, component assemblies, serial numbers, and maintenance metrics.</p>
-        </div>
+        {loadingData && <Loader2 className="w-5 h-5 text-(--text-primary) animate-spin" />}
       </div>
 
       {successMsg && (
-        <div className="bg-(--accent-subtle) border border-(--border-main) text-(--text-primary) px-3.5 py-2.5 rounded-lg flex items-center gap-3 text-xs animate-fade-in shrink-0">
+        <div className="shrink-0 bg-(--accent-subtle) border border-(--border-main) text-(--text-primary) px-3 py-2 rounded-lg flex items-center gap-2.5 text-xs animate-fade-in">
           <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-3.5 py-2.5 rounded-lg flex items-center gap-3 text-xs shrink-0">
+        <div className="shrink-0 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-3 py-2 rounded-lg flex items-center gap-2.5 text-xs">
           <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
-      {/* Main Container Card Body */}
-      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-surface) border border-(--border-main) shadow-xs rounded-xl p-4 overflow-hidden space-y-3">
-        
-        {/* Header Bar with Title, Add Action & Collapse Toggle Button */}
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-(--bg-elevated) border border-(--border-main) p-3 gap-3 shrink-0 rounded-lg">
-          <div className="flex items-center gap-2 text-xs font-semibold text-(--text-primary)">
-            <Cpu className="w-4 h-4 text-(--text-primary)" />
-            <span>Search & Select Component</span>
+      {/* Collapsible Search & Filter Section */}
+      <div className="shrink-0 bg-(--bg-elevated) border border-(--border-main) shadow-xs rounded-xl overflow-hidden">
+        <div className="px-4 py-2.5 bg-(--accent-subtle) border-b border-(--border-main) flex items-center justify-between">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Search className="w-4 h-4 text-(--text-primary)" />
+            <span className="text-xs font-semibold text-(--text-primary) uppercase tracking-wider">
+              Search & Filter Components
+            </span>
+            {selectedComponent && (
+              <div className="flex items-center gap-2 ml-2">
+                <span className="text-xs bg-(--bg-surface) border border-(--border-main) text-(--text-primary) px-2 py-0.5 rounded font-mono font-bold">
+                  {selectedComponent.equipment_component_code}
+                </span>
+                {selectedComponent.system_display && (
+                  <span className="text-xs text-(--text-muted) font-medium">
+                    - {selectedComponent.system_display}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setSelectedComponent(null)}
+                  className="text-(--text-muted) hover:text-red-600 dark:hover:text-red-400 p-0.5 transition-colors cursor-pointer"
+                  title="Clear selection"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
-
-          <div className="flex items-center gap-2 shrink-0 justify-end">
-            <button
-              type="button"
-              onClick={handleOpenAdd}
-              className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0 justify-center"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Component</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className="px-2.5 py-1.5 bg-(--accent-subtle) border border-(--border-main) text-(--text-primary) rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 hover:opacity-80 text-xs font-medium"
-              title={isSearchOpen ? 'Collapse search panel' : 'Expand search panel'}
-              aria-label={isSearchOpen ? 'Collapse search panel' : 'Expand search panel'}
-            >
-              <span>{isSearchOpen ? 'Collapse' : 'Expand'}</span>
-              {isSearchOpen ? (
-                <ChevronUp className="w-4 h-4 text-(--text-muted)" />
-              ) : (
-                <ChevronDown className="w-4 h-4 text-(--text-muted)" />
-              )}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsSearchOpen(!isSearchOpen)}
+            className="flex items-center gap-1.5 text-xs text-(--text-muted) hover:text-(--text-primary) bg-(--bg-surface) border border-(--border-main) px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+          >
+            <span>{isSearchOpen ? 'Collapse' : 'Expand'}</span>
+            {isSearchOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
         </div>
 
-        {/* Compact Search & Filter Controls Panel (Collapsible) */}
         {isSearchOpen && (
-          <div className="p-3 border border-(--border-main) bg-(--bg-elevated) space-y-2.5 shrink-0 rounded-lg transition-all">
+          <div className="p-3 space-y-2.5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               {/* Dropdown 1: System */}
               <div>
@@ -632,7 +638,7 @@ export function ComponentRegistry() {
                   value={searchSystemId}
                   options={systemDropdownOptions}
                   onChange={handleSystemChange}
-                  buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:border-(--text-primary) rounded-lg px-2.5 py-1.5 text-xs"
+                  buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-2.5 py-1.5 text-xs font-semibold hover:border-slate-400 dark:hover:border-slate-500"
                 />
               </div>
 
@@ -646,7 +652,7 @@ export function ComponentRegistry() {
                   options={componentDropdownOptions}
                   onChange={handleComponentChange}
                   disabled={!searchSystemId && tabFilteredComponents.length === 0}
-                  buttonClassName="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) focus:border-(--text-primary) rounded-lg px-2.5 py-1.5 text-xs"
+                  buttonClassName="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) rounded-lg px-2.5 py-1.5 text-xs font-semibold hover:border-slate-400 dark:hover:border-slate-500"
                 />
               </div>
             </div>
@@ -660,70 +666,77 @@ export function ComponentRegistry() {
                   placeholder="Filter by Component Code, Serial, or Description..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg pl-8 pr-3 py-1.5 text-xs"
+                  className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg pl-8 pr-3 py-1.5 text-xs"
                 />
               </div>
               <button
                 type="submit"
-                className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+                className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow"
               >
                 Search
               </button>
             </form>
           </div>
         )}
+      </div>
 
-        {/* Selected Component Banner */}
-        {selectedComponent && (
-          <div className="px-4 py-2 bg-(--accent-subtle) border border-(--border-main) rounded-lg flex items-center justify-between text-xs text-(--text-secondary) shrink-0">
-            <span className="flex items-center gap-2">
-              <Cpu className="w-3.5 h-3.5 text-(--text-primary)" />
-              <span>Selected Target Component: <strong className="text-(--text-primary)">{selectedComponent.equipment_component_code}</strong> ({selectedComponent.system_display})</span>
-            </span>
-            <button 
-              onClick={() => setSelectedComponent(null)}
-              className="text-(--text-muted) hover:text-red-500 dark:hover:text-red-400 p-1 cursor-pointer"
-              title="Clear selection"
+      {/* Main Content Body Container */}
+      <div className="flex flex-col flex-1 min-h-0 bg-(--bg-elevated) border border-solid border-(--border-main) rounded-xl p-4 shadow-xl overflow-hidden space-y-3">
+        {/* Primary Category Navigation Tab Bar */}
+        <div className="shrink-0 flex flex-wrap items-center justify-between gap-2 border-b border-(--border-main) pb-3 pt-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${getTabClass(true)}`}
             >
-              <X className="w-3.5 h-3.5" />
+              <Cpu className="w-4 h-4" />
+              <span>Component Registry ({totalItems})</span>
             </button>
           </div>
-        )}
+
+          <button
+            type="button"
+            onClick={handleOpenAdd}
+            className="bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow shrink-0 justify-center"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Component</span>
+          </button>
+        </div>
 
         {/* Results Table Panel */}
         <div className="flex flex-col flex-1 min-h-0 space-y-2">
-          <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-elevated)">
+          <div className="flex-1 min-h-0 overflow-auto border border-(--border-main) rounded-lg bg-(--bg-surface)">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10">
+                <tr className="border-b border-(--border-main) text-(--text-muted) uppercase bg-(--accent-subtle) sticky top-0 z-10 shadow-xs">
                   <th className="py-2 px-3">Component Code / Serial</th>
                   <th className="py-2 px-3">System / Component</th>
                   <th className="py-2 px-3">Make / Model</th>
                   <th className="py-2 px-3">Status</th>
-                  <th className="py-2 px-3 font-mono">Cost</th>
                   <th className="py-2 px-3 text-right w-28">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-(--border-main) text-(--text-secondary)">
                 {loadingData ? (
                   <tr>
-                    <td colSpan={6} className="p-6 text-center text-(--text-muted)">
+                    <td colSpan={5} className="p-6 text-center text-(--text-muted)">
                       <div className="flex items-center justify-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin text-(--text-primary)" />
-                        <span>Loading component maintenance records...</span>
+                        <span>Loading component registry records...</span>
                       </div>
                     </td>
                   </tr>
                 ) : !hasSearched ? (
                   <tr>
-                    <td colSpan={6} className="py-6 text-center text-(--text-muted) text-xs">
+                    <td colSpan={5} className="py-6 text-center text-(--text-muted) text-xs">
                       Select a System or Component Type from the dropdowns above to search and populate records.
                     </td>
                   </tr>
                 ) : displayedComponents.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-6 text-center text-(--text-muted) text-xs">
-                      No active component maintenance records found.
+                    <td colSpan={5} className="py-6 text-center text-(--text-muted) text-xs">
+                      No active component registry records found.
                     </td>
                   </tr>
                 ) : (
@@ -754,18 +767,17 @@ export function ComponentRegistry() {
                             {item.is_active ? 'Active' : 'Inactive'}
                           </span>
                         </td>
-                        <td className="py-2 px-3 font-mono text-(--text-secondary)">
-                          ₱{Number(item.cost ?? 0).toLocaleString()}
-                        </td>
                         <td className="py-2 px-3 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-2">
                             <button
+                              type="button"
                               onClick={() => handleOpenEdit(item)}
                               className="text-(--text-primary) hover:underline inline-flex items-center gap-1 cursor-pointer"
                             >
                               <Edit2 className="w-3 h-3" /> Edit
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleDelete(item.equipment_component_id)}
                               className="text-red-600 dark:text-red-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
                             >
@@ -832,13 +844,14 @@ export function ComponentRegistry() {
 
       {/* Add / Edit Form Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-(--bg-elevated) border border-(--border-main) rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
-            <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 shrink-0 bg-(--accent-subtle)">
+            <div className="flex items-center justify-between border-b border-(--border-main) px-6 py-4 shrink-0 bg-(--bg-surface)">
               <h3 className="text-lg font-bold text-(--text-primary)">
-                {editingId ? 'Edit Component Maintenance' : 'Add Component Maintenance'}
+                {editingId ? 'Edit Component Registry' : 'Add Component Registry'}
               </h3>
               <button 
+                type="button"
                 onClick={() => setIsModalOpen(false)}
                 className="text-(--text-muted) hover:text-(--text-primary) cursor-pointer p-1"
               >
@@ -851,10 +864,10 @@ export function ComponentRegistry() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* System Dropdown Search (Parent) */}
                   <div className="relative" ref={systemDropdownRef}>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">System <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">System <span className="text-red-500">*</span></label>
                     <div 
                       onClick={() => setIsSystemDropdownOpen(!isSystemDropdownOpen)}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs flex items-center justify-between cursor-pointer"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs flex items-center justify-between cursor-pointer hover:border-slate-400 dark:hover:border-slate-500"
                     >
                       <span className={componentForm.system_id ? 'text-(--text-primary)' : 'text-(--text-muted)'}>
                         {(() => {
@@ -866,14 +879,14 @@ export function ComponentRegistry() {
                     </div>
 
                     {isSystemDropdownOpen && (
-                      <div className="absolute left-0 right-0 top-full mt-1 bg-(--bg-elevated) border border-(--border-main) rounded-xl shadow-2xl z-50 overflow-hidden">
+                      <div className="absolute left-0 right-0 top-full mt-1 bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 rounded-xl shadow-2xl z-50 overflow-hidden">
                         <div className="p-2 border-b border-(--border-main)">
                           <input
                             type="text"
                             placeholder="Search system code/desc..."
                             value={systemSearchQuery}
                             onChange={(e) => setSystemSearchQuery(e.target.value)}
-                            className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
+                            className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                             autoFocus
                           />
                         </div>
@@ -913,7 +926,7 @@ export function ComponentRegistry() {
 
                   {/* Base Component Dropdown Search (Child of System) */}
                   <div className="relative" ref={baseComponentDropdownRef}>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Component Type <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">Component Type <span className="text-red-500">*</span></label>
                     <div 
                       onClick={() => {
                         if (!componentForm.system_id) {
@@ -923,7 +936,7 @@ export function ComponentRegistry() {
                         setErrorMsg(null);
                         setIsBaseComponentDropdownOpen(!isBaseComponentDropdownOpen);
                       }}
-                      className={`w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs flex items-center justify-between cursor-pointer ${!componentForm.system_id ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      className={`w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs flex items-center justify-between cursor-pointer hover:border-slate-400 dark:hover:border-slate-500 ${!componentForm.system_id ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                       <span className={componentForm.component_id ? 'text-(--text-primary)' : 'text-(--text-muted)'}>
                         {(() => {
@@ -935,14 +948,14 @@ export function ComponentRegistry() {
                     </div>
 
                     {isBaseComponentDropdownOpen && componentForm.system_id && (
-                      <div className="absolute left-0 right-0 top-full mt-1 bg-(--bg-elevated) border border-(--border-main) rounded-xl shadow-2xl z-50 overflow-hidden">
+                      <div className="absolute left-0 right-0 top-full mt-1 bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 rounded-xl shadow-2xl z-50 overflow-hidden">
                         <div className="p-2 border-b border-(--border-main)">
                           <input
                             type="text"
                             placeholder="Search component code/desc..."
                             value={baseComponentSearchQuery}
                             onChange={(e) => setBaseComponentSearchQuery(e.target.value)}
-                            className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
+                            className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                             autoFocus
                           />
                         </div>
@@ -973,10 +986,10 @@ export function ComponentRegistry() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Make Dropdown Search */}
                   <div className="relative" ref={makeDropdownRef}>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Make (Optional)</label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">Make (Optional)</label>
                     <div 
                       onClick={() => setIsMakeDropdownOpen(!isMakeDropdownOpen)}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs flex items-center justify-between cursor-pointer"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs flex items-center justify-between cursor-pointer hover:border-slate-400 dark:hover:border-slate-500"
                     >
                       <span className={componentForm.make_id ? 'text-(--text-primary)' : 'text-(--text-muted)'}>
                         {makes.find(m => m.make_id === componentForm.make_id)?.name || 'Select Make...'}
@@ -985,14 +998,14 @@ export function ComponentRegistry() {
                     </div>
 
                     {isMakeDropdownOpen && (
-                      <div className="absolute left-0 right-0 top-full mt-1 bg-(--bg-elevated) border border-(--border-main) rounded-xl shadow-2xl z-50 overflow-hidden">
+                      <div className="absolute left-0 right-0 top-full mt-1 bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 rounded-xl shadow-2xl z-50 overflow-hidden">
                         <div className="p-2 border-b border-(--border-main)">
                           <input
                             type="text"
                             placeholder="Search make..."
                             value={makeSearchQuery}
                             onChange={(e) => setMakeSearchQuery(e.target.value)}
-                            className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
+                            className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                             autoFocus
                           />
                         </div>
@@ -1039,7 +1052,7 @@ export function ComponentRegistry() {
 
                   {/* Model Dropdown Search */}
                   <div className="relative" ref={modelDropdownRef}>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Model (Optional)</label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">Model (Optional)</label>
                     <div 
                       onClick={() => {
                         if (!componentForm.make_id) {
@@ -1049,7 +1062,7 @@ export function ComponentRegistry() {
                         setErrorMsg(null);
                         setIsModelDropdownOpen(!isModelDropdownOpen);
                       }}
-                      className={`w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs flex items-center justify-between cursor-pointer ${!componentForm.make_id ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      className={`w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) rounded-lg px-3 py-2 text-xs flex items-center justify-between cursor-pointer hover:border-slate-400 dark:hover:border-slate-500 ${!componentForm.make_id ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                       <span className={componentForm.model_id ? 'text-(--text-primary)' : 'text-(--text-muted)'}>
                         {models.find(m => m.model_id === componentForm.model_id)?.name || (componentForm.make_id ? 'Select Model...' : 'Select Make First')}
@@ -1058,14 +1071,14 @@ export function ComponentRegistry() {
                     </div>
 
                     {isModelDropdownOpen && componentForm.make_id && (
-                      <div className="absolute left-0 right-0 top-full mt-1 bg-(--bg-elevated) border border-(--border-main) rounded-xl shadow-2xl z-50 overflow-hidden">
+                      <div className="absolute left-0 right-0 top-full mt-1 bg-(--bg-elevated) border border-slate-300 dark:border-slate-600 rounded-xl shadow-2xl z-50 overflow-hidden">
                         <div className="p-2 border-b border-(--border-main)">
                           <input
                             type="text"
                             placeholder="Search model..."
                             value={modelSearchQuery}
                             onChange={(e) => setModelSearchQuery(e.target.value)}
-                            className="w-full bg-(--bg-surface) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-(--text-primary)"
+                            className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                             autoFocus
                           />
                         </div>
@@ -1103,38 +1116,27 @@ export function ComponentRegistry() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Equipment Component Code <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">Equipment Component Code <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       required
                       value={componentForm.equipment_component_code}
                       onChange={(e) => setComponentForm({ ...componentForm, equipment_component_code: e.target.value })}
                       placeholder="e.g. ENG-ALT-001"
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs font-semibold"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-3 py-2 text-xs font-semibold"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Serial Number</label>
+                    <label className="block text-xs font-semibold text-(--text-primary) mb-1">Serial Number</label>
                     <input
                       type="text"
                       value={componentForm.serial_no}
                       onChange={(e) => setComponentForm({ ...componentForm, serial_no: e.target.value })}
                       placeholder="Optional serial number"
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Cost (₱)</label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={componentForm.cost}
-                      onChange={(e) => setComponentForm({ ...componentForm, cost: e.target.value })}
-                      className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs font-mono"
+                      className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-3 py-2 text-xs font-mono"
                     />
                   </div>
                 </div>
@@ -1145,24 +1147,24 @@ export function ComponentRegistry() {
                     id="is_active_chk"
                     checked={componentForm.is_active}
                     onChange={(e) => setComponentForm({ ...componentForm, is_active: e.target.checked })}
-                    className="rounded bg-(--bg-elevated) border-(--border-main) text-(--text-primary) focus:ring-0 w-4 h-4 cursor-pointer"
+                    className="rounded bg-(--bg-surface) border-slate-300 dark:border-slate-600 text-(--btn-primary-bg) focus:ring-0 w-4 h-4 cursor-pointer"
                   />
-                  <label htmlFor="is_active_chk" className="text-xs font-semibold uppercase text-(--text-muted) cursor-pointer">Is Active</label>
+                  <label htmlFor="is_active_chk" className="text-xs font-semibold text-(--text-primary) cursor-pointer">Is Active</label>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-(--text-muted) mb-1">Description</label>
+                  <label className="block text-xs font-semibold text-(--text-primary) mb-1">Description</label>
                   <textarea
                     rows={2}
                     value={componentForm.equipment_component_desc}
                     onChange={(e) => setComponentForm({ ...componentForm, equipment_component_desc: e.target.value })}
-                    placeholder="Optional component maintenance details..."
-                    className="w-full bg-(--bg-elevated) border border-(--border-main) text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-(--text-primary) rounded-lg px-3 py-2 text-xs"
+                    placeholder="Optional component details..."
+                    className="w-full bg-(--bg-surface) border border-slate-300 dark:border-slate-600 text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-lg px-3 py-2 text-xs"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 px-6 py-4 border-t border-(--border-main) shrink-0 bg-(--accent-subtle)">
+              <div className="flex justify-end gap-3 px-6 py-4 border-t border-(--border-main) shrink-0 bg-(--bg-surface)">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -1173,7 +1175,7 @@ export function ComponentRegistry() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                  className="px-4 py-2 bg-(--btn-primary-bg) hover:bg-(--btn-hover-bg) text-(--btn-primary-text) rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow disabled:opacity-50"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   <span>{editingId ? 'Update Component' : 'Save Component'}</span>
